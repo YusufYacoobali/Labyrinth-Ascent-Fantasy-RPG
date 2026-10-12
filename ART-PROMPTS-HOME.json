@@ -1,0 +1,15 @@
+{
+  "generator": "Built-in image_gen",
+  "edits": [
+    {
+      "path": "assets/art/town-play.png",
+      "source": "assets/art/town-modest.png",
+      "prompt": "Use case: precise-object-edit. Edit target is the attached existing Stormhold town artwork. Remove ONLY the large foreground innkeeper Elise, her name plaque, and the entire parchment dialogue box. Reconstruct the town street, paving stones, shop fronts and small scenery naturally behind those removed foreground objects. Preserve the castle, sky, fountain, every small pixel adventurer, the four existing clickable gold-edged location plaques labelled Tavern, Shop, Guild, Blacksmith, and their EXACT sizes and positions. Preserve the full original portrait dimensions and anime/pixel hybrid style, palette, perspective and lighting. No new characters, no additional labels, no buttons or boxes, no borders or margins. This is the main game home screen after the guide is dismissed; it must be the same town composition without Elise or her speech panel."
+    },
+    {
+      "path": "assets/art/town-guide.png",
+      "source": "assets/art/town-modest.png",
+      "prompt": "Use case: text-localization. Edit target: the existing Stormhold town plate, which includes the modestly dressed innkeeper Elise and her parchment speech panel. Keep Elise face, hair, modest high-neck blouse and sleeves, pose, town, castle, pixel adventurers, palette, lighting, exact dimensions and every location plaque EXACTLY unchanged. Change ONLY the parchment dialogue text into a short how-to-play guide, in the same readable condensed type, with these exact two lines: \"Recruit at the Tavern. Buy supplies.\" and \"Train at the Guild. Prepare for the gate.\" Preserve the Elise name plaque. In the upper-right blank corner of the parchment add a small dark circular close button containing a clear gold \"×\", completely within the parchment border, not covering the two lines. No other added copy or boxes. Preserve the entire image composition and exact portrait dimensions. Do not change clothing or introduce revealing details."
+    }
+  ]
+}

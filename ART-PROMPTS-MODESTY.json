@@ -1,0 +1,47 @@
+{
+  "generator": "Built-in image_gen",
+  "edits": [
+    {
+      "key": "tavern-modest",
+      "path": "assets/art/tavern.png",
+      "prompt": "Use case: identity-preserve. Precise clothing edit for a fantasy mobile RPG. The attached image is the edit target. Change only the revealing female clothing to a modest practical fantasy outfit. Preserve each face, identity, hair, expression, pose, body silhouette, all objects, lighting, composition, aspect ratio, and anime/pixel style. No new text, objects, borders or margins. Clothing must be opaque with a closed high neckline, fully covered chest (no cleavage, cutouts or sheer fabric), covered shoulders and appropriate sleeves. Do not change the characters' faces or add new characters. For the brown-haired innkeeper, use a cream high-neck long-sleeved blouse under the same burgundy fitted waistcoat, with her original red neck bow. Keep the tavern scene unchanged.",
+      "transparent": false,
+      "output": "C:/dev/fantasy sim/labyrinth-app/assets/art/tavern-modest.png"
+    },
+    {
+      "key": "town-modest",
+      "path": "assets/art/town-mock-v2.png",
+      "prompt": "Use case: identity-preserve. Precise clothing edit for a fantasy mobile RPG. The attached image is the edit target. Change only the revealing female clothing to a modest practical fantasy outfit. Preserve each face, identity, hair, expression, pose, body silhouette, all objects, lighting, composition, aspect ratio, and anime/pixel style. No new text, objects, borders or margins. Clothing must be opaque with a closed high neckline, fully covered chest (no cleavage, cutouts or sheer fabric), covered shoulders and appropriate sleeves. Do not change the characters' faces or add new characters. For Elise at lower left, replace the low-cut bodice/blouse with a cream opaque high-neck blouse and burgundy waistcoat, red bow at the collar, covered shoulders. Preserve the four location plaques and their labels, the entire parchment dialogue box and all baked text EXACTLY unchanged. Keep castle, town and pixel characters unchanged.",
+      "transparent": false,
+      "output": "C:/dev/fantasy sim/labyrinth-app/assets/art/town-modest.png"
+    },
+    {
+      "key": "tavern-banner-modest",
+      "path": "assets/art/tavern-mock-v4.png",
+      "prompt": "Use case: identity-preserve. Precise clothing edit for a fantasy mobile RPG. The attached image is the edit target. Change only the revealing female clothing to a modest practical fantasy outfit. Preserve each face, identity, hair, expression, pose, body silhouette, all objects, lighting, composition, aspect ratio, and anime/pixel style. No new text, objects, borders or margins. Clothing must be opaque with a closed high neckline, fully covered chest (no cleavage, cutouts or sheer fabric), covered shoulders and appropriate sleeves. Do not change the characters' faces or add new characters. For the leaning brown-haired innkeeper, add a cream high-neck blouse and full sleeves beneath her burgundy waistcoat, original red collar bow. Preserve the complete parchment bubble, its position and size, condensed type and exact text: “New faces? The labyrinth always needs more heroes.” Preserve landscape banner dimensions.",
+      "transparent": false,
+      "output": "C:/dev/fantasy sim/labyrinth-app/assets/art/tavern-banner-modest.png"
+    },
+    {
+      "key": "portraits-modest",
+      "path": "assets/art/portraits.png",
+      "prompt": "Use case: identity-preserve. Precise clothing edit for a fantasy mobile RPG. The attached image is the edit target. Change only the revealing female clothing to a modest practical fantasy outfit. Preserve each face, identity, hair, expression, pose, body silhouette, all objects, lighting, composition, aspect ratio, and anime/pixel style. No new text, objects, borders or margins. Clothing must be opaque with a closed high neckline, fully covered chest (no cleavage, cutouts or sheer fabric), covered shoulders and appropriate sleeves. Do not change the characters' faces or add new characters. This is an EXACTLY regular 2-column by 3-row portrait atlas. Edit ONLY the TOP RIGHT elf woman's exposed chest to opaque dark high-neck clothing beneath her existing green/gold cloak and armor, and ONLY the BOTTOM LEFT innkeeper to the same cream high-neck blouse with burgundy waistcoat and red bow. Preserve all six square cell boundaries, each portrait's framing and placement, and the other four portraits unchanged. No gridlines or new margins.",
+      "transparent": false,
+      "output": "C:/dev/fantasy sim/labyrinth-app/assets/art/portraits-modest.png"
+    },
+    {
+      "key": "companions-modest",
+      "path": "assets/onboarding/ob-companions-v2.png",
+      "prompt": "Use case: identity-preserve. Precise clothing edit for a fantasy mobile RPG. The attached image is the edit target. Change only the revealing female clothing to a modest practical fantasy outfit. Preserve each face, identity, hair, expression, pose, body silhouette, all objects, lighting, composition, aspect ratio, and anime/pixel style. No new text, objects, borders or margins. Clothing must be opaque with a closed high neckline, fully covered chest (no cleavage, cutouts or sheer fabric), covered shoulders and appropriate sleeves. Do not change the characters' faces or add new characters. Edit ONLY the exposed upper-chest/keyhole opening in Sylva's TOP card portrait into opaque dark high-neck cloth beneath her existing armor. Keep all three card positions, portrait borders, navy background, and every name, level, tag, quote, font, number and punctuation EXACTLY unchanged. Leave Brom and Kael untouched.",
+      "transparent": false,
+      "output": "C:/dev/fantasy sim/labyrinth-app/assets/onboarding/companions-modest.png"
+    },
+    {
+      "key": "sprites-modest",
+      "path": "assets/art/sprites_clean.png",
+      "prompt": "Use case: identity-preserve. Precise clothing edit for a fantasy mobile RPG. The attached image is the edit target. Change only the revealing female clothing to a modest practical fantasy outfit. Preserve each face, identity, hair, expression, pose, body silhouette, all objects, lighting, composition, aspect ratio, and anime/pixel style. No new text, objects, borders or margins. Clothing must be opaque with a closed high neckline, fully covered chest (no cleavage, cutouts or sheer fabric), covered shoulders and appropriate sleeves. Do not change the characters' faces or add new characters. This is an EXACT 2-column by 3-row transparent pixel sprite atlas. Edit ONLY the TOP RIGHT silver-haired female elf sprite: opaque high-neck tunic, covered shoulders and upper arms with sleeves, preserve existing dark leggings, armor, bow, quiver and pixel silhouette. Keep the other five sprites unchanged, every cell exactly the same size and alignment, no new gridlines, no ground or shadows. Retain a truly transparent alpha background everywhere between sprites.",
+      "transparent": true,
+      "output": "C:/dev/fantasy sim/labyrinth-app/assets/art/sprites-modest.png"
+    }
+  ]
+}

@@ -1,15 +1,25 @@
 {
-  "name": "labyrinth-app",
+  "name": "labyrinth-awaits",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@expo-google-fonts/barlow": "^0.4.1",
+    "@expo-google-fonts/cinzel": "^0.4.2",
+    "@expo-google-fonts/cormorant-garamond": "^0.4.1",
+    "@expo-google-fonts/roboto-condensed": "^0.4.2",
     "@expo/ui": "~57.0.23",
+    "@expo/vector-icons": "^15.0.2",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~57.0.28",
+    "expo-asset": "~57.0.19",
+    "expo-audio": "~57.0.5",
     "expo-constants": "~57.0.21",
     "expo-device": "~57.0.2",
     "expo-font": "~57.0.4",
     "expo-glass-effect": "~57.0.4",
+    "expo-haptics": "~57.0.3",
     "expo-image": "~57.0.5",
+    "expo-linear-gradient": "~57.0.2",
     "expo-linking": "~57.0.12",
     "expo-router": "~57.0.26",
     "expo-splash-screen": "~57.0.10",
@@ -29,15 +39,22 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.2",
+    "prettier": "^3.9.10",
     "typescript": "~6.0.3"
   },
   "scripts": {
     "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "node scripts/test-engine.cjs && node scripts/test-combat.cjs",
+    "playtest": "node scripts/playtest.cjs",
+    "typecheck": "tsc --noEmit",
+    "export": "expo export --platform all",
+    "format": "prettier --write src scripts app.json"
   },
   "private": true
 }

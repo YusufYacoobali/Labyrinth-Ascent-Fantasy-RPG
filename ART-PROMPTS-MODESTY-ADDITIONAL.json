@@ -1,0 +1,19 @@
+{
+  "generator": "Built-in image_gen",
+  "edits": [
+    {
+      "key": "combat-modest",
+      "path": "assets/onboarding/ob-combat-font.png",
+      "prompt": "Use case: identity-preserve. Edit target: the attached existing fantasy RPG onboarding Combat plate at C:/dev/fantasy sim/labyrinth-app/assets/onboarding/ob-combat-font.png. Change only revealing clothing on female characters. On the silver-haired elf pixel figure at middle left, replace exposed midriff and chest with an opaque dark high-neck tunic and sleeves under existing armor, keeping skirt and boots. On the lower left red-haired female portrait, replace bare shoulders and low neckline with a cream high-neck blouse and sleeves beneath the existing red clothing. Keep all characters faces, hair, expressions, poses, cell boundaries, pixel style, exact canvas size, composition, goblin, background, health bars and ALL text EXACTLY unchanged: Combat, Turn 1, Attack, Skill, Item, Flee. No new text, borders or margins. No cleavage, chest cutouts, sheer cloth or exposed midriff. Preserve the same anime and pixel styles.",
+      "transparent": false,
+      "output": "C:/dev/fantasy sim/labyrinth-app/assets/onboarding/combat-modest.png"
+    },
+    {
+      "key": "cover-modest",
+      "path": "assets/art/cover.png",
+      "prompt": "Use case: identity-preserve. Edit target: existing fantasy RPG cover at C:/dev/fantasy sim/labyrinth-app/assets/art/cover.png. Make female adventurers' clothing modest. Change ONLY the small exposed thigh/leg areas on the female companions at lower left and lower right to opaque full-length dark leggings underneath their existing green and white adventurer outfits. Preserve every face, hair, pose, character, silhouette, backpack, robe, boot, weapon, castle, steps, sunset, lighting, anime illustration style, dimensions and framing exactly. Keep the central cloaked male adventurer untouched. No new characters or text. Avoid exposed thighs, cutouts or translucent fabric. This is a minimal clothing edit.",
+      "transparent": false,
+      "output": "C:/dev/fantasy sim/labyrinth-app/assets/art/cover-modest.png"
+    }
+  ]
+}
