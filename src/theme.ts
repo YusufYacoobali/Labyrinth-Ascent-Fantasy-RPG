@@ -15,7 +15,12 @@ export const theme = {
     green: "#78c997",
     parchment: "#f1dfb8",
   },
-  font: { title: "GameSerif", body: "GameBody", bold: "GameBodyBold" },
+  font: {
+    title: "GameSerif",
+    body: "GameBody",
+    story: "GameNarrative",
+    bold: "GameBodyBold",
+  },
   space: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 },
   radius: { sm: 4, md: 8, lg: 16 },
 };

@@ -1,12 +1,12 @@
 import React, { useEffect, useRef } from "react";
 import { Pressable, View } from "react-native";
-import { Image } from "expo-image";
+import { ArrivalArt } from "@/components/story-art";
+import { StoryCard } from "@/components/story-card";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
-import { router } from "expo-router";
-import { art, Button, Choice, Copy, Icon } from "@/components/game-ui";
+import { Button, Choice, Copy, Icon } from "@/components/game-ui";
 import { Reveal } from "@/components/combat-motion";
+import { FieldSupplies } from "@/components/field-supplies";
 import { ARRIVALS } from "@/game/story";
-import { floorEnvironment } from "@/game/engine";
 import { useGame } from "@/game/provider";
 import { theme as t } from "@/theme";
 
@@ -30,10 +30,6 @@ export function Arrival() {
     }
   }, [audio.isLoaded, player, state.sound, state.floor, state.arrivalChoice]);
   const resolved = !!state.arrivalChoice;
-  const source =
-    scene.art === "route"
-      ? floorEnvironment(state.floor, state.route)
-      : scene.art;
   return (
     <View
       style={{
@@ -43,28 +39,13 @@ export function Arrival() {
         backgroundColor: t.color.bg,
       }}
     >
-      <Image
-        source={art[source as keyof typeof art]}
-        contentFit="cover"
-        style={{ width: "100%", aspectRatio: 1.4 }}
-        accessibilityLabel={scene.cue}
-      />
+      <ArrivalArt floor={state.floor} label={scene.cue} />
       <Reveal key={`${state.floor}-${resolved}`}>
-        <View style={{ gap: 12, paddingHorizontal: 15 }}>
-          <Copy
-            title
-            style={{
-              fontSize: 28,
-              lineHeight: 32,
-              textAlign: "center",
-              color: t.color.goldLight,
-            }}
-          >
-            {scene.title}
-          </Copy>
-          <Copy style={{ fontSize: 16, lineHeight: 23 }}>
-            {resolved ? state.arrivalOutcome : scene.body}
-          </Copy>
+        <StoryCard
+          title={scene.title}
+          body={resolved ? state.arrivalOutcome : scene.body}
+        >
+          <FieldSupplies />
           {resolved ? (
             <>
               <Copy style={{ color: t.color.gold, fontSize: 13 }}>
@@ -119,7 +100,19 @@ export function Arrival() {
               );
             })
           )}
-        </View>
+          {!resolved && state.arrivalScouted && state.enemy && (
+            <Copy style={{ fontSize: 12, color: t.color.gold }}>
+              {state.enemy.name} · ATK {state.enemy.atk} · {state.enemy.element}
+            </Copy>
+          )}
+          <Choice
+            label="Find a sheltered place"
+            detail="Step into a defensible watch room"
+            icon="tent"
+            tone="dark"
+            onPress={() => dispatch({ type: "SEEK_SHELTER" })}
+          />
+        </StoryCard>
       </Reveal>
       {!resolved && state.floor === 1 && state.sound && (
         <Pressable
@@ -145,16 +138,6 @@ export function Arrival() {
           </Copy>
         </Pressable>
       )}
-      <Button
-        label="Return to town"
-        small
-        tone="dark"
-        style={{ marginHorizontal: 15 }}
-        onPress={() => {
-          dispatch({ type: "RETURN" });
-          router.replace("/town");
-        }}
-      />
     </View>
   );
 }

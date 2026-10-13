@@ -1,8 +1,17 @@
+import { TOWN_ITEMS, TOWN_QUESTS } from "./town-content";
 export type Element = "physical" | "fire" | "frost" | "venom";
 export type Route = "roots" | "frost" | "forge" | "crypt";
 export type Vendor = "provisioner" | "alchemist" | "emporium" | "guild";
 export type QuestId =
-  "first-ascent" | "plunderer" | "clan-rescue" | "hollow-crown";
+  | "first-ascent"
+  | "plunderer"
+  | "clan-rescue"
+  | "hollow-crown"
+  | "trusted-company"
+  | "ready-for-gate"
+  | "ironbell-apprentice"
+  | "quartermaster"
+  | "seasoned-hunter";
 export const ROUTES = [
   {
     id: "roots" as Route,
@@ -216,7 +225,7 @@ export interface Item {
   id: string;
   name: string;
   icon: string;
-  kind: "supply" | "weapon" | "armor" | "charm" | "loot";
+  kind: "supply" | "weapon" | "armor" | "helmet" | "boots" | "charm" | "loot";
   quality: "common" | "fine" | "rare" | "legendary";
   price: number;
   sell: number;
@@ -224,10 +233,20 @@ export interface Item {
   description: string;
   atk?: number;
   def?: number;
+  speed?: number;
+  hp?: number;
+  mp?: number;
   resist?: { element: Element; amount: number };
   quantity?: number;
   effect?: string;
 }
+export const GEAR_KINDS = [
+  "weapon",
+  "armor",
+  "helmet",
+  "charm",
+  "boots",
+] as const;
 export const ITEMS: Item[] = [
   {
     id: "rations",
@@ -430,8 +449,62 @@ export const ITEMS: Item[] = [
     vendor: "guild",
     description: "Proof that your party reached the twelfth floor.",
   },
+  ...TOWN_ITEMS,
+  {
+    id: "iron-helm",
+    name: "Ironbell helm",
+    icon: "helmet",
+    kind: "helmet",
+    quality: "common",
+    price: 95,
+    sell: 35,
+    vendor: "provisioner",
+    def: 4,
+    description: "+4 DEF. Fits the head slot.",
+  },
+  {
+    id: "scout-boots",
+    name: "Wayfarer’s boots",
+    icon: "shoe-print",
+    kind: "boots",
+    quality: "common",
+    price: 85,
+    sell: 30,
+    vendor: "provisioner",
+    speed: 3,
+    description: "+3 SPD. Fits the boot slot.",
+  },
+  {
+    id: "warden-helm",
+    name: "Wardkeeper’s helm",
+    icon: "helmet",
+    kind: "helmet",
+    quality: "rare",
+    price: 380,
+    sell: 140,
+    vendor: "emporium",
+    def: 8,
+    hp: 15,
+    resist: { element: "physical", amount: 10 },
+    description:
+      "+8 DEF · +15 max HP · 10% physical resistance. Rest to fill bonus HP.",
+  },
+  {
+    id: "frost-boots",
+    name: "Winterpath boots",
+    icon: "shoe-print",
+    kind: "boots",
+    quality: "rare",
+    price: 360,
+    sell: 125,
+    vendor: "emporium",
+    speed: 4,
+    resist: { element: "frost", amount: 20 },
+    description: "+4 SPD · 20% frost resistance.",
+  },
 ];
 export const QUESTS = [
+  ...TOWN_QUESTS,
   {
     id: "first-ascent" as QuestId,
     faction: "Adventurers’ Guild",

@@ -1,3 +1,4 @@
+import { fatigueMultiplier } from "./exhaustion";
 import { SKILLS, resist } from "./combat-data";
 import type { Action, BattleEffect, Character, Enemy, Game } from "./engine";
 
@@ -80,7 +81,11 @@ function hitDamage(
       ? 8
       : 0;
   let n =
-    Math.max(6, e.atk * power - (c.def + lastStand) * 0.55) *
+    Math.max(
+      6,
+      e.atk * power -
+        (c.def * (1 - (c.exhaustion || 0) * 0.0015) + lastStand) * 0.55,
+    ) *
     (1 - resist(c, e.element) / 100);
   if (
     e.element === "physical" &&
@@ -148,7 +153,9 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
   const id = a.item || "potion";
   if (
     a.kind === "item" &&
-    (!["potion", "greater-potion", "antidote", "ether"].includes(id) ||
+    (!["potion", "greater-potion", "antidote", "ether", "bandage"].includes(
+      id,
+    ) ||
       (id === "potion" ? s.potions < 1 : !(s.inventory[id] > 0)))
   )
     return reject("You do not have that item.");
@@ -179,6 +186,14 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
     else inventory[id]--;
     party = party.map((c) => {
       if (c.hp <= 0) return c;
+      if (id === "bandage")
+        return c.id === actor.id
+          ? {
+              ...c,
+              hp: Math.min(c.maxHp, c.hp + 90),
+              ailments: { ...c.ailments, poison: 0 },
+            }
+          : c;
       if (id === "potion" || id === "greater-potion")
         return {
           ...c,
@@ -188,11 +203,13 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
       return { ...c, ailments: { poison: 0, paralysis: 0, ward: 2 } };
     });
     logs.push(
-      id === "ether"
-        ? "Moondew restores 30 MP to each ally."
-        : id === "antidote"
-          ? "Silverleaf clears ailments and wards for 2 turns."
-          : `Healing mist restores ${id === "potion" ? 65 : 120} HP to each ally.`,
+      id === "bandage"
+        ? actor.name + " is bandaged: +90 HP; poison cleansed."
+        : id === "ether"
+          ? "Moondew restores 30 MP to each ally."
+          : id === "antidote"
+            ? "Silverleaf clears ailments and wards for 2 turns."
+            : `Healing mist restores ${id === "potion" ? 65 : 120} HP to each ally.`,
     );
   } else if (a.kind === "guard") {
     momentum = Math.min(3, momentum + 1);
@@ -245,7 +262,11 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
         (c.trait === "Blood Rage" || c.trait === "Reckless Heart")
       )
         mult *= c.trait === "Reckless Heart" ? 1.35 : 1.25;
-      const crit = mult > 0 && roll > 0.88 && c.id === actor.id;
+      const crit =
+        mult > 0 &&
+        roll >
+          1 - Math.min(0.26, 0.06 + c.speed * fatigueMultiplier(c) * 0.005) &&
+        c.id === actor.id;
       if (crit) {
         mult *= 1.5;
         critical = true;
@@ -257,7 +278,12 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
             (c.traitRevealed && c.trait === "Moon Sight" ? 0.5 : 1);
       damage +=
         mult > 0
-          ? Math.max(2, Math.round(c.atk * mult * inspire * opening - armor))
+          ? Math.max(
+              2,
+              Math.round(
+                c.atk * fatigueMultiplier(c) * mult * inspire * opening - armor,
+              ),
+            )
           : 0;
       if (!cast) return c;
       logs.push(`${c.name} uses ${skill}.`);

@@ -1,3 +1,6 @@
+import { EventArt } from "@/components/story-art";
+import { BattleBackdrop } from "@/components/battle-backdrop";
+import { StoryCard } from "@/components/story-card";
 import React, { useCallback, useEffect, useState } from "react";
 import { useReducedMotion } from "react-native-reanimated";
 import {
@@ -8,7 +11,6 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Image } from "expo-image";
 import { Redirect, router } from "expo-router";
 import {
   art,
@@ -39,10 +41,22 @@ import {
   reducer,
   battleIntent,
   battleForecast,
+  daysRemaining,
 } from "@/game/engine";
+import {
+  MissionScene,
+  NagScene,
+  ExploreScene,
+  BranchScene,
+  CampScene,
+  TeamCondition,
+  RouteMap,
+  MissionTracker,
+} from "./exploration-scenes";
 import { EVENTS, FLOORS, ITEMS, ROUTES } from "@/game/world";
 import { useGame } from "@/game/provider";
 import { Guard } from "./town";
+import { FieldSupplies } from "@/components/field-supplies";
 import { Arrival } from "./arrival";
 import { theme as t } from "@/theme";
 const elementColor = {
@@ -64,11 +78,7 @@ export function LabyrinthScreen() {
   const open = gateOpen(state.day);
   return (
     <Guard>
-      <Frame
-        background={art.labyrinth}
-        active="Labyrinth"
-        title="The Labyrinth"
-      >
+      <Frame background={art.portal} active="Labyrinth" title="The Labyrinth">
         <View
           style={{
             padding: 20,
@@ -87,27 +97,7 @@ export function LabyrinthScreen() {
                 paddingTop: 15,
               }}
             >
-              <View style={{ flex: 1 }}>
-                <Copy
-                  title
-                  style={{
-                    fontSize: 57,
-                    lineHeight: 68,
-                    color: t.color.goldLight,
-                  }}
-                >
-                  F1—12
-                </Copy>
-                <Copy title style={{ fontSize: 15 }}>
-                  The Hollow Ascent
-                </Copy>
-                <Copy
-                  style={{ fontSize: 12, fontStyle: "italic", marginTop: 12 }}
-                >
-                  “The higher you go,{"\n"}the more you find{"\n"}out who you
-                  are.”
-                </Copy>
-              </View>
+              <View style={{ flex: 1, minHeight: 240 }} />
               <Panel
                 style={{ width: 126, padding: 10, alignSelf: "flex-start" }}
               >
@@ -134,7 +124,11 @@ export function LabyrinthScreen() {
             {map && (
               <Reveal>
                 <Panel style={{ marginTop: 18, gap: 10 }}>
-                  {FLOORS.map((f) => (
+                  {FLOORS.filter(
+                    (f) =>
+                      f.id <= state.bestFloor ||
+                      state.knownFloors.includes(f.id),
+                  ).map((f) => (
                     <View
                       key={f.id}
                       style={{
@@ -163,7 +157,7 @@ export function LabyrinthScreen() {
                         <Copy muted style={{ fontSize: 10, lineHeight: 14 }}>
                           {f.id <= state.bestFloor
                             ? f.subtitle
-                            : "Unknown until explored"}
+                            : "Known from town talk · unexplored"}
                         </Copy>
                       </View>
                       <Icon
@@ -178,6 +172,9 @@ export function LabyrinthScreen() {
                       />
                     </View>
                   ))}
+                  <Copy muted style={{ textAlign: "center", fontSize: 12 }}>
+                    Uncharted floors remain hidden.
+                  </Copy>
                 </Panel>
               </Reveal>
             )}
@@ -264,10 +261,10 @@ function Combat({
         setPreview(null);
         setPendingAction(null);
       },
-      reduced ? 120 : 380,
+      preview?.enemy?.hp === 0 ? (reduced ? 300 : 1000) : reduced ? 120 : 380,
     );
     return () => clearTimeout(timer);
-  }, [dispatch, pendingAction, reduced]);
+  }, [dispatch, pendingAction, reduced, preview?.enemy?.hp]);
   const [selected, setSelected] = useState(
     state.party.find((c) => c.hp > 0)?.id,
   );
@@ -379,15 +376,17 @@ function Combat({
               flex: 1,
             }}
           >
-            {smallBattle
-              ? heavy
-                ? "HEAVY · " + incoming
-                : intent.kind === "strike"
-                  ? incoming
-                  : intent.kind === "charge"
-                    ? "Charging · Heavy attack next"
-                    : intent.label
-              : `${heavy ? "HEAVY · " : ""}${intent.label}`}
+            {e.hp <= 0
+              ? "Defeated"
+              : smallBattle
+                ? heavy
+                  ? "HEAVY · " + incoming
+                  : intent.kind === "strike"
+                    ? incoming
+                    : intent.kind === "charge"
+                      ? "Charging · Heavy attack next"
+                      : intent.label
+                : `${heavy ? "HEAVY · " : ""}${intent.label}`}
           </Copy>
           {e.poison > 0 && (
             <Copy style={{ fontSize: 10, color: t.color.green }}>
@@ -406,7 +405,7 @@ function Combat({
               color: heavy ? t.color.red : t.color.text,
             }}
           >
-            {incoming}
+            {e.hp <= 0 ? "The chamber falls silent." : incoming}
           </Copy>
         )}
         <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
@@ -447,7 +446,22 @@ function Combat({
           size={smallBattle ? 112 : compactBattle ? 140 : 180}
           effect={state.effects.id}
           hit={state.effects.damage > 0 || state.effects.poisonDamage > 0}
+          dying={pending && e.hp <= 0}
         />
+        {pending && e.hp <= 0 && (
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0 }}>
+            <Copy
+              title
+              style={{
+                textAlign: "center",
+                color: t.color.goldLight,
+                fontSize: 27,
+              }}
+            >
+              Victory
+            </Copy>
+          </View>
+        )}
         {state.effects.damage > 0 && (
           <DamageNumber
             key={`hit-${state.effects.id}`}
@@ -526,7 +540,9 @@ function Combat({
                     }}
                   >
                     <Copy style={{ fontSize: 13, lineHeight: 17 }}>
-                      Return to town? The gate will close.
+                      Fall back to shelter? Standing allies lose{" "}
+                      {8 + state.floor} HP covering the retreat. The enemy still
+                      guards this crossing.
                     </Copy>
                     <View style={{ flexDirection: "row", gap: 8 }}>
                       <Button
@@ -538,11 +554,10 @@ function Combat({
                       />
                       <Button
                         small
-                        label="Return to town"
+                        label="Find shelter"
                         style={{ flex: 1 }}
                         onPress={() => {
-                          dispatch({ type: "RETURN" });
-                          router.replace("/town");
+                          dispatch({ type: "SEEK_SHELTER" });
                         }}
                       />
                     </View>
@@ -590,37 +605,43 @@ function Combat({
                               />
                             );
                           })
-                      : ["potion", "greater-potion", "antidote", "ether"].map(
-                          (id) => {
-                            const item = ITEMS.find((i) => i.id === id)!;
-                            const n =
-                              id === "potion"
-                                ? state.potions
-                                : state.inventory[id] || 0;
-                            const detail =
-                              id === "potion"
+                      : [
+                          "potion",
+                          "greater-potion",
+                          "antidote",
+                          "ether",
+                          "bandage",
+                        ].map((id) => {
+                          const item = ITEMS.find((i) => i.id === id)!;
+                          const n =
+                            id === "potion"
+                              ? state.potions
+                              : state.inventory[id] || 0;
+                          const detail =
+                            id === "bandage"
+                              ? "+90 HP to " + actor.name + " · cleanse poison"
+                              : id === "potion"
                                 ? "+65 HP to each ally"
                                 : id === "greater-potion"
                                   ? "+120 HP to each ally"
                                   : id === "ether"
                                     ? "+30 MP to each ally"
                                     : "Clear ailments · Ward for 2 turns";
-                            return (
-                              <Choice
-                                key={id}
-                                label={item.name}
-                                detail={detail}
-                                icon={item.icon}
-                                tone={id === "antidote" ? "green" : "blue"}
-                                trailing={"×" + n}
-                                disabled={pending || n < 1}
-                                onPress={() =>
-                                  handleBattle("item", undefined, id)
-                                }
-                              />
-                            );
-                          },
-                        )}
+                          return (
+                            <Choice
+                              key={id}
+                              label={item.name}
+                              detail={detail}
+                              icon={item.icon}
+                              tone={id === "antidote" ? "green" : "blue"}
+                              trailing={"×" + n}
+                              disabled={pending || n < 1}
+                              onPress={() =>
+                                handleBattle("item", undefined, id)
+                              }
+                            />
+                          );
+                        })}
                   </ScrollView>
                 )}
               </Panel>
@@ -826,60 +847,43 @@ function FloorEvent({
       style={{
         flex: 1,
         minHeight: 560,
-        justifyContent: "flex-end",
-        padding: 15,
-        gap: 10,
+        justifyContent: "flex-start",
         backgroundColor: t.color.bg,
       }}
     >
-      <Image
-        source={art[event.art as keyof typeof art]}
-        contentFit="cover"
-        style={{ width: "100%", aspectRatio: 1.2 }}
-      />
-      <Copy
-        title
-        style={{
-          fontSize: 28,
-          lineHeight: 32,
-          textAlign: "center",
-          color: t.color.goldLight,
-        }}
-      >
-        {event.title}
-      </Copy>
-      <Copy style={{ fontSize: 15, lineHeight: 21, textAlign: "center" }}>
-        {event.body}
-      </Copy>
-      {state.floor === 8 && state.encounterExamined && (
-        <Copy style={{ color: t.color.green, textAlign: "center" }}>
-          The blade can be removed safely.
-        </Copy>
-      )}
-      {event.choices.map((choice) => {
-        const examined =
-          state.floor === 8 &&
-          choice.id === "examine" &&
-          state.encounterExamined;
-        return (
-          <Choice
-            key={choice.id}
-            label={choice.title}
-            detail={choice.detail}
-            icon={choice.icon}
-            tone={choice.tone || "gold"}
-            disabled={examined}
-            onPress={() => {
-              feedback("reward");
-              dispatch({
-                type: "EVENT",
-                choice: choice.id,
-                roll: Math.random(),
-              });
-            }}
-          />
-        );
-      })}
+      <EventArt floor={state.floor} label={event.title} />
+      <StoryCard title={event.title} body={event.body}>
+        {state.floor === 8 && state.encounterExamined && (
+          <Copy style={{ color: t.color.green, textAlign: "center" }}>
+            The blade can be removed safely.
+          </Copy>
+        )}
+        <FieldSupplies />
+        {event.choices.map((choice) => {
+          const examined =
+            state.floor === 8 &&
+            choice.id === "examine" &&
+            state.encounterExamined;
+          return (
+            <Choice
+              key={choice.id}
+              label={choice.title}
+              detail={choice.detail}
+              icon={choice.icon}
+              tone={choice.tone || "gold"}
+              disabled={examined}
+              onPress={() => {
+                feedback("reward");
+                dispatch({
+                  type: "EVENT",
+                  choice: choice.id,
+                  roll: Math.random(),
+                });
+              }}
+            />
+          );
+        })}
+      </StoryCard>
     </View>
   );
 }
@@ -969,7 +973,8 @@ function Essence({
 }
 function Victory() {
   const { state, dispatch } = useGame();
-  const final = state.floor === 12;
+  const extracted = state.phase === "extraction";
+  const final = state.floor === 12 && !!state.ending;
   return (
     <View
       style={{
@@ -980,11 +985,6 @@ function Victory() {
         justifyContent: "flex-end",
       }}
     >
-      <View style={{ flexDirection: "row", justifyContent: "center" }}>
-        {state.party.map((c) => (
-          <Atlas key={c.id} sprite index={c.portrait} size={73} />
-        ))}
-      </View>
       <Reveal>
         <View style={{ alignItems: "center" }}>
           <Icon name={final ? "crown" : "trophy-outline"} size={39} />
@@ -992,17 +992,48 @@ function Victory() {
             title
             style={{ fontSize: 42, lineHeight: 52, color: t.color.goldLight }}
           >
-            {final ? "Legend" : "Victory"}
+            {extracted
+              ? "Homeward"
+              : final
+                ? "Legend"
+                : state.journey.portal
+                  ? "Portal Found"
+                  : "Battle Won"}
           </Copy>
           <Copy title style={{ fontSize: 16, color: t.color.gold }}>
-            {final ? state.ending : `Floor ${state.floor} conquered`}
+            {extracted
+              ? "The return gate is open"
+              : final
+                ? state.ending
+                : state.journey.portal
+                  ? `Floor ${state.floor} · the next ascent awaits`
+                  : "The team catches its breath"}
           </Copy>
         </View>
       </Reveal>
+      <TeamCondition />
+      {!extracted && !final && <RouteMap />}
+      <MissionTracker />
+      <Copy style={{ fontSize: 14, lineHeight: 20 }}>
+        {extracted
+          ? state.party.some((c) => c.hp <= 0)
+            ? "Thirty days inside. You gather the fallen, pack the spoils, and step toward Stormhold."
+            : "Thirty days inside. Your companions pack the spoils and check the final headcount. Stormhold is waiting."
+          : final
+            ? "The crown is yours. Find shelter while the last days pass, then take your story home."
+            : state.journey.portal
+              ? "The arch pulses blue. Look at the team’s condition: climb while you can, or let everyone recover in shelter."
+              : "The enemy falls silent. Your companions check wounds and count supplies. The next floor is beyond a portal you still need to find."}
+      </Copy>
       <Panel style={{ padding: 13, gap: 8 }}>
         {[
           ["Enemies defeated", state.runKills],
           ["Gold recovered", state.runGold],
+          ["Gold found before shares", state.runGross],
+          [
+            "Companion shares paid",
+            Object.values(state.runPaid).reduce((n, gold) => n + gold, 0),
+          ],
           [
             "Party standing",
             `${state.party.filter((c) => c.hp > 0).length}/${state.party.length}`,
@@ -1015,36 +1046,81 @@ function Victory() {
               ? ROUTES.find((r) => r.id === state.route)!.name
               : "Not chosen yet",
           ],
-        ].map(([label, n]) => (
-          <View
-            key={String(label)}
-            style={{ flexDirection: "row", justifyContent: "space-between" }}
-          >
-            <Copy style={{ fontSize: 12 }}>{label}</Copy>
-            <Copy style={{ fontSize: 12, color: t.color.goldLight }}>{n}</Copy>
-          </View>
-        ))}
+        ]
+          .filter(
+            (_, i) =>
+              (extracted || final || i < 4) &&
+              (i !== 7 || state.route !== null),
+          )
+          .map(([label, n]) => (
+            <View
+              key={String(label)}
+              style={{ flexDirection: "row", justifyContent: "space-between" }}
+            >
+              <Copy style={{ fontSize: 12 }}>{label}</Copy>
+              <Copy style={{ fontSize: 12, color: t.color.goldLight }}>
+                {n}
+              </Copy>
+            </View>
+          ))}
       </Panel>
-      <View style={{ flexDirection: "row", gap: 7 }}>
+      {extracted ? (
         <Button
           label="Return to town"
           tone="blue"
           small
-          style={{ flex: 1 }}
           onPress={() => {
             dispatch({ type: "RETURN" });
             router.replace("/town");
           }}
         />
-        <Button
-          label={final ? "Ascent complete" : "Ascend further"}
-          small
-          style={{ flex: 1 }}
-          disabled={final || state.food < 1}
-          onPress={() => dispatch({ type: "CONTINUE" })}
-        />
-      </View>
-      {state.food < 1 && !final && (
+      ) : (
+        <View style={{ gap: 9 }}>
+          {final && (
+            <Choice
+              label="Explore the summit passages"
+              detail="Search the final floor before your watch ends"
+              icon="map-outline"
+              tone="blue"
+              onPress={() => dispatch({ type: "SEARCH_PORTAL" })}
+            />
+          )}
+          {!final && !state.journey.portal && (
+            <Choice
+              label="Search for the upward portal"
+              detail="Choose passages; mark six crossings on your chart"
+              icon="map-outline"
+              tone="blue"
+              onPress={() => dispatch({ type: "SEARCH_PORTAL" })}
+            />
+          )}
+          {!final && state.journey.portal && (
+            <>
+              <Button
+                label="Step through the upward portal"
+                small
+                disabled={state.food < 1}
+                onPress={() => dispatch({ type: "CONTINUE" })}
+              />
+              <Button
+                label="Search more side passages"
+                small
+                tone="dark"
+                onPress={() => dispatch({ type: "SEARCH_PORTAL" })}
+              />
+            </>
+          )}
+          <Choice
+            label="Find a safe place to rest"
+            detail={`${daysRemaining(state)} days remain inside · choose how long to wait`}
+            icon="campfire"
+            tone="dark"
+            onPress={() => dispatch({ type: "SEEK_SHELTER" })}
+          />
+        </View>
+      )}
+      {!final && !extracted && <FieldSupplies />}
+      {state.food < 1 && !final && !extracted && (
         <Copy muted style={{ fontSize: 12, textAlign: "center" }}>
           No rations remain.
         </Copy>
@@ -1061,41 +1137,61 @@ export function ExpeditionScreen() {
   const background =
     state.phase === "event"
       ? art[event.art as keyof typeof art]
-      : state.phase === "victory"
-        ? art.cover
+      : state.phase === "victory" || state.phase === "extraction"
+        ? state.phase === "victory" && state.journey.portal
+          ? art.portal
+          : art.sanctuary
         : state.phase === "essence"
           ? art.treasure
           : art[floorEnvironment(state.floor, state.route) as keyof typeof art];
   const title =
-    state.phase === "combat" || state.phase === "arrival"
-      ? `Floor ${state.floor}`
-      : state.phase === "event"
-        ? "Mysterious Encounter"
-        : state.phase === "essence"
-          ? "A Guardian’s Essence"
-          : state.phase === "defeat"
-            ? "Expedition Lost"
-            : "Expedition Complete";
+    state.phase === "extraction"
+      ? "Expedition Complete"
+      : `Floor ${state.floor}`;
   return (
     <Guard expedition>
       <Frame
+        backdrop={
+          state.phase === "combat" ? (
+            <BattleBackdrop floor={state.floor} />
+          ) : undefined
+        }
         background={
-          state.phase === "event" || state.phase === "arrival"
+          [
+            "combat",
+            "event",
+            "arrival",
+            "mission",
+            "exploration",
+            "branch",
+            "camp",
+            "nag",
+          ].includes(state.phase)
             ? undefined
             : background
         }
         active="Labyrinth"
         title={title}
         subtitle={
-          state.route
-            ? ROUTES.find((r) => r.id === state.route)?.name
-            : undefined
+          daysRemaining(state) === 0
+            ? "Return gate open · thirty-day window complete"
+            : `${daysRemaining(state)} days left inside · ${6 - (state.journey.watches % 6)} watches until dawn`
         }
         back={false}
         expedition
         hideNav
       >
-        {state.phase === "arrival" ? (
+        {state.phase === "nag" ? (
+          <NagScene />
+        ) : state.phase === "mission" ? (
+          <MissionScene />
+        ) : state.phase === "exploration" ? (
+          <ExploreScene />
+        ) : state.phase === "branch" ? (
+          <BranchScene />
+        ) : state.phase === "camp" ? (
+          <CampScene />
+        ) : state.phase === "arrival" ? (
           <Arrival key={state.floor} />
         ) : state.phase === "combat" ? (
           <Combat feedback={feedback} />
@@ -1103,7 +1199,7 @@ export function ExpeditionScreen() {
           <FloorEvent feedback={feedback} />
         ) : state.phase === "essence" ? (
           <Essence feedback={feedback} />
-        ) : state.phase === "victory" ? (
+        ) : state.phase === "victory" || state.phase === "extraction" ? (
           <Victory />
         ) : state.phase === "defeat" ? (
           <View
@@ -1118,13 +1214,13 @@ export function ExpeditionScreen() {
             <Copy title style={{ fontSize: 28 }}>
               The darkness prevailed.
             </Copy>
-            <Copy>Gold, loot, levels, and learned skills are retained.</Copy>
+            <Copy>
+              Your party cannot keep fighting. Shelter the fallen and wait for
+              the return gate. The expedition’s spoils and skills are kept.
+            </Copy>
             <Button
-              label="Return to Stormhold"
-              onPress={() => {
-                dispatch({ type: "RETURN" });
-                router.replace("/town");
-              }}
+              label="Wait for the return gate"
+              onPress={() => dispatch({ type: "CAMP_REST", untilClose: true })}
             />
           </View>
         ) : (

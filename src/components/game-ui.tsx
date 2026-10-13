@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import Animated, {
   cubicBezier,
+  FadeInDown,
+  ReduceMotion,
   useReducedMotion,
 } from "react-native-reanimated";
 import {
@@ -16,11 +18,12 @@ import {
 import { Image, ImageSource } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, usePathname } from "expo-router";
+import { walkthroughTip } from "@/game/walkthrough";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme as t } from "@/theme";
 import { useGame } from "@/game/provider";
-import { BevelFrame, ChoiceGlyph } from "./mock-chrome";
+import { BevelFrame } from "./mock-chrome";
 import { MenuIcon, NativeNavbar, Surface } from "./native-chrome";
 export const art = {
   cover: require("../../assets/art/cover-modest.png"),
@@ -28,6 +31,8 @@ export const art = {
   tavern: require("../../assets/art/tavern-modest.png"),
   dungeon: require("../../assets/art/dungeon.png"),
   labyrinth: require("../../assets/art/labyrinth.png"),
+  portal: require("../../assets/art/portal-scene.png"),
+  sanctuary: require("../../assets/art/expedition-sanctuary.png"),
   relic: require("../../assets/art/relic.png"),
   treasure: require("../../assets/art/treasure.png"),
   portraits: require("../../assets/art/portraits-modest.png"),
@@ -50,8 +55,14 @@ export const art = {
   guildScene: require("../../assets/art/guild-scene.png"),
   forgeScene: require("../../assets/art/forge-scene.png"),
   journalChapter: require("../../assets/art/journal-chapter.png"),
+  recruitPortraits: require("../../assets/art/town-recruits-portraits.png"),
+  recruitSprites: require("../../assets/art/town-recruits-sprites.png"),
+  townItemIcons: require("../../assets/ui/town-item-icons.png"),
   menuIcons: require("../../assets/ui/menu-icons.png"),
   supplyIcons: require("../../assets/ui/supply-icons.png"),
+  floodedRoad: require("../../assets/story/flooded-road.png"),
+  scavenger: require("../../assets/story/bonegnaw-sprite.png"),
+  storyGlyphs: require("../../assets/ui/story-glyphs.png"),
   moreStudy: require("../../assets/art/more-study.png"),
 };
 export function Copy({
@@ -139,20 +150,43 @@ export function Atlas({
   sprite?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
-  const boss = sprite && index >= 6;
-  const cell = boss ? index - 6 : index;
+  if (sprite && index === 20)
+    return (
+      <View style={[{ width: size, height: size }, style]}>
+        <Image
+          source={art.scavenger}
+          contentFit="contain"
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+    );
+  const recruit = index >= 12;
+  const boss = !recruit && sprite && index >= 6;
+  const cell = recruit ? index - 12 : boss ? index - 6 : index;
+  const columns = recruit || boss ? 3 : 2;
+  const rows = recruit || boss ? 2 : 3;
   return (
     <View style={[{ width: size, height: size, overflow: "hidden" }, style]}>
       <Image
-        source={boss ? art.bosses : sprite ? art.sprites : art.portraits}
+        source={
+          recruit
+            ? sprite
+              ? art.recruitSprites
+              : art.recruitPortraits
+            : boss
+              ? art.bosses
+              : sprite
+                ? art.sprites
+                : art.portraits
+        }
         cachePolicy="memory-disk"
         contentFit="fill"
         style={{
           position: "absolute",
-          width: size * (boss ? 3 : 2),
-          height: size * (boss ? 2 : 3),
-          left: -(cell % (boss ? 3 : 2)) * size,
-          top: -Math.floor(cell / (boss ? 3 : 2)) * size,
+          width: size * columns,
+          height: size * rows,
+          left: -(cell % columns) * size,
+          top: -Math.floor(cell / columns) * size,
         }}
       />
     </View>
@@ -289,29 +323,14 @@ export function Choice({
         style={{
           minHeight: 56,
           paddingVertical: 8,
-          paddingLeft: 24,
+          paddingLeft: 20,
           paddingRight: 16,
           flexDirection: "row",
           alignItems: "center",
-          gap: 24,
+          gap: 16,
         }}
       >
-        {icon &&
-          (["sword", "magnify", "alert-outline"].includes(icon) ? (
-            <ChoiceGlyph name={icon} size={40} />
-          ) : (
-            <Icon
-              name={icon}
-              size={40}
-              color={
-                tone === "blue"
-                  ? "#b6e7ff"
-                  : tone === "red"
-                    ? "#ffab9e"
-                    : t.color.goldLight
-              }
-            />
-          ))}
+        {icon && <StoryGlyph name={icon} size={36} />}
         <View style={{ flex: 1 }}>
           <Copy
             style={{ fontFamily: t.font.body, fontSize: 16, lineHeight: 19 }}
@@ -333,6 +352,62 @@ export function Choice({
     </Pressable>
   );
 }
+export function StoryGlyph({
+  name,
+  size = 36,
+}: {
+  name: string;
+  size?: number;
+}) {
+  const index = (
+    {
+      "eye-outline": 0,
+      "shoe-print": 1,
+      "sword-cross": 2,
+      sword: 2,
+      tent: 3,
+      "ear-hearing": 4,
+      magnify: 6,
+      "account-group": 7,
+      "handshake-outline": 7,
+      "treasure-chest": 8,
+      shield: 9,
+      "shield-check": 9,
+      sack: 10,
+      campfire: 11,
+      water: 12,
+      "alert-outline": 13,
+      key: 14,
+      "map-outline": 15,
+    } as Record<string, number>
+  )[name];
+  if (index === undefined)
+    return (
+      <MaterialCommunityIcons
+        name={
+          name as React.ComponentProps<typeof MaterialCommunityIcons>["name"]
+        }
+        size={size}
+        color={t.color.goldLight}
+      />
+    );
+  return (
+    <View style={{ width: size, height: size, overflow: "hidden" }}>
+      <Image
+        source={art.storyGlyphs}
+        contentFit="fill"
+        style={{
+          position: "absolute",
+          width: size * 4,
+          height: size * 4,
+          left: -(index % 4) * size,
+          top: -Math.floor(index / 4) * size,
+        }}
+      />
+    </View>
+  );
+}
+
 export function Divider() {
   return (
     <View
@@ -393,6 +468,252 @@ export function Resources() {
     </View>
   );
 }
+export function ExpeditionHeader({
+  title,
+  subtitle,
+  onSettings,
+}: {
+  title: string;
+  subtitle?: string;
+  onSettings?: () => void;
+}) {
+  const { state, dispatch } = useGame();
+  const [open, setOpen] = useState(false);
+  const insets = useSafeAreaInsets();
+  const hero = state.party[0];
+  const alive = state.party.filter((c) => c.hp > 0);
+  const leader =
+    alive.find((c) => c.id === state.journey.leaderId)?.id || alive[0]?.id;
+  const canLead = [
+    "mission",
+    "arrival",
+    "exploration",
+    "branch",
+    "camp",
+    "event",
+    "victory",
+  ].includes(state.phase);
+  const fatigue = Math.round(
+    alive.reduce((n, c) => n + (c.exhaustion || 0), 0) /
+      Math.max(1, alive.length),
+  );
+  return (
+    <View
+      style={{
+        backgroundColor: "#06121d",
+        paddingTop: insets.top,
+        borderBottomWidth: 1,
+        borderColor: t.color.goldDim,
+      }}
+    >
+      <View
+        style={{
+          paddingHorizontal: 12,
+          paddingTop: 6,
+          paddingBottom: 8,
+          gap: 5,
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Copy
+            title
+            style={{
+              flex: 1,
+              color: t.color.goldLight,
+              fontSize: 27,
+              lineHeight: 30,
+            }}
+          >
+            {title}
+          </Copy>
+          {!!hero && (
+            <View style={{ width: 87, gap: 3 }}>
+              <Copy style={{ fontSize: 12, lineHeight: 14 }}>
+                HP {hero.hp}/{hero.maxHp}
+              </Copy>
+              <Bar value={hero.hp} max={hero.maxHp} color={t.color.red} />
+            </View>
+          )}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Expedition settings"
+            onPress={onSettings}
+            style={{ padding: 5 }}
+          >
+            <MenuIcon index={7} size={27} />
+          </Pressable>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <View
+              accessibilityLabel={`${state.journey.chart[state.floor]?.length || 0} of six route marks known`}
+              style={{ flexDirection: "row", alignItems: "center", width: 135 }}
+            >
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && (
+                    <View
+                      style={{
+                        width: 10,
+                        height: 2,
+                        backgroundColor: "#384d62",
+                      }}
+                    />
+                  )}
+                  <View
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor:
+                        i < (state.journey.chart[state.floor]?.length || 0)
+                          ? "#9be8ff"
+                          : "#61758a",
+                      backgroundColor:
+                        i < (state.journey.chart[state.floor]?.length || 0)
+                          ? "#1688ce"
+                          : "#31404f",
+                    }}
+                  />
+                </React.Fragment>
+              ))}
+              <Copy
+                style={{
+                  marginLeft: 7,
+                  color: t.color.gold,
+                  fontSize: 15,
+                  lineHeight: 16,
+                }}
+              >
+                ♜
+              </Copy>
+            </View>
+            {!!subtitle && (
+              <Copy muted style={{ fontSize: 11, lineHeight: 14 }}>
+                {subtitle}
+              </Copy>
+            )}
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              open ? "Hide party overview" : "Show party overview"
+            }
+            accessibilityState={{ expanded: open }}
+            onPress={() => setOpen((v) => !v)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 5,
+              borderWidth: 1,
+              borderColor: t.color.gold,
+              paddingHorizontal: 9,
+              paddingVertical: 5,
+              borderRadius: 5,
+              backgroundColor: "#32291c",
+            }}
+          >
+            <MenuIcon index={1} size={22} />
+            <Copy title style={{ fontSize: 21, lineHeight: 23 }}>
+              Party
+            </Copy>
+            <Copy style={{ color: t.color.gold }}>{open ? "⌃" : "⌄"}</Copy>
+          </Pressable>
+        </View>
+      </View>
+      {open && (
+        <Animated.View
+          entering={FadeInDown.duration(160).reduceMotion(ReduceMotion.System)}
+          style={{
+            borderTopWidth: 1,
+            borderColor: t.color.goldDim,
+            padding: 9,
+            gap: 8,
+          }}
+        >
+          <View style={{ flexDirection: "row", gap: 7 }}>
+            {state.party.map((c) => (
+              <View
+                key={c.id}
+                style={{
+                  flex: 1,
+                  alignItems: "center",
+                  gap: 3,
+                  opacity: c.hp ? 1 : 0.45,
+                }}
+              >
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Let ${c.name} lead the passages`}
+                  accessibilityState={{
+                    selected: c.id === leader,
+                    disabled: !canLead || c.hp <= 0,
+                  }}
+                  disabled={!canLead || c.hp <= 0}
+                  onPress={() => dispatch({ type: "LEAD", id: c.id })}
+                >
+                  <Atlas
+                    index={c.portrait}
+                    size={44}
+                    style={{
+                      borderWidth: 1,
+                      borderColor:
+                        c.id === leader ? t.color.goldLight : t.color.goldDim,
+                      borderRadius: 4,
+                    }}
+                  />
+                  {c.id === leader && (
+                    <View
+                      pointerEvents="none"
+                      style={{
+                        position: "absolute",
+                        right: -4,
+                        bottom: -3,
+                        borderRadius: 8,
+                        backgroundColor: "#071521",
+                      }}
+                    >
+                      <StoryGlyph name="map-outline" size={15} />
+                    </View>
+                  )}
+                </Pressable>
+                <Copy
+                  numberOfLines={1}
+                  style={{ fontSize: 12, lineHeight: 14 }}
+                >
+                  {c.name}
+                </Copy>
+                <View style={{ alignSelf: "stretch", gap: 3 }}>
+                  <Bar value={c.hp} max={c.maxHp} color={t.color.red} />
+                  <Bar
+                    value={c.exhaustion || 0}
+                    max={100}
+                    color={t.color.gold}
+                  />
+                </View>
+                <Copy style={{ fontSize: 10, lineHeight: 12 }}>
+                  {c.hp}/{c.maxHp} HP
+                </Copy>
+                <Copy muted style={{ fontSize: 10, lineHeight: 12 }}>
+                  {c.exhaustion || 0}% exhausted
+                </Copy>
+              </View>
+            ))}
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+            <StoryGlyph name="tent" size={21} />
+            <Copy style={{ fontSize: 12 }}>Team exhaustion {fatigue}%</Copy>
+            <View style={{ flex: 1 }}>
+              <Bar value={fatigue} max={100} color={t.color.gold} />
+            </View>
+          </View>
+        </Animated.View>
+      )}
+    </View>
+  );
+}
+
 export function Header({
   title,
   subtitle,
@@ -408,26 +729,22 @@ export function Header({
   expedition?: boolean;
   onSettings?: () => void;
 }) {
+  const inset = useSafeAreaInsets();
   if (expedition)
     return (
-      <View
-        style={[styles.header, { minHeight: 52, justifyContent: "center" }]}
-      >
-        <Copy title style={{ fontSize: 22, textAlign: "center", flex: 1 }}>
-          {title}
-        </Copy>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Expedition settings"
-          onPress={onSettings}
-          style={{ padding: 8, position: "absolute", right: 8 }}
-        >
-          <MenuIcon index={7} size={27} />
-        </Pressable>
-      </View>
+      <ExpeditionHeader
+        title={title}
+        subtitle={subtitle}
+        onSettings={onSettings}
+      />
     );
   return (
-    <View style={styles.header}>
+    <View
+      style={[
+        styles.header,
+        { paddingTop: 10 + inset.top, minHeight: 68 + inset.top },
+      ]}
+    >
       {portrait !== undefined ? (
         <Atlas
           index={portrait}
@@ -507,9 +824,106 @@ export function SettingsControls() {
     </View>
   );
 }
+function WalkthroughCard() {
+  const { state, dispatch } = useGame();
+  const pathname = usePathname();
+  const tip = walkthroughTip(state);
+  if (!tip) return null;
+  const minimized = state.walkthrough.minimized;
+  return (
+    <View
+      style={{
+        backgroundColor: "#0c1b29",
+        borderBottomWidth: 1,
+        borderColor: t.color.goldDim,
+        paddingHorizontal: 14,
+        paddingVertical: minimized ? 5 : 9,
+        gap: 5,
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            minimized ? "Expand walkthrough" : "Collapse walkthrough"
+          }
+          onPress={() => dispatch({ type: "WALKTHROUGH", kind: "toggle" })}
+          style={{
+            flex: 1,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 7,
+            minHeight: 30,
+          }}
+        >
+          <Icon name="compass-outline" size={18} color={t.color.gold} />
+          <Copy
+            style={{
+              fontFamily: t.font.bold,
+              color: t.color.goldLight,
+              fontSize: 15,
+              flex: 1,
+            }}
+          >
+            {tip.title}
+          </Copy>
+          <Icon name={minimized ? "chevron-down" : "chevron-up"} size={17} />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Skip walkthrough"
+          onPress={() => dispatch({ type: "WALKTHROUGH", kind: "skip" })}
+          hitSlop={5}
+          style={{ padding: 5, minHeight: 30, justifyContent: "center" }}
+        >
+          <Copy muted style={{ fontSize: 12 }}>
+            Skip
+          </Copy>
+        </Pressable>
+      </View>
+      {!minimized && (
+        <>
+          <Copy style={{ fontSize: 13, lineHeight: 17 }}>{tip.body}</Copy>
+          {(tip.acknowledge ||
+            (tip.destination && pathname !== tip.destination)) && (
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 3 }}>
+              {tip.destination && pathname !== tip.destination && (
+                <View style={{ flex: 1 }}>
+                  <Button
+                    label={tip.button!}
+                    small
+                    tone="blue"
+                    onPress={() => router.push(tip.destination!)}
+                  />
+                </View>
+              )}
+              {tip.acknowledge && (
+                <View style={{ flex: 1 }}>
+                  <Button
+                    label={
+                      tip.id === "complete" || tip.id === "return"
+                        ? "Finish walkthrough"
+                        : "Got it"
+                    }
+                    small
+                    tone="dark"
+                    onPress={() =>
+                      dispatch({ type: "WALKTHROUGH", kind: "ack", id: tip.id })
+                    }
+                  />
+                </View>
+              )}
+            </View>
+          )}
+        </>
+      )}
+    </View>
+  );
+}
 export function Frame({
   children,
   background,
+  backdrop,
   active,
   title,
   subtitle,
@@ -522,6 +936,7 @@ export function Frame({
 }: {
   children: React.ReactNode;
   background?: ImageSource;
+  backdrop?: React.ReactNode;
   active?: string;
   title?: string;
   subtitle?: string;
@@ -535,9 +950,16 @@ export function Frame({
   const [settings, setSettings] = useState(false);
   const inset = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { state, dispatch, saveError, retrySave } = useGame();
+  const {
+    state,
+    dispatch,
+    saveError,
+    retrySave,
+    pendingTownAction,
+    confirmTownAction,
+  } = useGame();
   const showNotice =
-    /^(You need|Not enough|Select |Choose |You cannot|You do not|No |This contract|The merchant asks|A full training|Your signing offer|Make room|Rest your party)/i.test(
+    /^(You need|Not enough|Select |Choose |You cannot|You do not|No |This contract|The merchant asks|A full training|Your companions|Your party holds|Training costs|Find the upward portal|The return gate is sealed|Make room|Rest your party)/i.test(
       state.message,
     );
   return (
@@ -557,8 +979,12 @@ export function Frame({
         style={[
           styles.frame,
           {
-            paddingTop: fullBleed ? 0 : inset.top,
-            paddingBottom: fullBleed ? 0 : inset.bottom,
+            paddingTop: fullBleed || title ? 0 : inset.top,
+            paddingBottom:
+              fullBleed ||
+              (active && !hideNav && !expedition && state.phase === "town")
+                ? 0
+                : inset.bottom,
             maxWidth: fullBleed && width <= 600 ? undefined : 460,
           },
         ]}
@@ -570,6 +996,7 @@ export function Frame({
             style={StyleSheet.absoluteFill}
           />
         )}
+        {backdrop}
         <LinearGradient
           pointerEvents="none"
           colors={[
@@ -593,6 +1020,7 @@ export function Frame({
             onSettings={() => setSettings(true)}
           />
         )}
+        {title && !fullBleed && <WalkthroughCard />}
         <View style={{ flex: 1 }}>
           {scroll ? (
             <ScrollView
@@ -634,6 +1062,44 @@ export function Frame({
           </Pressable>
         )}
         {!hideNav && !expedition && active && <Nav active={active} />}
+        {pendingTownAction && (
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                zIndex: 30,
+                backgroundColor: "rgba(3,8,14,.92)",
+                paddingHorizontal: 22,
+                justifyContent: "center",
+              },
+            ]}
+          >
+            <Panel style={{ gap: 15, borderColor: t.color.goldDim }}>
+              <Copy title style={{ textAlign: "center" }}>
+                Skip this opening?
+              </Copy>
+              <Copy>
+                The labyrinth is open today.{" "}
+                {pendingTownAction.type === "TRAIN"
+                  ? "Training"
+                  : pendingTownAction.type === "WORK"
+                    ? "Working"
+                    : "Resting"}{" "}
+                takes a day. The next opening is in 30 days.
+              </Copy>
+              <Button
+                label="Keep the opening"
+                tone="blue"
+                onPress={() => confirmTownAction(false)}
+              />
+              <Button
+                label="Skip opening and continue"
+                tone="dark"
+                onPress={() => confirmTownAction(true)}
+              />
+            </Panel>
+          </View>
+        )}
         {settings && (
           <View
             style={[

@@ -27,7 +27,12 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  walkthrough: load("src/game/walkthrough.ts"),
+  maps: load("src/game/floor-map.ts"),
+  fatigue: load("src/game/exhaustion.ts"),
   e: load("src/game/engine.ts"),
   w: load("src/game/world.ts"),
+  town: load("src/game/town-content.ts"),
   story: load("src/game/story.ts"),
+  exploration: load("src/game/exploration.ts"),
 };

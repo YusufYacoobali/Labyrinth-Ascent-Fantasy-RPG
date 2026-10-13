@@ -14,7 +14,8 @@ import {
   Panel,
 } from "@/components/game-ui";
 import { RACES, resist, SKILLS } from "@/game/engine";
-import { ITEMS } from "@/game/world";
+import { RECIPES } from "@/game/town-content";
+import { ITEMS, GEAR_KINDS } from "@/game/world";
 import { useGame } from "@/game/provider";
 import { Guard } from "./town";
 import {
@@ -23,8 +24,8 @@ import {
   Ornament,
   ItemGlyph,
 } from "@/components/native-chrome";
-import { Image } from "expo-image";
 import { theme as t } from "@/theme";
+import { SceneImage } from "@/components/scene-motion";
 export function PartyScreen() {
   const { state, dispatch } = useGame();
   const [selected, setSelected] = useState(state.party[0]?.id);
@@ -43,7 +44,7 @@ export function PartyScreen() {
   const skills = SKILLS.filter((s) => catalog || c.skills.includes(s.name));
   const gear = ITEMS.filter(
     (i) =>
-      ["weapon", "armor", "charm"].includes(i.kind) &&
+      (GEAR_KINDS as readonly string[]).includes(i.kind) &&
       ((state.inventory[i.id] || 0) > 0 || c.equipment.includes(i.id)),
   );
   return (
@@ -60,6 +61,7 @@ export function PartyScreen() {
                 onPress={() => setSelected(p.id)}
                 style={{
                   flex: 1,
+                  alignItems: "center",
                   borderWidth: 1,
                   borderColor: p.id === c.id ? "#92d4ff" : t.color.goldDim,
                   borderRadius: 5,
@@ -144,6 +146,14 @@ export function PartyScreen() {
                     ["shield", "DEF", c.def],
                     ["run-fast", "SPD", c.speed],
                     ["creation", "MP", `${c.mp}/${c.maxMp}`],
+                    [
+                      "star-four-points",
+                      "CRIT",
+                      Math.round(
+                        Math.min(0.26, 0.06 + Math.max(0, c.speed) * 0.005) *
+                          100,
+                      ) + "%",
+                    ],
                   ].map(([icon, label, n]) => (
                     <View
                       key={String(label)}
@@ -164,11 +174,11 @@ export function PartyScreen() {
                     </View>
                   ))}
                 </View>
-                <View style={{ width: 111, gap: 8 }}>
+                <View style={{ width: width < 370 ? 144 : 164, gap: 8 }}>
                   <View
                     style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}
                   >
-                    {["weapon", "armor", "charm"].map((kind) => {
+                    {GEAR_KINDS.map((kind) => {
                       const item = ITEMS.find(
                         (i) => c.equipment.includes(i.id) && i.kind === kind,
                       );
@@ -183,8 +193,8 @@ export function PartyScreen() {
                         >
                           <Panel
                             style={{
-                              width: 51,
-                              height: 67,
+                              width: width < 370 ? 68 : 78,
+                              height: 88,
                               padding: 5,
                               alignItems: "center",
                               justifyContent: "center",
@@ -194,20 +204,38 @@ export function PartyScreen() {
                                 : t.color.line,
                             }}
                           >
-                            <Icon
-                              name={
-                                item?.icon ||
-                                {
-                                  weapon: "sword",
-                                  armor: "tshirt-crew",
-                                  charm: "ring",
-                                }[kind]!
-                              }
-                              size={27}
-                              color={item ? t.color.goldLight : t.color.muted}
-                            />
-                            <Copy style={{ fontSize: 9, lineHeight: 12 }}>
-                              {item ? "Equipped" : "Starter"}
+                            {item ? (
+                              <ItemGlyph id={item.id} size={49} />
+                            ) : (
+                              <Icon
+                                name={
+                                  {
+                                    weapon: "sword",
+                                    armor: "tshirt-crew",
+                                    charm: "ring",
+                                    helmet: "helmet",
+                                    boots: "shoe-print",
+                                  }[kind]!
+                                }
+                                size={43}
+                                color={t.color.muted}
+                              />
+                            )}
+                            <Copy
+                              numberOfLines={1}
+                              style={{ fontSize: 11, lineHeight: 14 }}
+                            >
+                              {item
+                                ? item.atk
+                                  ? `ATK +${item.atk}`
+                                  : item.def
+                                    ? `DEF +${item.def}`
+                                    : item.speed
+                                      ? `SPD +${item.speed}`
+                                      : item.resist
+                                        ? `${item.resist.amount}% ${item.resist.element}`
+                                        : item.name
+                                : "Starter"}
                             </Copy>
                           </Panel>
                         </Pressable>
@@ -215,14 +243,14 @@ export function PartyScreen() {
                     })}
                     <Panel
                       style={{
-                        width: 51,
-                        height: 67,
+                        width: width < 370 ? 68 : 78,
+                        height: 88,
                         padding: 5,
                         alignItems: "center",
                         justifyContent: "center",
                       }}
                     >
-                      <Icon name="anvil" size={25} />
+                      <Icon name="anvil" size={39} />
                       <Copy style={{ fontSize: 10 }}>+{c.gear}</Copy>
                     </Panel>
                   </View>
@@ -230,12 +258,15 @@ export function PartyScreen() {
                     label="Auto equip"
                     small
                     onPress={() => {
-                      for (const kind of ["weapon", "armor", "charm"]) {
+                      for (const kind of GEAR_KINDS) {
                         const score = (id: string) => {
                           const i = ITEMS.find((x) => x.id === id)!;
                           return (
                             (i.atk || 0) +
-                            (i.def || 0) +
+                            (i.def || 0) * 1.2 +
+                            (i.hp || 0) / 8 +
+                            (i.mp || 0) / 6 +
+                            (i.speed || 0) * 0.7 +
                             (i.resist?.amount || 0) / 3
                           );
                         };
@@ -311,7 +342,7 @@ export function PartyScreen() {
                           gap: 12,
                         }}
                       >
-                        <Icon name={item.icon} size={35} />
+                        <ItemGlyph id={item.id} size={57} />
                         <View style={{ flex: 1 }}>
                           <Copy title style={{ fontSize: 17 }}>
                             {item.name}
@@ -435,6 +466,11 @@ export function PartyScreen() {
               <Copy title style={{ marginTop: 8 }}>
                 {c.name} of Stormhold
               </Copy>
+              {c.id !== "hero" && (
+                <Copy style={{ fontSize: 13, color: t.color.gold }}>
+                  Agreed share: {state.contracts[c.id] || 0}% of gold finds
+                </Copy>
+              )}
               <Divider />
               <Copy>{RACES.find((r) => r.id === c.race)?.description}</Copy>
               <Divider />
@@ -461,7 +497,7 @@ export function PartyScreen() {
                     }[c.trait] || "A trusted companion’s true strength."
                   : "Build trust at the tavern, or defeat a guardian together to discover this companion’s true strength."}
               </Copy>
-              {c.job === "Mage" && (
+              {c.job === "Mage" && c.id === "hero" && (
                 <Copy style={{ color: t.color.blue, marginTop: 14 }}>
                   A rare awakening. The 5% human magic roll succeeded.
                 </Copy>
@@ -548,7 +584,7 @@ export function BlacksmithScreen() {
             ))}
           </View>
           <View style={{ flex: 1, gap: 8 }}>
-            <Image
+            <SceneImage
               source={art.forgeScene}
               contentFit="fill"
               style={{ width: "100%", aspectRatio: 1.5, borderRadius: 4 }}
@@ -631,51 +667,76 @@ export function BlacksmithScreen() {
               </Surface>
             ) : tab === "Craft" ? (
               <>
-                {ITEMS.filter((i) =>
-                  ["iron-blade", "leather"].includes(i.id),
-                ).map((item) => (
-                  <Surface key={item.id} style={{ padding: 12, gap: 8 }}>
-                    <ItemGlyph id={item.id} size={43} />
-                    <Copy title style={{ fontSize: 19 }}>
-                      {item.name}
-                    </Copy>
-                    <Copy>{item.description}</Copy>
-                    <Copy muted style={{ fontSize: 12 }}>
-                      3 monster cores · 90 gold
-                    </Copy>
-                    <Copy style={{ fontSize: 12, color: t.color.gold }}>
-                      Cores {state.inventory["beast-core"] || 0}/3 · Owned{" "}
-                      {state.inventory[item.id] || 0}
-                    </Copy>
-                    <Button
-                      label="Craft"
-                      small
-                      disabled={
-                        state.gold < 90 ||
-                        (state.inventory["beast-core"] || 0) < 3
-                      }
-                      onPress={() =>
-                        dispatch({
-                          type: "CRAFT",
-                          id: item.id as "iron-blade" | "leather",
-                        })
-                      }
-                    />
-                    <Button
-                      label={"Equip on " + c.name}
-                      small
-                      tone="blue"
-                      disabled={!(state.inventory[item.id] || 0)}
-                      onPress={() =>
-                        dispatch({
-                          type: "EQUIP",
-                          character: c.id,
-                          item: item.id,
-                        })
-                      }
-                    />
-                  </Surface>
-                ))}
+                {RECIPES.map((recipe) => {
+                  const item = ITEMS.find((i) => i.id === recipe.id)!;
+                  return (
+                    <Surface key={item.id} style={{ padding: 12, gap: 8 }}>
+                      <ItemGlyph id={item.id} size={43} />
+                      <Copy title style={{ fontSize: 19 }}>
+                        {item.name}
+                      </Copy>
+                      <Copy>{item.description}</Copy>
+                      <Copy muted style={{ fontSize: 12 }}>
+                        {recipe.materials
+                          .map(
+                            (m) =>
+                              m.quantity +
+                              " " +
+                              ITEMS.find((i) => i.id === m.id)!.name,
+                          )
+                          .join(" · ")}{" "}
+                        · {recipe.gold} gold
+                      </Copy>
+                      <Copy style={{ fontSize: 12, color: t.color.gold }}>
+                        {recipe.materials
+                          .map(
+                            (m) =>
+                              (state.inventory[m.id] || 0) +
+                              "/" +
+                              m.quantity +
+                              " " +
+                              ITEMS.find((i) => i.id === m.id)!.name,
+                          )
+                          .join(" · ")}{" "}
+                        · Owned {state.inventory[item.id] || 0}
+                      </Copy>
+                      <Button
+                        label={
+                          state.bestFloor < (recipe.floor || 0)
+                            ? "Unlock at Floor " + recipe.floor
+                            : "Craft"
+                        }
+                        small
+                        disabled={
+                          state.gold < recipe.gold ||
+                          state.bestFloor < (recipe.floor || 0) ||
+                          recipe.materials.some(
+                            (m) => (state.inventory[m.id] || 0) < m.quantity,
+                          )
+                        }
+                        onPress={() =>
+                          dispatch({
+                            type: "CRAFT",
+                            id: item.id,
+                          })
+                        }
+                      />
+                      <Button
+                        label={"Equip on " + c.name}
+                        small
+                        tone="blue"
+                        disabled={!(state.inventory[item.id] || 0)}
+                        onPress={() =>
+                          dispatch({
+                            type: "EQUIP",
+                            character: c.id,
+                            item: item.id,
+                          })
+                        }
+                      />
+                    </Surface>
+                  );
+                })}
               </>
             ) : (
               SKILLS.filter(

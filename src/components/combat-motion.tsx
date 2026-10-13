@@ -55,15 +55,31 @@ export function BattleSprite({
   size = 170,
   effect = 0,
   hit = false,
+  dying = false,
 }: {
   index: number;
   size?: number;
   effect?: number;
   hit?: boolean;
+  dying?: boolean;
 }) {
   const reduced = useReducedMotion();
   const x = useSharedValue(0);
   const flash = useSharedValue(1);
+  const death = useSharedValue(0);
+  useEffect(() => {
+    death.set(
+      dying
+        ? withDelay(
+            reduced ? 0 : 180,
+            withTiming(1, {
+              duration: reduced ? 150 : 550,
+              easing: Easing.bezier(0.23, 1, 0.32, 1),
+            }),
+          )
+        : 0,
+    );
+  }, [dying, death, reduced]);
   useEffect(() => {
     if (!effect || !hit) return;
     flash.set(
@@ -86,8 +102,13 @@ export function BattleSprite({
       );
   }, [effect, hit, reduced, x, flash]);
   const style = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.get() }],
-    opacity: flash.get(),
+    transform: [
+      { translateX: x.get() },
+      { translateY: reduced ? 0 : death.get() * 24 },
+      { rotate: `${reduced ? 0 : death.get() * -18}deg` },
+      { scale: reduced ? 1 : 1 - death.get() * 0.2 },
+    ],
+    opacity: flash.get() * (1 - death.get()),
   }));
   return (
     <Animated.View style={style}>

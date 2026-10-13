@@ -1,3 +1,11 @@
+import { generateFloor, seedFor } from "./floor-map";
+import {
+  advanceWalkthrough,
+  newWalkthrough,
+  walkthroughTip,
+  type Walkthrough,
+} from "./walkthrough";
+import { tire, maybeComplain, exertForAction } from "./exhaustion";
 import { resolveBattle } from "./battle";
 import {
   Element,
@@ -10,8 +18,27 @@ import {
   ROUTES,
   Route,
   Vendor,
+  GEAR_KINDS,
 } from "./world";
+import { RECRUITS, RECIPES, type Recruit } from "./town-content";
 import { ARRIVALS } from "./story";
+import {
+  newJourney,
+  resolveExploration,
+  spendWatches,
+  daysRemaining,
+  MISSIONS,
+  missionProgress,
+  chartRumour,
+  currentRoom,
+  backRoom,
+  moveRoom,
+  enterMappedRoom,
+  type Journey,
+  type Mission,
+  type Direction,
+} from "./exploration";
+export { daysRemaining, MISSIONS, missionProgress } from "./exploration";
 export { SKILLS, resist } from "./combat-data";
 export { battleIntent, battleForecast } from "./battle";
 export type Race = "barbarian" | "human" | "elf" | "dwarf";
@@ -24,7 +51,13 @@ export type Phase =
   | "essence"
   | "victory"
   | "defeat"
-  | "event";
+  | "event"
+  | "mission"
+  | "exploration"
+  | "branch"
+  | "camp"
+  | "extraction"
+  | "nag";
 export type Skill =
   | "Arcane Bolt"
   | "Shield Bash"
@@ -57,6 +90,7 @@ export interface Character {
   def: number;
   speed: number;
   gear: number;
+  exhaustion: number;
   skills: Skill[];
   trait: string;
   traitRevealed: boolean;
@@ -116,6 +150,13 @@ export interface Game {
   kills: number;
   runKills: number;
   runGold: number;
+  runGross: number;
+  contracts: Record<string, number>;
+  runContracts: Record<string, number>;
+  runPaid: Record<string, number>;
+  knownFloors: number[];
+  heardRumours: string[];
+  journey: Journey;
   enemy: Enemy | null;
   turn: number;
   momentum: number;
@@ -140,6 +181,7 @@ export interface Game {
   ending: string;
   effects: BattleEffect;
   guideSeen: boolean;
+  walkthrough: Walkthrough;
   introSeen: boolean;
   sound: boolean;
   haptics: boolean;
@@ -148,6 +190,8 @@ export interface Game {
   arrivalOutcome: string;
   arrivalEffect: string;
   arrivalScouted: boolean;
+  usedSupplies: string[];
+  townProgress: { signed: string[]; trained: number; crafted: number };
 }
 export const RACES = [
   {
@@ -209,54 +253,7 @@ const raceTraits: Record<Race, string> = {
   elf: "Moon Sight",
   dwarf: "Iron Will",
 };
-export const RECRUITS = [
-  {
-    id: "kael",
-    name: "Kael",
-    race: "human" as Race,
-    price: 500,
-    tagline: "Steady. Reliable.",
-    trait: "Vanguard",
-    traitDetail: "Standing with the party reduces physical damage by 15%.",
-    motive: "honor",
-    quote:
-      "I don’t need a hero. I need someone who won’t leave a companion behind.",
-  },
-  {
-    id: "lyria",
-    name: "Lyria",
-    race: "elf" as Race,
-    price: 600,
-    tagline: "Curious. Brilliant.",
-    trait: "Venom Savant",
-    traitDetail: "Poison inflicted by the party deals 50% more damage.",
-    motive: "discovery",
-    quote:
-      "The labyrinth remembers a world older than ours. I want to know its name.",
-  },
-  {
-    id: "bram",
-    name: "Bram",
-    race: "dwarf" as Race,
-    price: 500,
-    tagline: "Loud. Loyal.",
-    trait: "Stoneblood",
-    traitDetail: "Born with 25% resistance to venom damage.",
-    motive: "honor",
-    quote: "Fair pay. Good company. And no one takes my share of the ale.",
-  },
-  {
-    id: "ragnar",
-    name: "Ragnar",
-    race: "barbarian" as Race,
-    price: 700,
-    tagline: "Fearless. Unbroken.",
-    trait: "Reckless Heart",
-    traitDetail: "Below 40% HP, strikes deal 35% more damage.",
-    motive: "glory",
-    quote: "Gold buys supper. Glory buys a name that death can’t take.",
-  },
-];
+export { RECRUITS } from "./town-content";
 export function makeCharacter(
   race: Race,
   id: string,
@@ -264,25 +261,33 @@ export function makeCharacter(
   roll = 1,
 ): Character {
   const r = RACES.find((x) => x.id === race)!;
-  const mage = race === "human" && roll < 0.05;
   const recruit = RECRUITS.find((x) => x.id === id);
-  return {
-    id,
-    name,
-    race,
-    job: mage ? "Mage" : r.job,
-    portrait: r.portrait,
-    level: 1,
-    xp: 0,
+  const mage = (race === "human" && roll < 0.05) || recruit?.job === "Mage";
+  const stats = recruit?.stats || {
     hp: r.hp,
-    maxHp: r.hp,
     mp: mage ? 95 : r.mp,
-    maxMp: mage ? 95 : r.mp,
     atk: mage ? 34 : r.atk,
     def: r.def,
     speed: r.speed,
+  };
+  const character: Character = {
+    id,
+    name,
+    race,
+    job: recruit?.job || (mage ? "Mage" : r.job),
+    portrait: recruit?.portrait ?? r.portrait,
+    level: 1,
+    xp: 0,
+    hp: stats.hp,
+    maxHp: stats.hp,
+    mp: stats.mp,
+    maxMp: stats.mp,
+    atk: stats.atk,
+    def: stats.def,
+    speed: stats.speed,
     gear: 0,
-    skills: [
+    exhaustion: 0,
+    skills: recruit?.skills || [
       mage
         ? "Arcane Bolt"
         : race === "barbarian"
@@ -297,7 +302,13 @@ export function makeCharacter(
     equipment: [],
     cooldowns: {},
   };
+  const level = recruit?.level || 1;
+  return level > 1
+    ? gainXp(character, (70 * level * (level - 1)) / 2)
+    : character;
 }
+export const recruitAvailable = (s: Game, recruit: Recruit) =>
+  s.bestFloor >= (recruit.floor || 0);
 const emptyEffects = (): BattleEffect => ({
   id: 0,
   damage: 0,
@@ -326,6 +337,13 @@ export function initialGame(): Game {
     kills: 0,
     runKills: 0,
     runGold: 0,
+    runGross: 0,
+    contracts: {},
+    runContracts: {},
+    runPaid: {},
+    knownFloors: [],
+    heardRumours: [],
+    journey: newJourney(),
     enemy: null,
     turn: 1,
     momentum: 0,
@@ -350,6 +368,7 @@ export function initialGame(): Game {
     ending: "",
     effects: emptyEffects(),
     guideSeen: false,
+    walkthrough: newWalkthrough(),
     introSeen: false,
     sound: true,
     haptics: true,
@@ -358,10 +377,22 @@ export function initialGame(): Game {
     arrivalOutcome: "",
     arrivalEffect: "",
     arrivalScouted: false,
+    usedSupplies: [],
+    townProgress: { signed: [], trained: 0, crafted: 0 },
   };
 }
 export function normalizeSave(raw: Game): Game {
   const s = { ...initialGame(), ...raw };
+  // Existing journeys do not suddenly acquire a first-play tutorial.
+  s.walkthrough = raw.walkthrough
+    ? {
+        active: raw.walkthrough.active === true,
+        minimized: raw.walkthrough.minimized === true,
+        done: Array.isArray(raw.walkthrough.done)
+          ? raw.walkthrough.done.filter((id) => typeof id === "string")
+          : [],
+      }
+    : newWalkthrough();
   s.introSeen = raw.introSeen ?? raw.started;
   s.party = (raw.party || []).map((c) => ({
     ...makeCharacter(c.race, c.id, c.name),
@@ -377,6 +408,133 @@ export function normalizeSave(raw: Game): Game {
     ailments: c.ailments || { poison: 0, paralysis: 0 },
     equipment: c.equipment || [],
   }));
+  s.usedSupplies = raw.usedSupplies || [];
+  s.contracts = Object.fromEntries(
+    s.party
+      .concat(s.reserve)
+      .filter((c) => RECRUITS.some((r) => r.id === c.id))
+      .map((c) => [
+        c.id,
+        validShare(raw.contracts?.[c.id])
+          ? raw.contracts[c.id]
+          : recruitShare(
+              s,
+              RECRUITS.find((r) => r.id === c.id)!,
+            ),
+      ]),
+  );
+  s.runContracts =
+    raw.runContracts ||
+    (s.phase === "town"
+      ? {}
+      : Object.fromEntries(
+          s.party
+            .filter((c) => s.contracts[c.id] !== undefined)
+            .map((c) => [c.id, s.contracts[c.id]]),
+        ));
+  s.runPaid = raw.runPaid || {};
+  s.runGross = raw.runGross ?? s.runGold;
+  s.knownFloors = [
+    ...new Set([
+      ...(raw.knownFloors || []),
+      ...FLOORS.filter((f) => f.id <= s.bestFloor).map((f) => f.id),
+    ]),
+  ];
+  s.heardRumours = raw.heardRumours || [];
+  s.journey = { ...newJourney(), ...raw.journey };
+  // Old route notes reveal the corresponding graph rooms without inventing visits.
+  for (const [key, chart] of Object.entries(s.journey.chart)) {
+    const floor = Number(key);
+    if (!Number.isInteger(floor) || floor < 1 || floor > 12 || !chart.length)
+      continue;
+    const map = s.journey.maps[floor] || generateFloor(floor, s.journey.seed);
+    s.journey.maps = {
+      ...s.journey.maps,
+      [floor]: {
+        ...map,
+        known: [
+          ...new Set([
+            ...map.known,
+            ...Array.from(
+              { length: Math.min(6, chart.length) + 1 },
+              (_, i) => `cross-${i}`,
+            ).filter((id) => !map.explored.includes(id)),
+          ]),
+        ],
+      },
+    };
+  }
+  if (!raw.journey?.reachedPortals && s.phase !== "town")
+    s.journey.reachedPortals = Array.from(
+      { length: Math.max(0, s.floor - 1) },
+      (_, i) => i + 1,
+    );
+  if (s.phase !== "town" && s.journey.startDay === null)
+    s.journey.startDay = s.day;
+  s.journey.watches = Math.min(180, Math.max(0, s.journey.watches));
+  s.journey.step = Math.min(6, Math.max(0, s.journey.step));
+  if (!raw.journey?.maps?.[s.floor]) {
+    const map =
+      s.journey.maps[s.floor] || generateFloor(s.floor, s.journey.seed);
+    let room = ["exploration", "victory", "branch"].includes(s.phase)
+      ? `cross-${s.journey.step}`
+      : s.phase === "event"
+        ? "aftermath"
+        : "entrance";
+    if (s.phase === "victory" && !s.journey.portal && s.journey.step === 0)
+      room = "aftermath";
+    if (s.phase === "branch") s.phase = "exploration";
+    if (s.phase === "camp") {
+      const resume = s.journey.campReturn;
+      const parent =
+        resume === "arrival" || resume === "combat"
+          ? "entrance"
+          : resume === "event" ||
+              (resume === "victory" &&
+                !s.journey.portal &&
+                s.journey.step === 0)
+            ? "aftermath"
+            : `cross-${s.journey.step}`;
+      room = `camp-${parent}`;
+    }
+    s.journey.room = room;
+    s.journey.maps = {
+      ...s.journey.maps,
+      [s.floor]: { ...map, explored: [...new Set([...map.explored, room])] },
+    };
+    if (s.phase !== "town" && s.journey.portal)
+      s.journey.reachedPortals = [
+        ...new Set([...s.journey.reachedPortals, s.floor]),
+      ];
+  }
+  s.party = s.party.map((c) => ({
+    ...c,
+    exhaustion: Math.min(100, Math.max(0, c.exhaustion || 0)),
+  }));
+  s.rapport = Object.fromEntries(
+    Object.entries(s.rapport).map(([id, rp]) => [
+      id,
+      {
+        ...rp,
+        offer: validShare(rp.offer)
+          ? rp.offer
+          : RECRUITS.find((r) => r.id === id)?.share || 14,
+      },
+    ]),
+  );
+  s.townProgress = {
+    signed: [
+      ...new Set([
+        ...(raw.townProgress?.signed || []),
+        ...s.party
+          .concat(s.reserve)
+          .filter((c) => c.id !== "hero")
+          .map((c) => c.id),
+      ]),
+    ],
+    trained: raw.townProgress?.trained || 0,
+    crafted: raw.townProgress?.crafted || 0,
+  };
   s.momentum = Math.max(0, Math.min(3, s.momentum || 0));
   s.effects = { ...emptyEffects(), ...s.effects };
   if (s.enemy)
@@ -385,6 +543,43 @@ export function normalizeSave(raw: Game): Game {
 }
 export const daysToGate = (day: number) => (30 - (day % 30)) % 30;
 export const gateOpen = (day: number) => day % 30 === 0;
+const validShare = (n: number | undefined): n is number =>
+  typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= 35;
+export const recruitShare = (
+  s: Game,
+  r: Recruit,
+  trust = s.rapport[r.id]?.trust || 0,
+) =>
+  Math.max(
+    6,
+    r.share - trust * 2 - Math.min(3, Math.floor(s.faction.guild / 10)),
+  );
+export const TOWN_RUMOURS = [
+  {
+    id: "camp-watch",
+    title: "Listen to the scout",
+    speaker: "A scarred scout",
+    floor: 1,
+    required: 0,
+    body: "Goblin voices carry down the left passage. At the first camp, strangers may be plunderers. Keep a watch.",
+  },
+  {
+    id: "stag-checkpoint",
+    title: "Ask about the White Stag",
+    speaker: "A caravan guard",
+    floor: 3,
+    required: 1,
+    body: "The White Stag holds a checkpoint on the third floor. Rescue their scouts and they may show you a safer road.",
+  },
+  {
+    id: "fourfold-gate",
+    title: "Listen to the route keeper",
+    speaker: "An old surveyor",
+    floor: 4,
+    required: 3,
+    body: "The fourth floor splits into roots, ice, furnace and crypt. Each road reaches the same ascent, with different dangers.",
+  },
+] as const;
 export const marketRush = (day: number) => day % 30 >= 27 || day % 30 === 0;
 export const buyPrice = (item: Item, day: number) =>
   Math.ceil(item.price * (marketRush(day) ? 1.15 : 1));
@@ -477,6 +672,13 @@ const addLoot = (inventory: Record<string, number>, id: string, n = 1) => ({
 const hurtParty = (party: Character[], amount: number) =>
   party.map((c) => ({ ...c, hp: c.hp > 0 ? Math.max(1, c.hp - amount) : 0 }));
 export function questProgress(s: Game, id: QuestId): number {
+  if (id === "trusted-company")
+    return Math.min(3, s.townProgress.signed.length);
+  if (id === "ready-for-gate") return Math.min(3, s.townProgress.trained);
+  if (id === "ironbell-apprentice") return Math.min(2, s.townProgress.crafted);
+  if (id === "quartermaster")
+    return Math.min(3, s.inventory["beast-core"] || 0);
+  if (id === "seasoned-hunter") return Math.min(10, s.kills);
   if (id === "plunderer") return Math.min(1, s.plunderers);
   if (id === "clan-rescue") return s.scoutsRescued && s.clanAlly ? 1 : 0;
   return Math.min(QUESTS.find((q) => q.id === id)!.target, s.bestFloor);
@@ -484,20 +686,33 @@ export function questProgress(s: Game, id: QuestId): number {
 export type Action =
   | { type: "CREATE"; race: Race; name: string; roll: number }
   | { type: "RECRUIT"; id: string; offer?: number }
+  | { type: "RUMOUR"; id: string }
+  | { type: "MISSION"; id: Mission }
+  | { type: "LEAD"; id: string }
+  | { type: "NAG_DECISION"; rest: boolean }
+  | { type: "SEARCH_PORTAL" }
+  | { type: "MOVE"; direction: Direction }
+  | { type: "MOVE_BACK" }
+  | { type: "AT_PORTAL" }
+  | { type: "BRANCH_CHOICE"; choice: string; roll: number }
+  | { type: "SEEK_SHELTER" }
+  | { type: "CAMP_REST"; untilClose?: boolean }
+  | { type: "LEAVE_CAMP" }
   | { type: "BENCH"; id: string }
   | {
       type: "TALK";
       id: string;
       choice: "strengths" | "honor" | "discovery" | "glory";
     }
-  | { type: "REST" }
-  | { type: "WORK" }
-  | { type: "TRAIN" }
+  | { type: "REST"; skipOpening?: boolean }
+  | { type: "WORK"; skipOpening?: boolean }
+  | { type: "TRAIN"; skipOpening?: boolean }
   | { type: "PREPARE_CYCLE"; mode: "rest" | "work" | "train" }
   | { type: "BUY"; item: "food" | "potion" }
   | { type: "BUY_ITEM"; id: string }
   | { type: "BUY_BATCH"; items: { id: string; quantity: number }[] }
-  | { type: "CRAFT"; id: "iron-blade" | "leather" }
+  | { type: "CRAFT"; id: string }
+  | { type: "USE_SUPPLY"; id: "torch" | "camp-kit" | "labyrinth-key" }
   | { type: "RENAME"; name: string }
   | { type: "SELL"; id: string; vendor: Vendor; quantity: number }
   | { type: "EQUIP"; character: string; item: string }
@@ -526,10 +741,20 @@ export type Action =
   | { type: "RESET" }
   | { type: "DEFER" }
   | { type: "GUIDE"; show?: boolean }
+  | {
+      type: "WALKTHROUGH";
+      kind: "skip" | "restart" | "toggle" | "ack";
+      id?: string;
+    }
   | { type: "INTRO_COMPLETED" }
   | { type: "SETTING"; key: "sound" | "haptics"; value: boolean };
 function afterFloor(s: Game): Game {
-  return { ...s, phase: s.eventResolved ? "victory" : "event" };
+  if (s.journey.branchFight) {
+    const next = { ...s, journey: { ...s.journey, branchFight: false } };
+    return enterMappedRoom(next, backRoom(s) || "cross-0");
+  }
+  const next = moveRoom(s, "aftermath");
+  return { ...next, phase: s.eventResolved ? "victory" : "event" };
 }
 function battleWon(
   s: Game,
@@ -586,7 +811,137 @@ function battleWon(
         : `Floor ${s.floor} cleared. Recover what the labyrinth left behind.`,
   );
 }
+/** Pay contracted shares on each gold find; town earnings and trades are excluded. */
+export function needsGateConfirmation(s: Game, a: Action) {
+  return (
+    s.phase === "town" &&
+    gateOpen(s.day) &&
+    (a.type === "REST" ||
+      a.type === "WORK" ||
+      (a.type === "TRAIN" && s.gold >= 60)) &&
+    !a.skipOpening
+  );
+}
 export function reducer(s: Game, a: Action): Game {
+  if (a.type === "WALKTHROUGH") {
+    if (!s.started) return s;
+    if (a.kind === "restart")
+      return { ...s, guideSeen: true, walkthrough: newWalkthrough(true) };
+    if (a.kind === "skip")
+      return {
+        ...s,
+        guideSeen: true,
+        walkthrough: { ...s.walkthrough, active: false },
+      };
+    if (a.kind === "toggle")
+      return {
+        ...s,
+        walkthrough: { ...s.walkthrough, minimized: !s.walkthrough.minimized },
+      };
+    const tip = walkthroughTip(s);
+    if (!tip?.acknowledge || tip.id !== a.id) return s;
+    return {
+      ...s,
+      walkthrough: {
+        ...s.walkthrough,
+        active: tip.id !== "complete" && tip.id !== "return",
+        done: [...new Set([...s.walkthrough.done, tip.id])],
+      },
+    };
+  }
+  return advanceWalkthrough(s, resolveGameAction(s, a), a);
+}
+function resolveGameAction(s: Game, a: Action): Game {
+  if (needsGateConfirmation(s, a))
+    return note(
+      s,
+      "The labyrinth is open. Confirm skipping this opening before spending a day in town.",
+    );
+  let next = reduceGame(s, a);
+  if (
+    s.phase !== "town" &&
+    next !== s &&
+    next.journey.watches === s.journey.watches
+  ) {
+    const timed =
+      ((a.type === "MOVE" || a.type === "MOVE_BACK") &&
+        next.journey.room !== s.journey.room) ||
+      (a.type === "BRANCH_CHOICE" &&
+        (next.phase !== s.phase || next.journey.room !== s.journey.room)) ||
+      (a.type === "BATTLE" && next.kills > s.kills) ||
+      (a.type === "APPROACH" && next.arrivalChoice !== s.arrivalChoice) ||
+      (a.type === "EVENT" &&
+        (next.eventResolved !== s.eventResolved ||
+          next.encounterExamined !== s.encounterExamined ||
+          next.route !== s.route)) ||
+      (a.type === "CONTINUE" && next.floor > s.floor) ||
+      (a.type === "SEEK_SHELTER" && next.phase === "camp");
+    if (timed)
+      next = spendWatches(
+        a.type === "BATTLE" ? next : exertForAction(s, next, a),
+        1,
+      );
+  }
+  if (a.type === "BATTLE" && next.effects.id !== s.effects.id)
+    next = exertForAction(s, next, a);
+  if (next !== s && s.phase !== "town" && a.type !== "NAG_DECISION")
+    next = maybeComplain(next);
+  const gross = next.gold - s.gold;
+  if (s.phase === "town" || a.type === "RETURN" || gross <= 0) return next;
+  const paid = Object.fromEntries(
+    Object.entries(s.runContracts).map(([id, share]) => [
+      id,
+      Math.floor((gross * share) / 100),
+    ]),
+  );
+  const cut = Object.values(paid).reduce((n, amount) => n + amount, 0);
+  return {
+    ...next,
+    gold: next.gold - cut,
+    runGross: s.runGross + gross,
+    runGold: s.runGold + gross - cut,
+    runPaid: Object.fromEntries(
+      Object.entries(s.runContracts).map(([id]) => [
+        id,
+        (s.runPaid[id] || 0) + paid[id],
+      ]),
+    ),
+  };
+}
+function reduceGame(s: Game, a: Action): Game {
+  if (a.type === "LEAD") {
+    if (
+      ![
+        "mission",
+        "arrival",
+        "exploration",
+        "branch",
+        "camp",
+        "event",
+        "victory",
+      ].includes(s.phase) ||
+      !s.party.some((c) => c.id === a.id && c.hp > 0)
+    )
+      return s;
+    return { ...s, journey: { ...s.journey, leaderId: a.id } };
+  }
+  if (a.type === "NAG_DECISION" && s.phase === "nag" && s.journey.nag) {
+    const resumed = {
+      ...s,
+      phase: s.journey.nag.resume,
+      journey: { ...s.journey, nag: null },
+    };
+    return a.rest
+      ? reducer(resumed, { type: "SEEK_SHELTER" })
+      : note(
+          tire(resumed, 4),
+          "You promise to stop at the next safe room. The party shoulders its packs again.",
+        );
+  }
+  const exploration = resolveExploration(s, a, (floor, partySize) =>
+    enemyFor(floor, s.route, partySize),
+  );
+  if (exploration) return exploration;
   if (a.type === "RESET") return initialGame();
   if (a.type === "DISMISS") return { ...s, message: "" };
   if (a.type === "SETTING") return { ...s, [a.key]: a.value };
@@ -630,21 +985,104 @@ export function reducer(s: Game, a: Action): Game {
     return result;
   }
   if (a.type === "CRAFT") {
-    if (s.phase !== "town" || !["iron-blade", "leather"].includes(a.id))
-      return s;
-    if (s.gold < 90 || (s.inventory["beast-core"] || 0) < 3)
-      return note(s, "You need 3 monster cores and 90 gold.");
+    const recipe = RECIPES.find((r) => r.id === a.id);
+    if (s.phase !== "town" || !recipe) return s;
+    if (s.bestFloor < (recipe.floor || 0))
+      return note(s, "Clear Floor " + recipe.floor + " to unlock this recipe.");
+    if (
+      s.gold < recipe.gold ||
+      recipe.materials.some((m) => (s.inventory[m.id] || 0) < m.quantity)
+    )
+      return note(s, "You need the recipe’s gold and materials.");
+    const inventory = { ...s.inventory, [a.id]: (s.inventory[a.id] || 0) + 1 };
+    for (const m of recipe.materials) inventory[m.id] -= m.quantity;
     return note(
       {
         ...s,
-        gold: s.gold - 90,
-        inventory: {
-          ...s.inventory,
-          "beast-core": s.inventory["beast-core"] - 3,
-          [a.id]: (s.inventory[a.id] || 0) + 1,
+        gold: s.gold - recipe.gold,
+        inventory,
+        townProgress: {
+          ...s.townProgress,
+          crafted: s.townProgress.crafted + 1,
         },
       },
-      `${ITEMS.find((i) => i.id === a.id)!.name} crafted.`,
+      ITEMS.find((i) => i.id === a.id)!.name + " crafted.",
+    );
+  }
+  if (a.type === "USE_SUPPLY") {
+    if (!(s.inventory[a.id] > 0) || s.usedSupplies.includes(a.id))
+      return note(s, "You do not have an unused supply for this floor.");
+    const inventory = { ...s.inventory, [a.id]: s.inventory[a.id] - 1 };
+    const usedSupplies = [...s.usedSupplies, a.id];
+    if (
+      a.id === "torch" &&
+      s.phase === "arrival" &&
+      !s.arrivalChoice &&
+      s.enemy
+    )
+      return note(
+        {
+          ...s,
+          inventory,
+          usedSupplies,
+          enemy: {
+            ...s.enemy,
+            atk: Math.max(1, Math.round(s.enemy.atk * 0.92)),
+          },
+          arrivalScouted: true,
+        },
+        "Torch lit. Enemy revealed; enemy ATK −8%.",
+      );
+    if (
+      a.id === "camp-kit" &&
+      ["arrival", "victory"].includes(s.phase) &&
+      s.food > 0 &&
+      s.party.some((c) => c.hp > 0 && (c.hp < c.maxHp || c.mp < c.maxMp))
+    )
+      return note(
+        {
+          ...s,
+          inventory,
+          usedSupplies,
+          food: s.food - 1,
+          party: s.party.map((c) =>
+            c.hp > 0
+              ? {
+                  ...c,
+                  hp: Math.min(c.maxHp, c.hp + Math.round(c.maxHp * 0.3)),
+                  mp: Math.min(c.maxMp, c.mp + Math.round(c.maxMp * 0.3)),
+                  ailments: { poison: 0, paralysis: 0 },
+                }
+              : c,
+          ),
+        },
+        "Camp restored 30% HP and MP; consumed 1 ration. Fallen allies remain fallen.",
+      );
+    if (
+      a.id === "labyrinth-key" &&
+      s.phase === "event" &&
+      !s.eventResolved &&
+      [2, 10].includes(s.floor)
+    ) {
+      const result = resolveEvent(
+        { ...s, inventory, usedSupplies },
+        s.floor === 2 ? "careful" : "pick",
+        1,
+      );
+      return note(
+        {
+          ...result,
+          gold: result.gold + 100,
+          inventory: addLoot(result.inventory, "relic-fragment"),
+        },
+        "The key opens an untouched compartment. Safe treasure, +100 gold and an extra relic fragment.",
+      );
+    }
+    return note(
+      s,
+      a.id === "camp-kit" && !s.food
+        ? "You need 1 ration to camp."
+        : "You cannot use this supply here.",
     );
   }
   if (a.type === "CREATE") {
@@ -656,26 +1094,46 @@ export function reducer(s: Game, a: Action): Game {
       a.roll,
     );
     return note(
-      { ...initialGame(), started: true, introSeen: true, party: [hero] },
+      {
+        ...initialGame(),
+        started: true,
+        walkthrough: newWalkthrough(true),
+        introSeen: true,
+        party: [hero],
+        journey: {
+          ...newJourney(),
+          seed: seedFor(`${hero.name}:${hero.race}`),
+        },
+      },
       `${hero.name}, a ${hero.job}, arrived in Stormhold.`,
     );
   }
   if (a.type === "RETURN") {
     if (s.phase === "town") return s;
+    if (daysRemaining(s) > 0)
+      return note(
+        s,
+        `The return gate is sealed for ${daysRemaining(s)} more days. Find shelter if your team cannot continue.`,
+      );
+    const mission = MISSIONS.find((m) => m.id === s.journey.mission);
+    const reward =
+      mission && missionProgress(s) >= mission.target ? mission.reward : 0;
     return note(
       {
         ...s,
-        day: s.day + 1,
+        day: (s.journey.startDay ?? s.day) + 31,
+        gold: s.gold + reward,
+        journey: { ...s.journey, startDay: null },
         phase: "town",
         enemy: null,
         lastOutcome:
           s.phase === "defeat" ? "Lost expedition" : "Returned safely",
       },
-      "The gate sealed. Trade your spoils and prepare for the next opening.",
+      `The return gate carried your team home.${reward ? ` Mission fulfilled: +${reward} guild gold.` : ""} Trade your spoils and prepare for the next opening.`,
     );
   }
   if (a.type === "ACCEPT") {
-    if (s.quests[a.id]) return s;
+    if (!QUESTS.some((q) => q.id === a.id) || s.quests[a.id]) return s;
     if (a.id === "clan-rescue" && !s.clanAlly)
       return note(s, "Meet the White Stag on Floor 3 to earn its trust.");
     return note(
@@ -685,7 +1143,8 @@ export function reducer(s: Game, a: Action): Game {
   }
   if (a.type === "CLAIM") {
     const id = a.id || "first-ascent";
-    const q = QUESTS.find((x) => x.id === id)!;
+    const q = QUESTS.find((x) => x.id === id);
+    if (!q) return s;
     if (s.phase !== "town")
       return note(s, "Return to town to deliver the contract.");
     if (s.quests[id] !== "accepted" || questProgress(s, id) < q.target)
@@ -695,6 +1154,10 @@ export function reducer(s: Game, a: Action): Game {
         ...s,
         gold: s.gold + q.gold,
         gems: s.gems + q.gems,
+        inventory:
+          id === "quartermaster"
+            ? { ...s.inventory, "beast-core": s.inventory["beast-core"] - 3 }
+            : s.inventory,
         questClaimed: id === "first-ascent" ? true : s.questClaimed,
         quests: { ...s.quests, [id]: "claimed" },
         faction: {
@@ -753,6 +1216,10 @@ export function reducer(s: Game, a: Action): Game {
           ...s,
           day: s.day + days,
           party,
+          townProgress: {
+            ...s.townProgress,
+            trained: s.townProgress.trained + (a.mode === "train" ? days : 0),
+          },
           gold:
             s.gold +
             (a.mode === "work"
@@ -788,23 +1255,50 @@ export function reducer(s: Game, a: Action): Game {
     if (a.type === "RECRUIT" && s.reserve.some((c) => c.id === a.id)) {
       if (s.party.length >= 4) return note(s, "Make room in the party first.");
       const c = s.reserve.find((c) => c.id === a.id)!;
+      if (
+        s.party.reduce((n, p) => n + (s.contracts[p.id] || 0), 0) +
+          (s.contracts[c.id] || 0) >
+        75
+      )
+        return note(
+          s,
+          "Your companions’ shares cannot exceed 75%. Change the party before inviting them back.",
+        );
       return note(
         {
           ...s,
           party: [...s.party, c],
           reserve: s.reserve.filter((c) => c.id !== a.id),
         },
-        `${c.name} returns to the party. No second signing fee.`,
+        `${c.name} returns on the same ${s.contracts[c.id]}% loot-share agreement.`,
+      );
+    }
+    if (a.type === "RUMOUR") {
+      const rumour = TOWN_RUMOURS.find((r) => r.id === a.id);
+      if (
+        !rumour ||
+        s.bestFloor < rumour.required ||
+        s.heardRumours.includes(rumour.id)
+      )
+        return s;
+      return note(
+        {
+          ...s,
+          knownFloors: [...new Set([...s.knownFloors, rumour.floor])],
+          journey: chartRumour(s, rumour.floor),
+          heardRumours: [...s.heardRumours, rumour.id],
+        },
+        `${rumour.speaker}: ${rumour.body}`,
       );
     }
     if (a.type === "TALK") {
       const r = RECRUITS.find((r) => r.id === a.id);
-      if (!r) return s;
+      if (!r || !recruitAvailable(s, r)) return s;
       const old = s.rapport[a.id] || {
         trust: 0,
         asked: false,
         inspected: false,
-        offer: r.price,
+        offer: r.share,
         reply: r.quote,
       };
       if (a.choice === "strengths") {
@@ -812,13 +1306,30 @@ export function reducer(s: Game, a: Action): Game {
           return note(s, "You already know their visible strengths.");
         return {
           ...s,
+          knownFloors: [
+            ...new Set([
+              ...s.knownFloors,
+              Math.min(12, 1 + RECRUITS.findIndex((x) => x.id === r.id)),
+            ]),
+          ],
+          journey: chartRumour(
+            s,
+            Math.min(12, 1 + RECRUITS.findIndex((x) => x.id === r.id)),
+          ),
           rapport: {
             ...s.rapport,
             [a.id]: {
               ...old,
               inspected: true,
               trust: old.trust + 1,
-              reply: `“I am a ${RACES.find((x) => x.id === r.race)!.job}. ${r.tagline} But there’s more to me than a blade.”`,
+              reply: `“I am a ${r.job || RACES.find((x) => x.id === r.race)!.job}. ${r.tagline} I can mark ${
+                FLOORS[
+                  Math.min(
+                    11,
+                    RECRUITS.findIndex((x) => x.id === r.id),
+                  )
+                ].name
+              } on your chart.”`,
             },
           },
         };
@@ -836,7 +1347,7 @@ export function reducer(s: Game, a: Action): Game {
             trust: Math.max(0, old.trust + (match ? 2 : -1)),
             reply: match
               ? `“Then we understand one another.” Hidden trait discovered: ${r.trait}. ${r.traitDetail}`
-              : "“That is not what I am looking for. A better signing offer might change my mind.”",
+              : "“That is not what I am looking for. A larger share might change my mind.”",
           },
         },
       };
@@ -844,6 +1355,11 @@ export function reducer(s: Game, a: Action): Game {
     if (a.type === "RECRUIT") {
       const r = RECRUITS.find((r) => r.id === a.id);
       if (!r || s.party.some((c) => c.id === a.id)) return s;
+      if (!recruitAvailable(s, r))
+        return note(
+          s,
+          "Reach Floor " + r.floor + " before recruiting " + r.name + ".",
+        );
       if (s.party.length >= 4)
         return note(
           s,
@@ -853,37 +1369,46 @@ export function reducer(s: Game, a: Action): Game {
         trust: 0,
         asked: false,
         inspected: false,
-        offer: r.price,
+        offer: r.share,
         reply: r.quote,
       };
-      const minimum = Math.max(
-        100,
-        r.price - rp.trust * 45 - s.faction.guild * 5,
-      );
-      const offer = a.offer ?? r.price;
-      if (!Number.isFinite(offer) || offer < 0 || s.gold < offer)
-        return note(
-          s,
-          "Your signing offer exceeds your gold. Earn more at the guild.",
-        );
+      const minimum = recruitShare(s, r, rp.trust);
+      const offer = a.offer ?? r.share;
+      if (!validShare(offer))
+        return note(s, "Choose a whole-number loot share between 1% and 35%.");
       if (offer < minimum)
         return {
           ...s,
-          message: `${r.name} asks for at least ${minimum} gold. Build trust or raise your offer.`,
+          message: `${r.name} asks for at least ${minimum}% of expedition gold. Build trust or raise your offer.`,
           rapport: {
             ...s.rapport,
             [a.id]: {
               ...rp,
               offer: minimum,
-              reply: `“${minimum} gold, and I’ll walk with you.”`,
+              reply: `“${minimum}% of what we find, and I’ll walk with you.”`,
             },
           },
         };
+      const total =
+        s.party.reduce((n, c) => n + (s.contracts[c.id] || 0), 0) + offer;
+      if (total > 75)
+        return note(
+          s,
+          "Your companions’ shares cannot exceed 75%. Negotiate or change the party.",
+        );
       const c = makeCharacter(r.race, r.id, r.name);
       c.traitRevealed = rp.trust >= 2;
       return note(
-        { ...s, gold: s.gold - offer, party: [...s.party, c] },
-        `${r.name} accepted ${offer} gold and joined your party.`,
+        {
+          ...s,
+          contracts: { ...s.contracts, [a.id]: offer },
+          party: [...s.party, c],
+          townProgress: {
+            ...s.townProgress,
+            signed: [...new Set([...s.townProgress.signed, c.id])],
+          },
+        },
+        `${r.name} joined for ${offer}% of expedition gold. No upfront payment.`,
       );
     }
     if (a.type === "REST")
@@ -895,6 +1420,7 @@ export function reducer(s: Game, a: Action): Game {
             ...c,
             hp: c.maxHp,
             mp: c.maxMp,
+            exhaustion: 0,
             ailments: { poison: 0, paralysis: 0 },
           })),
         },
@@ -918,6 +1444,10 @@ export function reducer(s: Game, a: Action): Game {
           day: s.day + 1,
           gold: s.gold - 60,
           party: s.party.map((c) => gainXp(c, 45)),
+          townProgress: {
+            ...s.townProgress,
+            trained: s.townProgress.trained + 1,
+          },
         },
         "The party trained together. Everyone gained 45 XP.",
       );
@@ -977,7 +1507,7 @@ export function reducer(s: Game, a: Action): Game {
       if (
         !item ||
         !c ||
-        !["weapon", "armor", "charm"].includes(item.kind) ||
+        !(GEAR_KINDS as readonly string[]).includes(item.kind) ||
         !s.inventory[item.id]
       )
         return note(s, "Buy this equipment before equipping it.");
@@ -997,6 +1527,17 @@ export function reducer(s: Game, a: Action): Game {
                   ...p,
                   atk: p.atk - (prev?.atk || 0) + (item.atk || 0),
                   def: p.def - (prev?.def || 0) + (item.def || 0),
+                  speed: p.speed - (prev?.speed || 0) + (item.speed || 0),
+                  maxHp: p.maxHp - (prev?.hp || 0) + (item.hp || 0),
+                  maxMp: p.maxMp - (prev?.mp || 0) + (item.mp || 0),
+                  hp: Math.min(
+                    p.hp,
+                    p.maxHp - (prev?.hp || 0) + (item.hp || 0),
+                  ),
+                  mp: Math.min(
+                    p.mp,
+                    p.maxMp - (prev?.mp || 0) + (item.mp || 0),
+                  ),
                   equipment: [
                     ...p.equipment.filter((id) => id !== old),
                     item.id,
@@ -1055,13 +1596,30 @@ export function reducer(s: Game, a: Action): Game {
           ...s,
           food: s.food - 3,
           floor: 1,
-          phase: "arrival",
+          phase: "mission",
+          journey: {
+            ...newJourney(),
+            seed: s.journey.seed,
+            maps: {
+              ...s.journey.maps,
+              1: s.journey.maps[1] || generateFloor(1, s.journey.seed),
+            },
+            chart: s.journey.chart,
+            startDay: s.day,
+          },
           enemy: enemyFor(1, null, s.party.length),
           turn: 1,
           momentum: 0,
           party: s.party.map((c) => ({ ...c, cooldowns: {} })),
           runKills: 0,
           runGold: 0,
+          runGross: 0,
+          runPaid: {},
+          runContracts: Object.fromEntries(
+            s.party
+              .filter((c) => s.contracts[c.id] !== undefined)
+              .map((c) => [c.id, s.contracts[c.id]]),
+          ),
           route: null,
           eventResolved: false,
           sideBattle: false,
@@ -1070,6 +1628,7 @@ export function reducer(s: Game, a: Action): Game {
           arrivalOutcome: "",
           arrivalEffect: "",
           arrivalScouted: false,
+          usedSupplies: [],
           effects: emptyEffects(),
           log: [FLOORS[0].intro],
         },
@@ -1148,7 +1707,7 @@ export function reducer(s: Game, a: Action): Game {
         arrivalChoice: choice.id,
         arrivalOutcome: outcome,
         arrivalEffect: effect,
-        arrivalScouted: choice.effect === "observe",
+        arrivalScouted: s.arrivalScouted || choice.effect === "observe",
         phase: party.some((c) => c.hp > 0) ? "arrival" : "defeat",
       },
       `${ARRIVALS[s.floor - 1].title}: ${choice.label}. ${effect}.`,
@@ -1166,16 +1725,39 @@ export function reducer(s: Game, a: Action): Game {
   if (a.type === "EVENT" && s.phase === "event")
     return resolveEvent(s, a.choice, a.roll);
   if (a.type === "CONTINUE" && s.phase === "victory") {
+    if (!s.journey.portal || currentRoom(s).kind !== "portal")
+      return note(
+        s,
+        "Find the upward portal before ascending. Search the corridors.",
+      );
     if (s.floor >= 12)
       return note(
         s,
         "The campaign is complete. Return with your story and the crown.",
       );
-    if (s.food < 1) return note(s, "No rations remain. Return to town safely.");
+    if (s.food < 1)
+      return note(
+        s,
+        "No rations remain. Search side passages for cave roots, or wait in shelter.",
+      );
     const floor = s.floor + 1;
     return {
       ...s,
       phase: "arrival",
+      journey: {
+        ...s.journey,
+        step: 0,
+        portal: false,
+        branch: null,
+        branchFight: false,
+        room: "entrance",
+        history: [],
+        maps: {
+          ...s.journey.maps,
+          [floor]:
+            s.journey.maps[floor] || generateFloor(floor, s.journey.seed),
+        },
+      },
       floor,
       food: s.food - 1,
       enemy: enemyFor(floor, s.route, s.party.length),
@@ -1192,6 +1774,7 @@ export function reducer(s: Game, a: Action): Game {
       arrivalOutcome: "",
       arrivalEffect: "",
       arrivalScouted: false,
+      usedSupplies: [],
     };
   }
   // Compatibility for older saves at the original relic/treasure screens.
@@ -1476,8 +2059,10 @@ function resolveEvent(s: Game, choice: string, roll: number): Game {
         },
         "The outer cache yields 80 gold and ancient ore.",
       );
+    const keyed = s.usedSupplies.includes("labyrinth-key");
     const safe =
-      choice === "pick" && s.party.some((c) => c.hp > 0 && c.race === "dwarf");
+      choice === "pick" &&
+      (keyed || s.party.some((c) => c.hp > 0 && c.race === "dwarf"));
     const gold = choice === "force" ? 300 : 220;
     return done(
       {
@@ -1487,7 +2072,9 @@ function resolveEvent(s: Game, choice: string, roll: number): Game {
         inventory: addLoot(s.inventory, "relic-fragment", 3),
       },
       safe
-        ? "The dwarf opens the vault. +220 gold and three relic fragments."
+        ? keyed
+          ? "The key releases the vault’s locks. +220 gold and three relic fragments."
+          : "The dwarf opens the vault. +220 gold and three relic fragments."
         : `The blades strike for 20 party HP. You recover ${gold} gold and three fragments.`,
     );
   }

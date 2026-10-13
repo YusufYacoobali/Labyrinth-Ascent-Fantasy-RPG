@@ -3,6 +3,7 @@ node_modules/
 dist/
 .npm-cache/
 test-results/
+verification/
 *.tsbuildinfo
 .env*
 !.env.example

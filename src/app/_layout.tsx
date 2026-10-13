@@ -1,7 +1,10 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
-import { CormorantGaramond_700Bold } from "@expo-google-fonts/cormorant-garamond";
+import {
+  CormorantGaramond_700Bold,
+  CormorantGaramond_400Regular,
+} from "@expo-google-fonts/cormorant-garamond";
 import {
   RobotoCondensed_400Regular,
   RobotoCondensed_600SemiBold,
@@ -14,6 +17,7 @@ import { useEffect } from "react";
 import { Asset } from "expo-asset";
 import { Image } from "expo-image";
 import { art } from "@/components/game-ui";
+import { battleAtlases } from "@/components/battle-backdrop";
 export default function RootLayout() {
   useEffect(() => {
     const foreground = [
@@ -23,7 +27,11 @@ export default function RootLayout() {
       art.townGuide,
       art.townPlay,
       art.menuIcons,
+      art.storyGlyphs,
       art.supplyIcons,
+      art.recruitPortraits,
+      art.recruitSprites,
+      art.townItemIcons,
     ].map((source) => Asset.fromModule(source).uri);
     const scenes = [
       art.cover,
@@ -44,6 +52,10 @@ export default function RootLayout() {
       art.tavernScene,
       art.journalChapter,
       art.moreStudy,
+      art.portal,
+      art.sanctuary,
+      art.floodedRoad,
+      ...battleAtlases,
     ].map((source) => Asset.fromModule(source).uri);
     // Reused atlases stay decoded; larger scenes warm the disk cache without pinning all of them in memory.
     void Image.prefetch(foreground, { cachePolicy: "memory-disk" })
@@ -51,6 +63,7 @@ export default function RootLayout() {
       .catch(() => {});
   }, []);
   const [loaded, error] = useFonts({
+    GameNarrative: CormorantGaramond_400Regular,
     GameSerif: CormorantGaramond_700Bold,
     GameBody: RobotoCondensed_400Regular,
     GameBodyBold: RobotoCondensed_600SemiBold,
@@ -64,13 +77,14 @@ export default function RootLayout() {
           justifyContent: "center",
         }}
       >
+        <StatusBar hidden style="light" />
         <ActivityIndicator color={theme.color.gold} />
       </View>
     );
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <GameProvider>
-        <StatusBar style="light" />
+        <StatusBar hidden style="light" />
         <Stack
           screenOptions={{
             headerShown: false,

@@ -627,6 +627,16 @@ export function MoreScreen() {
                     Burst spends momentum. Break a guard to interrupt attacks.
                   </Copy>
                   <Button
+                    label="Replay guided walkthrough"
+                    tone="blue"
+                    onPress={() => {
+                      dispatch({ type: "WALKTHROUGH", kind: "restart" });
+                      router.replace(
+                        state.phase === "town" ? "/town" : "/expedition",
+                      );
+                    }}
+                  />
+                  <Button
                     label="How to play in town"
                     onPress={() => {
                       dispatch({ type: "GUIDE", show: true });

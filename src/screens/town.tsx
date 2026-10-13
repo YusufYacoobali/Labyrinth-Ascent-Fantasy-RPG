@@ -1,10 +1,11 @@
 import React from "react";
-import { View, Pressable } from "react-native";
+import { Pressable } from "react-native";
 import { Image } from "expo-image";
 import { router, Redirect } from "expo-router";
 import { art, Frame } from "@/components/game-ui";
 import { useGame } from "@/game/provider";
 import { daysToGate, gateOpen } from "@/game/engine";
+import { SceneMotion } from "@/components/scene-motion";
 export function Guard({
   children,
   expedition = false,
@@ -27,7 +28,7 @@ const places = [
 ] as const;
 export function TownScreen() {
   const { state, dispatch } = useGame();
-  const showGuide = !state.guideSeen;
+  const showGuide = !state.guideSeen && !state.walkthrough.active;
   return (
     <Guard>
       <Frame
@@ -38,7 +39,7 @@ export function TownScreen() {
         back={false}
         scroll={false}
       >
-        <View style={{ flex: 1 }}>
+        <SceneMotion subtle style={{ flex: 1 }}>
           <Image
             source={showGuide ? art.townGuide : art.townPlay}
             contentFit="fill"
@@ -83,7 +84,7 @@ export function TownScreen() {
               hitSlop={10}
             />
           )}
-        </View>
+        </SceneMotion>
       </Frame>
     </Guard>
   );

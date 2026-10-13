@@ -19,6 +19,7 @@ function arena(race = "barbarian", size = 1) {
       .map((r, i) => e.makeCharacter(r, "ally" + i, "Ally" + i)),
   );
   s = e.reducer({ ...s, day: 30 }, { type: "ENTER" });
+  s = e.reducer(s, { type: "MISSION", id: "survey" });
   s = e.reducer(s, { type: "APPROACH", choice: "sneak", roll: 0.99 });
   s = e.reducer(s, { type: "ENGAGE" });
   return {
@@ -103,7 +104,10 @@ test("Burst spends two momentum and breaks a charged attack", () => {
   assert.equal(n.effects.enemyDamage, 0);
   assert.equal(n.enemy.charged, false);
   const next = act(n, "attack");
-  assert.equal(next.effects.damage, Math.round(32 * 1.3));
+  assert.equal(
+    next.effects.damage,
+    Math.round(32 * (1 - n.party[0].exhaustion * 0.003) * 1.3),
+  );
   assert.equal(next.enemy.poise, next.enemy.maxPoise);
   assert.equal(next.enemy.broken, 0);
 });
@@ -176,7 +180,13 @@ test("Enemy HP scales with party size and momentum resets at the next floor", ()
     );
   assert.ok(fresh(4).enemy.maxHp > fresh(1).enemy.maxHp * 3);
   const n = e.reducer(
-    { ...four, phase: "victory", momentum: 3, food: 5 },
+    {
+      ...four,
+      phase: "victory",
+      journey: { ...four.journey, portal: true, room: "cross-6" },
+      momentum: 3,
+      food: 5,
+    },
     { type: "CONTINUE" },
   );
   assert.equal(n.momentum, 0);

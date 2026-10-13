@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const { e, w } = require("./engine-loader.cjs");
+const { e, w, exploration } = require("./engine-loader.cjs");
 let count = 0;
 function test(name, fn) {
   fn();
@@ -9,7 +9,17 @@ function test(name, fn) {
 const create = (race = "barbarian", roll = 0.5) =>
   e.reducer(e.initialGame(), { type: "CREATE", race, name: "Bjorn", roll });
 const reduce = (s, a) => e.reducer(s, a);
-const arrive = (s = create()) => reduce({ ...s, day: 30 }, { type: "ENTER" });
+const arrive = (s = create()) =>
+  reduce(reduce({ ...s, day: 30 }, { type: "ENTER" }), {
+    type: "MISSION",
+    id: "survey",
+  });
+function findPortal(s) {
+  s = reduce(s, { type: "SEARCH_PORTAL" });
+  for (const direction of exploration.floorMap(s).route)
+    s = reduce(s, { type: "MOVE", direction });
+  return s;
+}
 const enter = (s = create()) =>
   reduce(reduce(arrive(s), { type: "APPROACH", choice: "sneak", roll: 0.99 }), {
     type: "ENGAGE",
@@ -41,7 +51,7 @@ test("Gate-season prices increase exactly 15%, repeat each cycle", () => {
   assert.equal(e.buyPrice(potion, 31), 80);
   assert.equal(e.buyPrice(potion, 60), 92);
 });
-test("Negotiation reveals traits, lowers signing price, and cannot farm trust", () => {
+test("Negotiation reveals traits, lowers loot shares, and cannot farm trust", () => {
   let s = create();
   s = reduce(s, { type: "TALK", id: "lyria", choice: "strengths" });
   s = reduce(s, { type: "TALK", id: "lyria", choice: "discovery" });
@@ -52,22 +62,23 @@ test("Negotiation reveals traits, lowers signing price, and cannot farm trust", 
     choice: "discovery",
   });
   assert.equal(repeated.rapport.lyria.trust, 3);
-  const rejected = reduce(s, { type: "RECRUIT", id: "lyria", offer: 100 });
+  const rejected = reduce(s, { type: "RECRUIT", id: "lyria", offer: 6 });
   assert.equal(rejected.gold, s.gold);
   assert.equal(rejected.party.length, 1);
-  s = reduce(s, { type: "RECRUIT", id: "lyria", offer: 465 });
+  s = reduce(s, { type: "RECRUIT", id: "lyria", offer: 10 });
   assert.equal(s.party.length, 2);
   assert.equal(s.party[1].traitRevealed, true);
-  assert.equal(s.gold, 1875);
+  assert.equal(s.gold, 2340);
+  assert.equal(s.contracts.lyria, 10);
 });
 test("Recruitment caps at four and no duplicate signing costs", () => {
   let s = create();
   for (const id of ["kael", "lyria", "bram"])
     s = reduce(s, { type: "RECRUIT", id });
   assert.equal(s.party.length, 4);
-  assert.equal(s.gold, 740);
+  assert.equal(s.gold, 2340);
   assert.equal(reduce(s, { type: "RECRUIT", id: "ragnar" }).party.length, 4);
-  assert.equal(reduce(s, { type: "RECRUIT", id: "kael" }).gold, 740);
+  assert.equal(reduce(s, { type: "RECRUIT", id: "kael" }).gold, 2340);
 });
 test("Bench and invite preserve levels and gear with no second fee", () => {
   let s = reduce(create(), { type: "RECRUIT", id: "kael" });
@@ -146,7 +157,10 @@ test("Twin Strike gives double caster damage and consumes exactly 16 MP", () => 
     roll: 0.5,
   });
   assert.equal(basic.effects.damage, 32);
-  assert.equal(double.effects.damage, 64);
+  assert.equal(
+    double.effects.damage,
+    Math.round(s.party[0].atk * 2 * (1 - (s.party[0].exhaustion || 0) * 0.003)),
+  );
   assert.equal(double.party[0].mp, s.party[0].mp - 16);
 });
 test("Poison applies and ticks for three turns", () => {
@@ -269,6 +283,7 @@ test("Fourfold gate routes change danger, environment, and drops", () => {
   for (const route of ["roots", "frost", "forge", "crypt"]) {
     let s = { ...create(), phase: "event", floor: 4, food: 8 };
     s = reduce(s, { type: "EVENT", choice: route, roll: 0 });
+    s = findPortal(s);
     s = reduce(s, { type: "CONTINUE" });
     assert.equal(s.floor, 5);
     assert.equal(s.route, route);
@@ -343,9 +358,10 @@ test("Every campaign route reaches all twelve events and both final rewards", ()
       party: s.party.map((c) => ({ ...c, atk: 450, hp: 1000, maxHp: 1000 })),
     };
     s = reduce(s, { type: "ENTER" });
+    s = reduce(s, { type: "MISSION", id: "survey" });
     const seen = new Set();
     let safety = 0;
-    while (safety++ < 150) {
+    while (safety++ < 400) {
       if (s.phase === "arrival") {
         s = reduce(s, {
           type: "APPROACH",
@@ -366,10 +382,36 @@ test("Every campaign route reaches all twelve events and both final rewards", ()
               ? "take"
               : choices[s.floor];
         s = reduce(s, { type: "EVENT", choice, roll: 0.5 });
-      } else if (s.phase === "victory") {
+      } else if (s.phase === "exploration") {
+        s = reduce(s, {
+          type: "MOVE",
+          direction: exploration.floorMap(s).route[s.journey.step],
+        });
+      } else if (s.phase === "nag")
+        s = reduce(s, { type: "NAG_DECISION", rest: false });
+      else if (s.phase === "camp")
+        s = reduce(
+          s,
+          Math.max(...s.party.map((c) => c.exhaustion || 0)) >= 32
+            ? { type: "CAMP_REST" }
+            : { type: "LEAVE_CAMP" },
+        );
+      else if (s.phase === "victory") {
         if (s.floor === 12) break;
-        s = reduce(s, { type: "CONTINUE" });
-      } else throw Error(s.phase);
+        s = reduce(
+          s,
+          s.journey.portal ? { type: "CONTINUE" } : { type: "SEARCH_PORTAL" },
+        );
+      } else
+        throw Error(
+          s.phase +
+            " floor=" +
+            s.floor +
+            " watches=" +
+            s.journey.watches +
+            " fatigue=" +
+            s.party.map((c) => c.exhaustion),
+        );
     }
     assert.equal(seen.size, 12);
     assert.equal(s.bestFloor, 12);
@@ -377,8 +419,10 @@ test("Every campaign route reaches all twelve events and both final rewards", ()
     assert.equal(s.inventory["hollow-crown"], 1);
     assert.ok(s.inventory["beast-core"] > 12);
     assert.equal(s.scoutsRescued, true);
+    s = reduce(s, { type: "SEEK_SHELTER" });
+    s = reduce(s, { type: "CAMP_REST", untilClose: true });
     s = reduce(s, { type: "RETURN" });
-    assert.equal(s.day, 31);
+    assert.equal(s.day, 61);
     assert.equal(s.phase, "town");
     const gold = s.gold;
     s = reduce(s, { type: "CLAIM", id: "first-ascent" });
@@ -392,6 +436,8 @@ test("Defeat, return, and inn rest recover every companion", () => {
   s.party[0].atk = 1;
   s = reduce(s, { type: "BATTLE", kind: "attack", roll: 0 });
   assert.equal(s.phase, "defeat");
+  assert.equal(reduce(s, { type: "RETURN" }).phase, "defeat");
+  s = reduce(s, { type: "CAMP_REST", untilClose: true });
   s = reduce(s, { type: "RETURN" });
   s = reduce(s, { type: "REST" });
   assert.equal(s.party[0].hp, s.party[0].maxHp);

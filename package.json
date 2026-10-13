@@ -50,7 +50,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node scripts/test-engine.cjs && node scripts/test-combat.cjs",
+    "test": "node scripts/test-engine.cjs && node scripts/test-combat.cjs && node scripts/test-town.cjs && node scripts/test-exploration.cjs && node scripts/test-maps.cjs && node scripts/test-walkthrough.cjs",
     "playtest": "node scripts/playtest.cjs",
     "typecheck": "tsc --noEmit",
     "export": "expo export --platform all",

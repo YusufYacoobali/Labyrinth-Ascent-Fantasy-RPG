@@ -1,0 +1,62 @@
+{
+  "generated": "2026-10-13",
+  "reference": "User's pic 3; scenery only, live UI is native React",
+  "assets": [
+    {
+      "file": "flooded-road.png",
+      "prompt": "Create a high quality landscape story illustration, aspect 3:2, for a fantasy mobile RPG. Reference attached picture is STYLE AND SCENE reference only; produce ONLY its central illustration, absolutely NO interface, lettering, framing, buttons, meters or borders. Scene: The road under water. Wagon tracks disappear beneath black water in a huge ruined blue stone labyrinth canal. A broken wooden wagon dominates left foreground; a small medieval guild seal hangs from its broken wheel. On right foreground a skeleton in rusted plate armor kneels half submerged, head turned towards ripples, sword tip trailing across water. Stone bridges, blue banners, arched passages, distant mystical blue towers, orange braziers reflected in dark water. Match the reference's finely painted anime fantasy RPG environment style, rich midnight navy and warm amber light, clear readable story composition, handmade detailed illustration, not 3D render. Skeleton and wagon must be fully visible, sharp and prominent.",
+      "tool": "image_gen.imagegen (built-in)",
+      "transparent_background": false,
+      "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-c2fac6d0-8ed1-40a5-82b6-c7cc526f6203.png"
+    },
+    {
+      "file": "../ui/story-glyphs.png",
+      "prompt": "Transparent-background fantasy RPG UI icon atlas. Exactly 4 columns and 4 rows, equal square cells, 16 isolated painted icons centered with ample padding, uniformly sized, crisp small-scale silhouette, anime fantasy game illustration, warm gold metal and clear jewel colors. Reading order: row1 cyan eye, brown leather boot, two crossed steel swords, gray canvas tent; row2 gold ear, single steel sword, blue magnifying glass, two clasped hands; row3 wooden treasure chest, steel shield, ration pouch, campfire; row4 water droplet, red warning triangle, gold key, brass compass. NO text, NO tile backgrounds, NO squares or frames, NO floor, NO opaque or checkerboard background, NO glow filling cells. All spaces and around each object must be genuine alpha transparency. Do not connect any objects. Each of sixteen objects completely contained within its own centered cell.",
+      "tool": "image_gen.imagegen (built-in)",
+      "transparent_background": true,
+      "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-e051b9d5-b538-47df-8f4f-9bb61f50b241.png"
+    },
+    {
+      "file": "arrival-scenes-a.png",
+      "prompt": "Create one landscape atlas of SIX distinct fantasy RPG story illustrations in an exact 3-column by 2-row grid of equal SQUARE scenes. No gutters, no borders, no text or UI. Each scene is fully contained within its cell, composed for a small mobile story image. Finely painted anime fantasy illustration, midnight blue stone, amber lanterns, dramatic readable silhouettes, intricate details, no 3D rendering. Same visual polish as supplied reference central art. Reading order: top left cave bend at night, small goblin with axe and dragging shield waiting beyond torchlight, daylight distant at cave mouth. Top middle BLUE BANNERS stone adventurer checkpoint, glowing RUNESTONE GOLEM in foreground, fully clothed armed commander and team watching behind, no text. Top right FOUR STONE DOORS in an underground hall covered in silver webs, huge broodmother spider clinging to ceiling, abandoned hanging backpack. Bottom left dark stone basin with an eerie armed humanoid reflection stepping out, mirrorlike black water, ruined shrine. Bottom middle abandoned alchemist stone laboratory full of cracked glass reagent vessels, green mist pools, armored Blight Warden dragging a chain through liquid. Bottom right broken narrow stone bridge spanning deep chasm, prominent pale wolf on near span, distant masked traveler standing by rope. No writing in any scene, no visible letters. Every person wears modest full adventurer clothing.",
+      "tool": "image_gen.imagegen (built-in)",
+      "transparent_background": false,
+      "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-d2069506-de4c-40d0-aa4f-cfd5011070d4.png"
+    },
+    {
+      "file": "arrival-scenes-b.png",
+      "prompt": "A landscape fantasy RPG illustration atlas, exactly 3 columns by 2 rows of equal SQUARE image panels with sharp cell boundaries, no border/gutter, no text, no UI. Every panel is its own complete dedicated story scene. Detailed painted anime fantasy game illustration, blue midnight stone and amber light, readably composed, no 3D render. Reference for quality/color only. Row1 col1: ancient underground garden of stone names, old sword on pedestal, kneeling armored sentinel polishing blade, blue magical light; no readable lettering. Row1 col2: underground furnace stairs, burning blue stag banner overhead, huge knight with cracked orange glowing armor lifting molten sword, distant people beneath stairs. Row1 col3: frosted stone VAULT DOOR with claw scratches from inside, translucent icy hunter among tall ice pillars, breath mist, eerie pale blue. Row2 col1: last lantern at end of dark stone hall, fully clothed tired merchant sitting with a tied backpack, sinister armored swordsman emerging in foreground. Row2 col2: Hollow Throne in black stone hall, dark armored king standing beneath floating crown, doorway to dawn sky, immense shadow. Row2 col3: broken guild wagon beside black water, rusted skeleton armor fallen in mud, open ledger with no readable writing, CLOSED wooden cargo CHEST with fine trap wires stretched across surrounding stones. Modest fully clothed adults, no letters.",
+      "tool": "image_gen.imagegen (built-in)",
+      "transparent_background": false,
+      "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-dd73904a-3e9c-470b-ba3b-1e3ad93c1c7e.png"
+    },
+    {
+      "file": "room-scenes.png",
+      "prompt": "Fantasy RPG story illustration atlas, exactly 3 columns by 2 rows of equal SQUARE cells, no gutters, no UI, no labels, no border. Six separate dedicated story scenes composed inside their cells. Detailed painted anime fantasy style, deep midnight navy, blue stone and amber lanterns, no 3D render. Reference's environment style only. Row1 col1: stone corridor floor with a LOOSE stone pulled aside revealing small hidden brass latch and treasure compartment under the floor, coins faintly glinting, subtle wire catch. Row1 col2: exhausted fully clothed adult adventurer survey team of three with packs and lantern, leader holding a torn route parchment with abstract lines/no readable text, raising empty hands in peaceful greeting in a blue stone passage. Row1 col3: underground shallow SPRING with pale hanging roots, a few edible roots on rocky shore, blue cave water, no trees outside. Row2 col1: bones scattered across floor of dark stone passage, solitary hunched corridor predator feeding in shadow, form mostly obscured, orange lantern entering from near foreground. Row2 col2: SAFE stone watch room alcove with closed iron door, small warm lantern, four bedrolls, ration pouch, adventurers' packs, peaceful sheltered navy room. Row2 col3: UNDERGROUND CROSSROADS with three distinct passages left/right/straight, survey marks scratches not letters on stone, central held lantern low foreground, pale blue light from one passage, no floating exterior castle. All people in modest full clothing.",
+      "tool": "image_gen.imagegen (built-in)",
+      "transparent_background": false,
+      "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-ae026fac-7b20-4957-9756-75b7bb3df967.png"
+    },
+    {
+      "file": "event-scenes-a.png",
+      "prompt": "One landscape atlas for fantasy RPG story art. Exact 3-column, 2-row grid of six equal SQUARE illustrations, no gaps, no border, no UI/text. Detailed painted anime fantasy, midnight navy stone, blue magic and warm amber, same handmade polish as reference central illustration. Each cell depicts its own story, fully contained. Row1 col1: night CAMP beneath broken stone arch inside labyrinth, two modest cloaked adult adventurers by a small fire, a suspicious hooded traveler stepping into firelight with one hand concealed. Row1 col2: modest fully armored female commander with tied dark hair unrolling a route map with abstract symbols, beside blue stag banners and a fallen stone golem at stone checkpoint, offering supplies. Row1 col3: four distinct stone doorways in underground hall, left roots, second frost, third fiery forge glow, fourth utter darkness, fallen spider webs around foreground. Row2 col1: dark stone BASIN with a translucent armed reflection fading back into mirrorlike water, eerie blue energy rising from water towards viewer, ruined shrine. Row2 col2: ruined alchemy workbench after fight, still chain lying in reagent pools, living silverleaf plant beside cracked bottles, preparation notes with NO readable letters, faint green mist. Row2 col3: masked cloaked traveler stretching rope across broken narrow bridge above chasm, two shadowed bandits blocking near foreground, narrow ledge along wall visible as alternative. All adults modest full clothing, no readable writing.",
+      "tool": "image_gen.imagegen (built-in)",
+      "transparent_background": false,
+      "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-0d6083ed-33f3-4b21-b118-e200758a768e.png"
+    },
+    {
+      "file": "event-scenes-b.png",
+      "prompt": "Landscape atlas of six detailed painted anime fantasy RPG story illustrations. Exact THREE columns and TWO rows, equal SQUARE cells, sharply separated composition but no gutters/borders, NO UI, lettering, buttons or text. Midnight navy blue stone with warm golden lanterns, high-quality handmade illustration like reference. Row1 col1: a weathered sword planted in a stone pedestal in an underground overgrown ruined garden, soft golden pulse, empty quiet scene. Row1 col2: three injured adult scouts under furnace stairs, one holding torn blue stag banner against a wound, another slumped unable to stand, modest full armor, supply cache beside them, rescuable not gory. Row1 col3: icy vault door in stone chamber, ornate SEVEN-TUMBLER lock and seven dangerous narrow slots in floor, faintly glowing frost, threatening mechanism, no lettering. Row2 col1: fully clothed adult merchant sitting next to one lantern in dark stone hall, open pack displaying rations and medicine vials, sheltered alcove and final stairs beyond him. Row2 col2: fallen black-armored king before dark throne, shadow reaching towards a floating crown, open arched DOOR to dawn sky over distant city, fully clothed adventurer party silhouettes deciding in doorway, no gore. Row2 col3: narrow dead-end underground stone corridor, collapsed wall blocking way, a small side opening leading into another chamber, a single abandoned boot and scratched marks, no characters. Each scene fully contained in its own cell. No readable writing; all people modest fully clothed.",
+      "tool": "image_gen.imagegen (built-in)",
+      "transparent_background": false,
+      "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-f39515a2-2413-4f61-afd9-9f801ed997f9.png"
+    },
+    {
+      "file": "bonegnaw-sprite.png",
+      "prompt": "A single isolated fantasy monster sprite for a mobile turn based pixel-art RPG, TRANSPARENT background, no tile square or scenery. Match the creature in the bottom left panel of the reference: a sinister large bone-gnawing cave rat scavenger, shaggy dark gray fur, hunched body, long tail, sharp small teeth, reddish glowing eyes, big clawed paws. Three-quarter view facing left, full body centered completely visible with ample transparent margin, squat combat pose. Detailed crisp pixel art inspired by 64x64 JRPG enemy sprites, limited navy/gray palette, warm edge highlights. Clearly pixel art not smooth painting. No letters, no labels, no frame, no floor, no UI. Genuine alpha transparency.",
+      "tool": "image_gen.imagegen (built-in)",
+      "transparent_background": true,
+      "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-35fd516e-0c88-4d5e-9227-f06954ce3b82.png"
+    }
+  ]
+}

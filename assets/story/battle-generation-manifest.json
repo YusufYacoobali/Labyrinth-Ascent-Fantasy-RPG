@@ -1,0 +1,41 @@
+[
+  {
+    "asset": "battle-floors-1-4.png",
+    "floors": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "layout": "2x2 portrait plates: top left, top right, bottom left, bottom right",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-2a3390f3-e033-493f-afe3-b74a3e83aa09.png",
+    "prompt": "Use case: stylized-concept. Asset type: mobile fantasy RPG battle scenery atlas. Generate one high-resolution 2048x3072 image containing a precise seamless 2 by 2 grid of FOUR distinct portrait battlefield plates, each 1024x1536, no gutters, no borders. Reference images are STYLE and LOCATION CONTINUITY guides only. Match their detailed anime fantasy painted stonework, deep midnight blue, amber torchlight, antique gold banners. Each panel is an EMPTY environment from near ground level, with open relatively calm central midground cobblestone fighting space for a separately rendered pixel enemy. Main landmarks frame upper half and sides; dark simple foreground. No enemies, people, animals, skeletons, text, UI, letters, cards, frames or weapons floating in center. NOT isometric miniature maps, NOT new environments. Preserve recognizable locations from references. Top left FLOOR 1: the wet rocky goblin cave bend of the upper-left panel in arrival-scenes-a, amber wall torch left, stalactites, blue ruined arch visible through cave opening, scattered bones only at edge, clear rock floor. Top right FLOOR 2: flooded-road location, broken wagon and wheel with small gold guild seal at LEFT edge, shallow black water over submerged road, blue stone aqueducts behind, amber braziers, no skeleton, large low central exposed wet-stone bank as arena. Bottom left FLOOR 3: White Stag checkpoint from upper-middle arrival panel, blue and gold stag banners at sides, stone gateway, waterfall distant, vacant broad flagstone checkpoint arena; no golem or soldiers. Bottom right FLOOR 4: spiderweb-covered four-door gothic hall from upper-right arrival panel, hanging torn pack at edge, large cobwebs upper corners, four heavy ancient doors behind, empty wet flagstones, no spider. Strong visual coherence across all four panels."
+  },
+  {
+    "asset": "battle-floors-5-8.png",
+    "floors": [
+      5,
+      6,
+      7,
+      8
+    ],
+    "layout": "2x2 portrait plates: top left, top right, bottom left, bottom right",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-fd5f7340-4940-4490-9d05-d7cfc7833190.png",
+    "prompt": "Use case: stylized-concept. Asset type: mobile fantasy RPG battle scenery atlas. Generate one high-resolution 2048x3072 image containing a precise seamless 2 by 2 grid of FOUR distinct portrait battlefield plates, each 1024x1536, no gutters, no borders. Reference images are STYLE and LOCATION CONTINUITY guides only. Match their detailed anime fantasy painted stonework, deep midnight blue, amber torchlight, antique gold banners. Each panel is an EMPTY environment from near ground level, with open relatively calm central midground cobblestone fighting space for a separately rendered pixel enemy. Main landmarks frame upper half and sides; dark simple foreground. No enemies, people, animals, skeletons, text, UI, letters, cards, frames or weapons floating in center. NOT isometric miniature maps, NOT new environments. Preserve recognizable locations from references. Top left FLOOR 5: Echoing Shrine matching lower-left arrival-scenes-a: two hooded stone statues at edges, still black circular reflecting basin in background, blue waterfall beneath arches, candle braziers, wet central stone arena with reflection but no revenant. Top right FLOOR 6: alchemist ruin matching lower-middle arrival-scenes-a: glass alembics and potion bottles on LEFT shelves, hanging empty cages, thin green mist at perimeter, broken masonry arches, amber iron lamps, central empty wet stonework no warden. Bottom left FLOOR 7: Broken Span matching lower-right arrival-scenes-a: broken rope-and-stone bridge over blue labyrinth abyss, worn landing platform broad enough for fight, ropes on sides, ruined blue archways distant, moonlight and torch, no wolf or people. Bottom right FLOOR 8: garden of blades matching upper-left arrival-scenes-b: blue luminous flowers and moss at sides, carved guardian STATUES on back wall, waterfall narrow, empty sword pedestal behind central arena, wet stone courtyard, no standing sword or living sentinel. Keep four plates distinct and empty; no creatures or characters."
+  },
+  {
+    "asset": "battle-floors-9-12.png",
+    "floors": [
+      9,
+      10,
+      11,
+      12
+    ],
+    "layout": "2x2 portrait plates: top left, top right, bottom left, bottom right",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-910b184e-1242-4cc9-8a32-e9688c799ace.png",
+    "prompt": "Use case: stylized-concept. Asset type: mobile fantasy RPG battle scenery atlas. Generate one high-resolution 2048x3072 image containing a precise seamless 2 by 2 grid of FOUR distinct portrait battlefield plates, each 1024x1536, no gutters, no borders. Reference images are STYLE and LOCATION CONTINUITY guides only. Match their detailed anime fantasy painted stonework, deep midnight blue, amber torchlight, antique gold banners. Each panel is an EMPTY environment from near ground level, with open relatively calm central midground cobblestone fighting space for a separately rendered pixel enemy. Main landmarks frame upper half and sides; dark simple foreground. No enemies, people, animals, skeletons, text, UI, letters, cards, frames or weapons floating in center. NOT isometric miniature maps, NOT new environments. Preserve recognizable locations from references. Top left FLOOR 9: furnace hall matching upper-middle arrival-scenes-b, broad empty stone landing, furnace fire and hanging blue gold STAG banner on left wall, blackened stairs curve upward at right, amber molten channels along edges, distant blue stone archway; no molten knight. Top right FLOOR 10: frozen vault matching upper-right arrival-scenes-b: huge circular stone vault door at rear surrounded by seven lock recesses, icicles and pale frost, broad empty cracked ice and snow-dusted flagstone floor; no hunter. Bottom left FLOOR 11: Last Lantern matching lower-left arrival-scenes-b: tall midnight gothic corridor with rows of pointed arches, warm lone hanging lantern above merchant's VACANT alcove with tied pack and crates at left edge, quiet empty stone floor, no merchant or swordsman. Bottom right FLOOR 12: Hollow Throne matching lower-middle arrival-scenes-b: empty weathered throne and crown on rear pedestal, giant blue-gold tattered banners, ruined high arch opens to pale gold dawn at right, broad empty dark reflective stone arena, no king or people. Exact four-panel grid, portrait plates, no gutters/text/UI/living subjects."
+  }
+]

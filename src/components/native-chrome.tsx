@@ -8,7 +8,9 @@ import {
   ViewStyle,
 } from "react-native";
 import { Image } from "expo-image";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { TOWN_ITEMS } from "@/game/town-content";
 import { theme as t } from "@/theme";
 
 export function ItemGlyph({ id, size = 36 }: { id: string; size?: number }) {
@@ -30,8 +32,14 @@ export function ItemGlyph({ id, size = 36 }: { id: string; size?: number }) {
     dawnsteel: 0,
     leather: 1,
     "crown-fragment": 7,
+    "iron-helm": 2,
+    "warden-helm": 2,
+    "scout-boots": 4,
+    "frost-boots": 4,
   };
-  const index = supplies[id] ?? equipment[id] ?? 5;
+  const townIndex = TOWN_ITEMS.findIndex((i) => i.id === id);
+  const index =
+    townIndex >= 0 ? townIndex : (supplies[id] ?? equipment[id] ?? 5);
   return (
     <View
       pointerEvents="none"
@@ -39,16 +47,18 @@ export function ItemGlyph({ id, size = 36 }: { id: string; size?: number }) {
     >
       <Image
         source={
-          supplies[id] !== undefined
-            ? require("../../assets/ui/supply-icons.png")
-            : require("../../assets/art/items.png")
+          townIndex >= 0
+            ? require("../../assets/ui/town-item-icons.png")
+            : supplies[id] !== undefined
+              ? require("../../assets/ui/supply-icons.png")
+              : require("../../assets/art/items.png")
         }
         contentFit="fill"
         cachePolicy="memory-disk"
         style={{
           position: "absolute",
           width: size * 4,
-          height: size * 3,
+          height: size * (townIndex >= 0 ? 4 : 3),
           left: -(index % 4) * size,
           top: -Math.floor(index / 4) * size,
         }}
@@ -247,13 +257,14 @@ export function NativeNavbar({
   tabs: readonly { label: string; path: string }[];
   onSelect: (path: string) => void;
 }) {
+  const inset = useSafeAreaInsets();
   return (
     <View
       accessibilityLabel="Main navigation"
       style={{
         flexDirection: "row",
         padding: 6,
-        paddingBottom: 5,
+        paddingBottom: 5 + inset.bottom,
         backgroundColor: "#08131e",
         borderTopWidth: 1,
         borderTopColor: t.color.goldDim,

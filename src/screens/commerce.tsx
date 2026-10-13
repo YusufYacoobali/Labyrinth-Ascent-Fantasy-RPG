@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Pressable, TextInput } from "react-native";
 import { Image } from "expo-image";
+import { SceneImage } from "@/components/scene-motion";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   art,
@@ -22,6 +23,10 @@ import {
   questProgress,
   RACES,
   RECRUITS,
+  makeCharacter,
+  recruitAvailable,
+  recruitShare,
+  TOWN_RUMOURS,
   sellPrice,
 } from "@/game/engine";
 import { ITEMS, QUESTS, Vendor } from "@/game/world";
@@ -39,9 +44,15 @@ export function TavernScreen() {
   const { state, dispatch } = useGame();
   const [tab, setTab] = useState("Recruit");
   const [selected, setSelected] = useState<string | null>(null);
-  const [offer, setOffer] = useState("500");
+  const [offer, setOffer] = useState("14");
+  const [roster, setRoster] = useState("Available");
   const recruit = RECRUITS.find((r) => r.id === selected);
   const rapport = selected ? state.rapport[selected] : undefined;
+  const askingShare = (trust: number) =>
+    recruit ? recruitShare(state, recruit, trust) : 14;
+  const recruitBuild = recruit
+    ? makeCharacter(recruit.race, recruit.id, recruit.name)
+    : null;
   return (
     <Guard>
       <Frame
@@ -54,7 +65,7 @@ export function TavernScreen() {
           active={tab}
           onChange={setTab}
         />
-        <Image
+        <SceneImage
           source={art.tavernScene}
           contentFit="fill"
           style={{ width: "100%", aspectRatio: 1.5 }}
@@ -72,15 +83,12 @@ export function TavernScreen() {
                       gap: 12,
                     }}
                   >
-                    <Atlas
-                      index={RACES.find((r) => r.id === recruit.race)!.portrait}
-                      size={64}
-                    />
+                    <Atlas index={recruitBuild!.portrait} size={64} />
                     <View style={{ flex: 1 }}>
                       <Copy title>{recruit.name}</Copy>
                       <Copy style={{ fontSize: 12, color: t.color.gold }}>
-                        Trust {rapport?.trust || 0}/3 · Signing price{" "}
-                        {recruit.price}g
+                        Trust {rapport?.trust || 0}/3 · Asking{" "}
+                        {askingShare(rapport?.trust || 0)}% of gold
                       </Copy>
                       <Bar
                         value={rapport?.trust || 0}
@@ -109,26 +117,27 @@ export function TavernScreen() {
                     small
                     tone="blue"
                     disabled={rapport?.inspected}
-                    onPress={() =>
+                    onPress={() => {
                       dispatch({
                         type: "TALK",
                         id: recruit.id,
                         choice: "strengths",
-                      })
-                    }
+                      });
+                      setOffer(String(askingShare((rapport?.trust || 0) + 1)));
+                    }}
                   />
+                  {rapport?.inspected && (
+                    <Copy style={{ fontSize: 12, color: t.color.blue }}>
+                      Skills: {recruitBuild!.skills.join(", ")} · MP{" "}
+                      {recruitBuild!.maxMp} · SPD {recruitBuild!.speed}
+                    </Copy>
+                  )}
                   {rapport?.inspected && (
                     <View style={{ flexDirection: "row", gap: 14 }}>
                       {[
-                        ["heart", RACES.find((r) => r.id === recruit.race)!.hp],
-                        [
-                          "sword",
-                          RACES.find((r) => r.id === recruit.race)!.atk,
-                        ],
-                        [
-                          "shield",
-                          RACES.find((r) => r.id === recruit.race)!.def,
-                        ],
+                        ["heart", recruitBuild!.maxHp],
+                        ["sword", recruitBuild!.atk],
+                        ["shield", recruitBuild!.def],
                       ].map(([icon, n]) => (
                         <View
                           key={String(icon)}
@@ -161,13 +170,24 @@ export function TavernScreen() {
                             small
                             tone="dark"
                             style={{ flex: 1 }}
-                            onPress={() =>
+                            onPress={() => {
                               dispatch({
                                 type: "TALK",
                                 id: recruit.id,
                                 choice: id as "honor" | "discovery" | "glory",
-                              })
-                            }
+                              });
+                              setOffer(
+                                String(
+                                  askingShare(
+                                    Math.max(
+                                      0,
+                                      (rapport?.trust || 0) +
+                                        (id === recruit.motive ? 2 : -1),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }}
                           />
                         ))}
                       </View>
@@ -198,13 +218,13 @@ export function TavernScreen() {
                     }}
                   >
                     <View style={{ flex: 1 }}>
-                      <Eyebrow>YOUR SIGNING OFFER</Eyebrow>
+                      <Eyebrow>YOUR LOOT-SHARE OFFER</Eyebrow>
                       <TextInput
-                        accessibilityLabel="Signing gold offer"
+                        accessibilityLabel="Loot share percentage"
                         keyboardType="number-pad"
                         value={offer}
                         onChangeText={(v) =>
-                          setOffer(v.replace(/[^0-9]/g, "").slice(0, 6))
+                          setOffer(v.replace(/[^0-9]/g, "").slice(0, 2))
                         }
                         style={{
                           borderWidth: 1,
@@ -219,12 +239,12 @@ export function TavernScreen() {
                       />
                     </View>
                     <Button
-                      label={`Offer ${Number(offer) || 0}g`}
+                      label={`Offer ${Number(offer) || 0}%`}
                       small
                       tone="green"
                       disabled={
                         !Number(offer) ||
-                        Number(offer) > state.gold ||
+                        Number(offer) > 35 ||
                         state.party.length >= 4
                       }
                       onPress={() =>
@@ -237,13 +257,50 @@ export function TavernScreen() {
                     />
                   </View>
                   <Copy muted style={{ fontSize: 11 }}>
-                    A fair conversation lowers the price. A rejected offer costs
-                    no gold.
+                    Negotiate their share of gold finds. Nothing is paid
+                    upfront.
                   </Copy>
                 </Panel>
               )}
-              {RECRUITS.map((r) => {
+              <TabStrip
+                tabs={["Available", "Waiting", "All"]}
+                active={roster}
+                onChange={setRoster}
+              />
+              <Copy muted style={{ fontSize: 12 }}>
+                Party {state.party.length}/4 · Waiting {state.reserve.length}
+              </Copy>
+              <Copy style={{ fontSize: 12, color: t.color.gold }}>
+                Your share:{" "}
+                {100 -
+                  state.party.reduce(
+                    (n, c) => n + (state.contracts[c.id] || 0),
+                    0,
+                  )}
+                % · Companions split the rest
+              </Copy>
+              {state.party.length >= 4 && (
+                <Button
+                  small
+                  tone="dark"
+                  label="Manage party to make room"
+                  onPress={() => router.push("/party")}
+                />
+              )}
+              {RECRUITS.filter((r) =>
+                roster === "Waiting"
+                  ? state.reserve.some((c) => c.id === r.id)
+                  : roster === "Available"
+                    ? recruitAvailable(state, r) &&
+                      !state.party.some((c) => c.id === r.id)
+                    : true,
+              ).map((r) => {
                 const race = RACES.find((x) => x.id === r.race)!;
+                const build =
+                  state.party.find((c) => c.id === r.id) ||
+                  state.reserve.find((c) => c.id === r.id) ||
+                  makeCharacter(r.race, r.id, r.name);
+                const unlocked = recruitAvailable(state, r);
                 const own = state.party.find((c) => c.id === r.id);
                 return (
                   <Panel
@@ -258,7 +315,7 @@ export function TavernScreen() {
                     }}
                   >
                     <Atlas
-                      index={race.portrait}
+                      index={build.portrait}
                       size={61}
                       style={{
                         borderWidth: 1,
@@ -284,7 +341,7 @@ export function TavernScreen() {
                           color: "#453a30",
                         }}
                       >
-                        {race.name} {race.job}
+                        {race.name} {build.job} · Lv. {build.level}
                       </Copy>
                       <Copy
                         style={{
@@ -293,64 +350,77 @@ export function TavernScreen() {
                           color: "#655442",
                         }}
                       >
-                        {own?.traitRevealed ? own.trait : r.tagline}
+                        {unlocked
+                          ? own?.traitRevealed
+                            ? own.trait
+                            : r.tagline
+                          : "Reach Floor " + r.floor}
                       </Copy>
                     </View>
-                    <Atlas sprite index={race.portrait} size={43} />
-                    <Button
-                      label={
-                        own
-                          ? "Joined"
-                          : state.reserve.some((c) => c.id === r.id)
-                            ? "Invite back"
-                            : "Talk"
-                      }
-                      small
-                      tone="green"
-                      disabled={!!own || state.party.length >= 4}
-                      onPress={() => {
-                        if (state.reserve.some((c) => c.id === r.id)) {
-                          dispatch({ type: "RECRUIT", id: r.id });
-                          return;
+                    <Atlas sprite index={build.portrait} size={43} />
+                    <View style={{ alignItems: "center", gap: 3 }}>
+                      <Copy
+                        style={{
+                          fontSize: 11,
+                          lineHeight: 15,
+                          color: "#70502b",
+                        }}
+                      >
+                        {state.contracts[r.id] !== undefined
+                          ? `${state.contracts[r.id]}% agreed`
+                          : `${recruitShare(state, r)}% share`}
+                      </Copy>
+                      <Button
+                        label={
+                          !unlocked
+                            ? "Locked"
+                            : own
+                              ? "Joined"
+                              : state.reserve.some((c) => c.id === r.id)
+                                ? "Invite back"
+                                : "Talk"
                         }
-                        setSelected(r.id);
-                        setOffer(
-                          String(
-                            Math.max(
-                              100,
-                              r.price -
-                                (state.rapport[r.id]?.trust || 0) * 45 -
-                                state.faction.guild * 5,
-                            ),
-                          ),
-                        );
-                      }}
-                    />
+                        small
+                        tone="green"
+                        disabled={!unlocked || !!own || state.party.length >= 4}
+                        onPress={() => {
+                          if (state.reserve.some((c) => c.id === r.id)) {
+                            dispatch({ type: "RECRUIT", id: r.id });
+                            return;
+                          }
+                          setSelected(r.id);
+                          setOffer(String(recruitShare(state, r)));
+                        }}
+                      />
+                    </View>
                   </Panel>
                 );
               })}
             </>
           ) : tab === "Rumours" ? (
-            <Panel>
-              <Copy title style={{ marginTop: 8 }}>
-                Rumours
-              </Copy>
-              <Divider />
-              <Copy>
-                Plunderers dress like adventurers. On the first floor, keep
-                someone awake when strangers ask to share your camp.
-              </Copy>
-              <Divider />
-              <Copy muted>
-                The White Stag keeps a checkpoint on Floor 3. Win their trust
-                before choosing a route through the Fourfold Gate.
-              </Copy>
-              <Divider />
-              <Copy style={{ color: t.color.gold, fontSize: 13 }}>
-                Shops raise prices 15% during the last three days before an
-                opening. Buy early. Sell your cores to the guild.
-              </Copy>
-            </Panel>
+            <>
+              {TOWN_RUMOURS.filter((r) => state.bestFloor >= r.required).map(
+                (r) => (
+                  <Panel key={r.id} style={{ gap: 9 }}>
+                    <Copy title>{r.speaker}</Copy>
+                    {state.heardRumours.includes(r.id) ? (
+                      <>
+                        <Copy>{r.body}</Copy>
+                        <Copy muted style={{ fontSize: 12 }}>
+                          Floor {r.floor} added to your chart
+                        </Copy>
+                      </>
+                    ) : (
+                      <Button
+                        label={r.title}
+                        tone="dark"
+                        onPress={() => dispatch({ type: "RUMOUR", id: r.id })}
+                      />
+                    )}
+                  </Panel>
+                ),
+              )}
+            </>
           ) : (
             <Panel>
               <Copy title>Contracts</Copy>
@@ -384,6 +454,10 @@ export function ShopScreen() {
           : "Supplies",
   );
   const [recipient, setRecipient] = useState(state.party[0]?.id);
+  const recipients = state.party.map((c) => ({
+    id: c.id,
+    label: c.name + (c.id === "hero" ? " (You)" : ""),
+  }));
   const [cart, setCart] = useState<Record<string, number>>({});
   const [buyer, setBuyer] = useState<Vendor>("guild");
   const vendor: Vendor =
@@ -396,7 +470,13 @@ export function ShopScreen() {
   const goods = ITEMS.filter((i) =>
     sell
       ? (state.inventory[i.id] || 0) > 0
-      : i.vendor === vendor && i.kind !== "loot",
+      : i.vendor === vendor &&
+        i.kind !== "loot" &&
+        (category === "Supplies"
+          ? i.kind === "supply"
+          : category === "Equipment"
+            ? i.kind !== "supply"
+            : true),
   );
   const total = ITEMS.reduce(
     (n, i) => n + (cart[i.id] || 0) * buyPrice(i, state.day),
@@ -416,14 +496,14 @@ export function ShopScreen() {
           (marketRush(state.day) ? " · Gate-season prices +15%" : "")
         }
       >
-        <Image
+        <SceneImage
           source={art.shopScene}
           contentFit="fill"
           style={{ width: "100%", aspectRatio: 1.5 }}
           accessibilityLabel="Provisioner’s Shop. Good gear makes long roads shorter. Everything you need for a safer journey is right here."
         />
         <TabStrip
-          tabs={["Supplies", "Consumables", "Rare Goods", "Sell"]}
+          tabs={["Supplies", "Equipment", "Consumables", "Rare Goods", "Sell"]}
           active={category}
           onChange={setCategory}
         />
@@ -453,12 +533,14 @@ export function ShopScreen() {
               }
             />
           )}
-          {category === "Rare Goods" && (
+          {(category === "Rare Goods" ||
+            category === "Equipment" ||
+            category === "Consumables") && (
             <TabStrip
-              tabs={state.party.map((p) => p.name)}
-              active={state.party.find((p) => p.id === recipient)?.name || ""}
+              tabs={recipients.map((p) => p.label)}
+              active={recipients.find((p) => p.id === recipient)?.label || ""}
               onChange={(name) =>
-                setRecipient(state.party.find((p) => p.name === name)!.id)
+                setRecipient(recipients.find((p) => p.label === name)!.id)
               }
             />
           )}
@@ -691,7 +773,7 @@ export function GuildScreen() {
     <Guard>
       <Frame active="Home" title="Adventurers’ Guild">
         <View style={{ position: "relative" }}>
-          <Image
+          <SceneImage
             source={art.guildScene}
             contentFit="fill"
             style={{ width: "100%", aspectRatio: 1.5 }}
@@ -738,7 +820,9 @@ export function GuildScreen() {
                   >
                     <Image
                       source={
-                        [art.labyrinth, art.camp, art.clan, art.forge][index]
+                        [art.labyrinth, art.camp, art.clan, art.forge][
+                          index % 4
+                        ]
                       }
                       contentFit="cover"
                       style={{ width: 50, height: 62, borderRadius: 3 }}

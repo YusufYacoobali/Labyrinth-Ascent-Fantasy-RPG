@@ -1,10 +1,11 @@
 // Plays with earned stats and the actual starting budget: no boosted HP, gold, or damage.
-const { e, story } = require("./engine-loader.cjs");
+const { e, story, exploration } = require("./engine-loader.cjs");
 function play(
   seed = 12,
   route = "roots",
   race = "barbarian",
   strategy = "tactical",
+  roster = ["kael", "lyria", "bram"],
 ) {
   const initialSeed = seed;
   let s = e.reducer(e.initialGame(), {
@@ -16,23 +17,27 @@ function play(
   const act = (a) => {
     s = e.reducer(s, a);
   };
-  for (const [id, motive, offer] of [
-    ["kael", "honor", 365],
-    ["lyria", "discovery", 465],
-    ["bram", "honor", 365],
-  ]) {
+  for (const id of roster) {
+    const r = e.RECRUITS.find((r) => r.id === id);
     act({ type: "TALK", id, choice: "strengths" });
-    act({ type: "TALK", id, choice: motive });
-    act({ type: "RECRUIT", id, offer });
+    act({ type: "TALK", id, choice: r.motive });
+    act({ type: "RECRUIT", id, offer: e.recruitShare(s, r) });
+    if (!s.party.some((c) => c.id === id))
+      throw Error("Could not sign " + id + ": " + s.message);
   }
-  for (let i = 0; i < 3; i++) act({ type: "BUY_ITEM", id: "rations" });
+  for (let i = 0; i < 5; i++) act({ type: "BUY_ITEM", id: "rations" });
   act({ type: "FORGE", id: "hero" });
-  act({ type: "ENCHANT", id: "lyria", skill: "Toxic Adaptation" });
+  act({
+    type: "ENCHANT",
+    id: roster.includes("lyria") ? "lyria" : roster[0],
+    skill: "Toxic Adaptation",
+  });
   act({ type: "BUY_ITEM", id: "greater-potion" });
   act({ type: "BUY_ITEM", id: "ether" });
   act({ type: "BUY_ITEM", id: "potion" });
   for (let i = 0; i < 6; i++) act({ type: "TRAIN" });
   act({ type: "ENTER" });
+  act({ type: "MISSION", id: "survey" });
   let turns = 0;
   let battleTurns = 0,
     guards = 0,
@@ -185,7 +190,7 @@ function play(
       skills += a.kind === "skill";
       breaks += s.effects.broken;
     } else if (s.phase === "essence") {
-      const id = s.floor === 3 ? "kael" : s.floor === 6 ? "lyria" : "hero";
+      const id = s.floor === 3 ? roster[0] : s.floor === 6 ? roster[1] : "hero";
       const skill =
         s.floor === 3
           ? "Nerve Lock"
@@ -206,9 +211,28 @@ function play(
           s.floor === 8 && s.encounterExamined ? "take" : choices[s.floor],
         roll: random(),
       });
-    else if (s.phase === "victory") {
+    else if (s.phase === "exploration") {
+      const lead = s.party
+        .filter((c) => c.hp > 0)
+        .sort((a, b) => (a.exhaustion || 0) - (b.exhaustion || 0))[0];
+      if (lead.id !== s.journey.leaderId) act({ type: "LEAD", id: lead.id });
+      act({
+        type: "MOVE",
+        direction: exploration.floorMap(s).route[s.journey.step],
+      });
+    } else if (s.phase === "nag") {
+      act({ type: "NAG_DECISION", rest: true });
+    } else if (s.phase === "camp") {
+      if (
+        Math.max(
+          ...s.party.filter((c) => c.hp > 0).map((c) => c.exhaustion || 0),
+        ) >= 35
+      )
+        act({ type: "CAMP_REST" });
+      else act({ type: "LEAVE_CAMP" });
+    } else if (s.phase === "victory") {
       if (s.floor === 12) break;
-      act({ type: "CONTINUE" });
+      act(s.journey.portal ? { type: "CONTINUE" } : { type: "SEARCH_PORTAL" });
     } else break;
   }
   return {
@@ -216,11 +240,20 @@ function play(
     route,
     race,
     strategy,
+    roster,
     floor: maxFloor,
     phase: s.phase,
     standing: s.party.filter((c) => c.hp > 0).length,
     turns,
     gold: s.gold,
+    food: s.food,
+    exhaustion: s.party.map((c) => c.exhaustion || 0),
+    room: s.journey.room,
+    message: s.message,
+    daysInside: Math.floor(s.journey.watches / 6),
+    mappedFloors: Object.values(s.journey.chart).filter(
+      (path) => path.length === 6,
+    ).length,
     battleTurns,
     guards,
     focuses,

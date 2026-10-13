@@ -6,7 +6,14 @@ import React, {
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Action, Game, initialGame, normalizeSave, reducer } from "./engine";
+import {
+  Action,
+  Game,
+  initialGame,
+  normalizeSave,
+  reducer,
+  needsGateConfirmation,
+} from "./engine";
 const KEY = "labyrinth-awaits-save-v1";
 const Context = createContext<{
   state: Game;
@@ -14,6 +21,8 @@ const Context = createContext<{
   ready: boolean;
   saveError: string;
   retrySave: () => void;
+  pendingTownAction: Action | null;
+  confirmTownAction: (skip: boolean) => void;
 } | null>(null);
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatchBase] = useReducer(
@@ -23,6 +32,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     initialGame,
   );
   const [ready, setReady] = useState(false);
+  const [pendingTownAction, setPendingTownAction] = useState<Action | null>(
+    null,
+  );
   const [saveError, setSaveError] = useState("");
   const [retry, setRetry] = useState(0);
   useEffect(() => {
@@ -84,7 +96,24 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     <Context.Provider
       value={{
         state,
-        dispatch: dispatchBase,
+        dispatch: (action) => {
+          if (needsGateConfirmation(state, action))
+            setPendingTownAction(action);
+          else dispatchBase(action);
+        },
+        pendingTownAction,
+        confirmTownAction: (skip) => {
+          if (
+            skip &&
+            pendingTownAction &&
+            (pendingTownAction.type === "REST" ||
+              pendingTownAction.type === "WORK" ||
+              pendingTownAction.type === "TRAIN")
+          ) {
+            dispatchBase({ ...pendingTownAction, skipOpening: true });
+          }
+          setPendingTownAction(null);
+        },
         ready,
         saveError,
         retrySave: () => setRetry((x) => x + 1),

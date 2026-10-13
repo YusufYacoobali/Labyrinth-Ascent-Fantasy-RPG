@@ -1,0 +1,16 @@
+{
+  "tool": "built-in image_gen",
+  "reference": "mock/gameplay.png",
+  "assets": [
+    {
+      "path": "assets/art/portal-scene.png",
+      "source": "exec-0861bfec-6b1f-456f-ae7a-fa9f38c287c3.png",
+      "prompt": "Use case: illustration-story. Asset type: portrait mobile fantasy RPG background, 1024 by 1536. Match the attached Labyrinth Awaits gameplay mock's hand-painted anime/pixel hybrid environments, blue stone, tiny amber torches, intricate fantasy illustration, not photoreal/3D. Generate only scenery, no UI, no text, no border, no people. Main subject: a large ancient stone portal in Stormhold ruins, arch enclosing a luminous deep blue swirling gateway. Camera at human eye height, portal centered horizontally and within upper 60% of frame, clear readable silhouette, huge scale. Mossy stone steps, subtle orange lanterns at sides, midnight-blue ruined towers in background, small floating golden motes. Bottom 35% of frame must be quiet dark navy stone paving with minimal detail to support code UI. No stairs climbing the sky. No lettering or numbers anywhere."
+    },
+    {
+      "path": "assets/art/expedition-sanctuary.png",
+      "source": "exec-6e493eb8-bfaa-43b9-b5f2-9814195fd158.png",
+      "prompt": "Use case: illustration-story. Asset type: mobile fantasy RPG expedition results BACKGROUND only, portrait 1024x1536. Style reference: the attached gameplay mock, hand-painted anime fantasy with pixel-detail environments; same navy stone and restrained amber illumination. Primary request: replace busy victory background with quiet shelter scenery readable behind code-rendered statistics. View from inside an ancient blue-stone labyrinth sanctuary, sheltered campsite at dawn, arched opening in TOP THIRD showing a distant softly glowing fantasy tower and pale golden sky. Small camp lantern and rolled cloaks at edges only. Upper third has subdued storybook scenery; bottom TWO THIRDS must be almost plain very dark navy stone wall/paving in shadow, minimal low-contrast detail. No characters, no text, no boxes, no UI, no border. No large central bright light under where text will go. Keep the center and lower screen visually calm."
+    }
+  ]
+}
