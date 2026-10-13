@@ -6,14 +6,14 @@
     "orientation": "portrait",
     "scheme": "labyrinthawaits",
     "userInterfaceStyle": "dark",
-    "icon": "./assets/art/icon.png",
+    "icon": "./assets/art/app-icon.png",
     "ios": {
       "supportsTablet": false
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#080f19",
-        "foregroundImage": "./assets/art/icon.png"
+        "foregroundImage": "./assets/art/app-icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize"
@@ -21,7 +21,7 @@
     "web": {
       "output": "static",
       "name": "Labyrinth Awaits",
-      "favicon": "./assets/art/icon.png"
+      "favicon": "./assets/art/app-icon.png"
     },
     "plugins": [
       "expo-router",
@@ -29,7 +29,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#080f19",
-          "image": "./assets/art/icon.png",
+          "image": "./assets/art/app-icon.png",
           "imageWidth": 96
         }
       ],

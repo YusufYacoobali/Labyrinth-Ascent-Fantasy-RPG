@@ -24,16 +24,16 @@ import {
   RECRUITS,
   sellPrice,
 } from "@/game/engine";
-import { ITEMS, QUESTS, Vendor, VENDORS } from "@/game/world";
+import { ITEMS, QUESTS, Vendor } from "@/game/world";
 import { useGame } from "@/game/provider";
 import { Guard } from "./town";
 import { theme as t } from "@/theme";
-const quality = {
-  common: t.color.muted,
-  fine: t.color.green,
-  rare: t.color.blue,
-  legendary: t.color.gold,
-};
+import {
+  Surface,
+  TabStrip,
+  Ornament,
+  ItemGlyph,
+} from "@/components/native-chrome";
 
 export function TavernScreen() {
   const { state, dispatch } = useGame();
@@ -49,31 +49,16 @@ export function TavernScreen() {
         title="The Wandering Stag"
         subtitle="Good people. Greater stories."
       >
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 4,
-            paddingHorizontal: 10,
-            paddingVertical: 4,
-          }}
-        >
-          {["Recruit", "Rumours", "Quests"].map((x) => (
-            <Button
-              key={x}
-              small
-              compact
-              label={x}
-              style={{ flex: 1 }}
-              tone={tab === x ? "gold" : "dark"}
-              onPress={() => setTab(x)}
-            />
-          ))}
-        </View>
+        <TabStrip
+          tabs={["Recruit", "Rumours", "Quests"]}
+          active={tab}
+          onChange={setTab}
+        />
         <Image
-          source={art.tavernMock}
+          source={art.tavernScene}
           contentFit="fill"
-          style={{ width: "100%", aspectRatio: 1792 / 768 }}
-          accessibilityLabel="New faces? The labyrinth always needs more heroes."
+          style={{ width: "100%", aspectRatio: 1.5 }}
+          accessibilityLabel="Elise: New faces! The labyrinth always needs more heroes. Care to join our story?"
         />
         <View style={{ padding: 12, gap: 10 }}>
           {tab === "Recruit" ? (
@@ -389,280 +374,303 @@ export function TavernScreen() {
 export function ShopScreen() {
   const { state, dispatch } = useGame();
   const params = useLocalSearchParams<{ vendor?: string; mode?: string }>();
-  const [vendor, setVendor] = useState<Vendor>(
-    params.vendor === "guild" ? "guild" : "provisioner",
+  const [category, setCategory] = useState(
+    params.mode === "sell"
+      ? "Sell"
+      : params.vendor === "alchemist"
+        ? "Consumables"
+        : params.vendor === "emporium"
+          ? "Rare Goods"
+          : "Supplies",
   );
-  const [mode, setMode] = useState(params.mode === "sell" ? "Sell" : "Buy");
   const [recipient, setRecipient] = useState(state.party[0]?.id);
+  const [cart, setCart] = useState<Record<string, number>>({});
+  const [buyer, setBuyer] = useState<Vendor>("guild");
+  const vendor: Vendor =
+    category === "Consumables"
+      ? "alchemist"
+      : category === "Rare Goods"
+        ? "emporium"
+        : "provisioner";
+  const sell = category === "Sell";
   const goods = ITEMS.filter((i) =>
-    mode === "Sell"
+    sell
       ? (state.inventory[i.id] || 0) > 0
       : i.vendor === vendor && i.kind !== "loot",
   );
+  const total = ITEMS.reduce(
+    (n, i) => n + (cart[i.id] || 0) * buyPrice(i, state.day),
+    0,
+  );
+  const quantity = (id: string, n: number) =>
+    setCart((c) => ({ ...c, [id]: Math.max(0, Math.min(10, n)) }));
   return (
     <Guard>
-      <Frame active="Home" title="Stormhold Market">
-        <View style={{ padding: 14, gap: 12 }}>
-          <View style={{ flexDirection: "row", gap: 5 }}>
-            {VENDORS.map((v) => (
-              <Pressable
-                key={v.id}
-                accessibilityRole="button"
-                accessibilityLabel={v.name}
-                accessibilityState={{ selected: vendor === v.id }}
-                onPress={() => setVendor(v.id)}
-                style={{
-                  flex: 1,
-                  borderWidth: 1,
-                  borderColor: vendor === v.id ? t.color.gold : t.color.line,
-                  padding: 9,
-                  borderRadius: 5,
-                  alignItems: "center",
-                  gap: 5,
-                  backgroundColor: vendor === v.id ? "#302b22" : t.color.panel,
-                }}
-              >
-                <Icon name={v.icon} />
-                <Copy
-                  style={{ fontSize: 10, lineHeight: 15, textAlign: "center" }}
-                >
-                  {v.name}
-                </Copy>
-                <Copy
-                  style={{
-                    fontSize: 9,
-                    lineHeight: 12,
-                    color:
-                      quality[v.quality.toLowerCase() as keyof typeof quality],
-                  }}
-                >
-                  {v.quality}
-                </Copy>
-              </Pressable>
-            ))}
-          </View>
-          {marketRush(state.day) && (
-            <Panel
-              style={{
-                padding: 9,
-                borderColor: t.color.goldDim,
-                flexDirection: "row",
-                gap: 8,
-                alignItems: "center",
-              }}
-            >
-              <Icon name="clock-outline" size={18} />
-              <Copy style={{ fontSize: 11, flex: 1 }}>
-                Gate-season demand: purchase prices are 15% higher. Sell prices
-                stay stable.
-              </Copy>
-            </Panel>
-          )}
-          <View style={{ flexDirection: "row", gap: 6 }}>
-            {["Buy", "Sell"].map((x) => (
-              <Button
-                key={x}
-                label={x}
-                small
-                style={{ flex: 1 }}
-                tone={mode === x ? "gold" : "dark"}
-                onPress={() => {
-                  setMode(x);
-                  if (x === "Buy" && vendor === "guild")
-                    setVendor("provisioner");
-                }}
-              />
-            ))}
-          </View>
-          {mode === "Sell" && (
-            <Button
-              label={
-                vendor === "guild"
-                  ? "Selling to the guild"
-                  : "Sell to the Adventurers’ Guild"
+      <Frame
+        active="Home"
+        title="Stormhold"
+        portrait={state.party[0]?.portrait}
+        subtitle={
+          "Day " +
+          state.day +
+          (marketRush(state.day) ? " · Gate-season prices +15%" : "")
+        }
+      >
+        <Image
+          source={art.shopScene}
+          contentFit="fill"
+          style={{ width: "100%", aspectRatio: 1.5 }}
+          accessibilityLabel="Provisioner’s Shop. Good gear makes long roads shorter. Everything you need for a safer journey is right here."
+        />
+        <TabStrip
+          tabs={["Supplies", "Consumables", "Rare Goods", "Sell"]}
+          active={category}
+          onChange={setCategory}
+        />
+        <View style={{ padding: 10, gap: 7 }}>
+          {sell && (
+            <TabStrip
+              tabs={["Guild", "Provisioner", "Alchemist", "Emporium"]}
+              active={
+                buyer === "guild"
+                  ? "Guild"
+                  : buyer === "provisioner"
+                    ? "Provisioner"
+                    : buyer === "alchemist"
+                      ? "Alchemist"
+                      : "Emporium"
               }
-              icon="shield-check"
-              small
-              tone={vendor === "guild" ? "gold" : "dark"}
-              onPress={() => setVendor("guild")}
+              onChange={(v) =>
+                setBuyer(
+                  v === "Guild"
+                    ? "guild"
+                    : v === "Provisioner"
+                      ? "provisioner"
+                      : v === "Alchemist"
+                        ? "alchemist"
+                        : "emporium",
+                )
+              }
             />
           )}
-          <Eyebrow>
-            {vendor === "guild"
-              ? "GUILD APPRAISAL"
-              : VENDORS.find((v) => v.id === vendor)?.name}{" "}
-            · {mode === "Buy" ? "EQUIPMENT & SUPPLIES" : "EXPEDITION SPOILS"}
-          </Eyebrow>
-          {mode === "Sell" && (
-            <Copy muted style={{ fontSize: 12 }}>
-              Matching buyers pay 30% above appraisal; other buyers pay 15%
-              less. Compare before you sell.
-            </Copy>
+          {category === "Rare Goods" && (
+            <TabStrip
+              tabs={state.party.map((p) => p.name)}
+              active={state.party.find((p) => p.id === recipient)?.name || ""}
+              onChange={(name) =>
+                setRecipient(state.party.find((p) => p.name === name)!.id)
+              }
+            />
           )}
-          {mode === "Buy" && (
-            <View style={{ flexDirection: "row", gap: 5 }}>
-              {state.party.map((c) => (
-                <Button
-                  key={c.id}
-                  small
-                  label={c.name}
-                  tone={recipient === c.id ? "blue" : "dark"}
-                  onPress={() => setRecipient(c.id)}
-                  style={{ flex: 1 }}
-                />
-              ))}
-            </View>
-          )}
-          {goods.length ? (
-            goods.map((item) => {
-              const qty = state.inventory[item.id] || 0;
-              const price =
-                mode === "Buy"
-                  ? buyPrice(item, state.day)
-                  : sellPrice(item, vendor);
-              return (
-                <Panel
-                  key={item.id}
-                  style={{
-                    padding: 13,
-                    borderColor: quality[item.quality],
-                    gap: 9,
-                  }}
+          {goods.map((item) => {
+            const qty = state.inventory[item.id] || 0;
+            const owned =
+              item.effect === "food"
+                ? state.food
+                : item.effect === "potion"
+                  ? state.potions
+                  : qty;
+            const price = sell
+              ? sellPrice(item, buyer)
+              : buyPrice(item, state.day);
+            return (
+              <Surface key={item.id} parchment style={{ padding: 9, gap: 6 }}>
+                <View
+                  style={{ flexDirection: "row", gap: 9, alignItems: "center" }}
                 >
-                  <View
+                  <Surface
                     style={{
-                      flexDirection: "row",
-                      gap: 13,
+                      width: 49,
+                      height: 57,
                       alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    <Panel
+                    <ItemGlyph id={item.id} size={37} />
+                  </Surface>
+                  <View style={{ flex: 1 }}>
+                    <Copy
+                      title
+                      style={{ fontSize: 18, lineHeight: 21, color: "#241e18" }}
+                    >
+                      {item.name}
+                    </Copy>
+                    <Copy
+                      style={{ fontSize: 12, lineHeight: 15, color: "#44382b" }}
+                    >
+                      {item.description}
+                    </Copy>
+                    <Copy
+                      style={{ fontSize: 11, lineHeight: 15, color: "#725335" }}
+                    >
+                      Owned {owned} · {price}g
+                    </Copy>
+                  </View>
+                  {!sell && (
+                    <View
                       style={{
-                        padding: 9,
-                        width: 53,
-                        height: 56,
+                        flexDirection: "row",
                         alignItems: "center",
-                        justifyContent: "center",
-                        borderColor: quality[item.quality],
+                        gap: 4,
                       }}
                     >
-                      <Icon
-                        name={item.icon}
-                        color={quality[item.quality]}
-                        size={32}
-                      />
-                    </Panel>
-                    <View style={{ flex: 1 }}>
-                      <Copy title style={{ fontSize: 15, lineHeight: 21 }}>
-                        {item.name}
-                      </Copy>
-                      <Copy
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          "Remove " + item.name + " from cart"
+                        }
+                        onPress={() =>
+                          quantity(item.id, (cart[item.id] || 0) - 1)
+                        }
                         style={{
-                          fontSize: 10,
-                          lineHeight: 15,
-                          color: quality[item.quality],
-                          textTransform: "uppercase",
-                          letterSpacing: 1,
+                          width: 25,
+                          height: 35,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: "#18232e",
+                          borderRadius: 3,
                         }}
                       >
-                        {item.quality} · {item.kind}
-                      </Copy>
-                    </View>
-                    <View style={{ alignItems: "flex-end" }}>
+                        <Copy>−</Copy>
+                      </Pressable>
                       <Copy
                         style={{
-                          color: t.color.gold,
-                          fontFamily: t.font.bold,
-                          fontSize: 17,
+                          color: "#241e18",
+                          width: 14,
+                          textAlign: "center",
                         }}
                       >
-                        {price}g
+                        {cart[item.id] || 0}
                       </Copy>
-                      <Copy muted style={{ fontSize: 10 }}>
-                        Owned{" "}
-                        {item.effect === "food"
-                          ? state.food
-                          : item.effect === "potion"
-                            ? state.potions
-                            : qty}
-                      </Copy>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={"Add " + item.name + " to cart"}
+                        onPress={() =>
+                          quantity(item.id, (cart[item.id] || 0) + 1)
+                        }
+                        style={{
+                          width: 25,
+                          height: 35,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: "#18232e",
+                          borderRadius: 3,
+                        }}
+                      >
+                        <Copy>+</Copy>
+                      </Pressable>
                     </View>
-                  </View>
-                  <Copy muted style={{ fontSize: 12, lineHeight: 18 }}>
-                    {item.description}
-                  </Copy>
-                  <View style={{ flexDirection: "row", gap: 8 }}>
-                    {mode === "Buy" ? (
-                      <>
-                        <Button
-                          label={`Buy ${item.name}`}
-                          small
-                          disabled={state.gold < price}
-                          onPress={() =>
-                            dispatch({ type: "BUY_ITEM", id: item.id })
-                          }
-                          style={{ flex: 1 }}
-                        />
-                        {["weapon", "armor", "charm"].includes(item.kind) && (
-                          <Button
-                            label="Equip"
-                            small
-                            tone="blue"
-                            disabled={!qty}
-                            onPress={() =>
-                              dispatch({
-                                type: "EQUIP",
-                                character: recipient,
-                                item: item.id,
-                              })
-                            }
-                          />
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          label={`Sell one · ${price}g`}
-                          small
-                          tone="green"
-                          style={{ flex: 1 }}
-                          onPress={() =>
-                            dispatch({
+                  )}
+                </View>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: 6,
+                    justifyContent: "flex-end",
+                  }}
+                >
+                  <Button
+                    label={
+                      sell
+                        ? "Sell one · " + price + "g"
+                        : "Buy · " + price + "g"
+                    }
+                    small
+                    compact
+                    tone="green"
+                    disabled={!sell && state.gold < price}
+                    onPress={() =>
+                      dispatch(
+                        sell
+                          ? {
                               type: "SELL",
                               id: item.id,
-                              vendor,
+                              vendor: buyer,
                               quantity: 1,
-                            })
-                          }
-                        />
-                        <Button
-                          label={`Sell all · ${price * qty}g`}
-                          small
-                          style={{ flex: 1 }}
-                          onPress={() =>
-                            dispatch({
-                              type: "SELL",
-                              id: item.id,
-                              vendor,
-                              quantity: qty,
-                            })
-                          }
-                        />
-                      </>
-                    )}
-                  </View>
-                </Panel>
-              );
-            })
-          ) : (
-            <Panel style={{ padding: 25, alignItems: "center", gap: 10 }}>
-              <Icon name="sack" size={40} />
-              <Copy title>No spoils to trade yet.</Copy>
-              <Copy muted style={{ fontSize: 13, textAlign: "center" }}>
-                Monster cores, herbs, and fragments arrive from expeditions.
-                Keep useful supplies for the next ascent.
-              </Copy>
-            </Panel>
+                            }
+                          : { type: "BUY_ITEM", id: item.id },
+                      )
+                    }
+                  />
+                  {sell ? (
+                    <Button
+                      label={"Sell all · " + price * qty + "g"}
+                      small
+                      compact
+                      onPress={() =>
+                        dispatch({
+                          type: "SELL",
+                          id: item.id,
+                          vendor: buyer,
+                          quantity: qty,
+                        })
+                      }
+                    />
+                  ) : (
+                    item.kind !== "supply" && (
+                      <Button
+                        label="Equip"
+                        small
+                        compact
+                        tone="blue"
+                        disabled={!qty}
+                        onPress={() =>
+                          dispatch({
+                            type: "EQUIP",
+                            character: recipient,
+                            item: item.id,
+                          })
+                        }
+                      />
+                    )
+                  )}
+                </View>
+              </Surface>
+            );
+          })}
+          {!goods.length && (
+            <Surface style={{ padding: 20 }}>
+              <Copy title>No spoils to sell</Copy>
+              <Copy muted>Bring back loot from the labyrinth.</Copy>
+            </Surface>
+          )}
+          {!sell && (
+            <Surface style={{ padding: 13, gap: 9 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Copy title>Your Cart</Copy>
+                <Copy style={{ color: t.color.gold }}>{total} gold</Copy>
+              </View>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 5 }}>
+                {ITEMS.filter((i) => cart[i.id] > 0).map((i) => (
+                  <Surface
+                    key={i.id}
+                    style={{ padding: 6, alignItems: "center", gap: 3 }}
+                  >
+                    <Icon name={i.icon} size={28} />
+                    <Copy style={{ fontSize: 11 }}>×{cart[i.id]}</Copy>
+                  </Surface>
+                ))}
+              </View>
+              <Button
+                label="Purchase All"
+                disabled={!total || state.gold < total}
+                onPress={() => {
+                  dispatch({
+                    type: "BUY_BATCH",
+                    items: Object.entries(cart)
+                      .filter(([, quantity]) => quantity > 0)
+                      .map(([id, quantity]) => ({ id, quantity })),
+                  });
+                  setCart({});
+                }}
+              />
+            </Surface>
           )}
         </View>
       </Frame>
@@ -672,145 +680,125 @@ export function ShopScreen() {
 
 export function GuildScreen() {
   const { state, dispatch } = useGame();
-  const [tab, setTab] = useState("Prepare");
+  const [tab, setTab] = useState("Contracts");
+  const standing = state.faction.guild;
+  const rankBase = standing >= 30 ? 30 : standing >= 10 ? 10 : 0;
+  const rankStep = standing >= 30 ? 10 : standing >= 10 ? 7 : 4;
+  const rank = ["I", "II", "III"][
+    Math.min(2, Math.floor((standing - rankBase) / rankStep))
+  ];
   return (
     <Guard>
-      <Frame
-        background={tab === "Clans" ? art.clan : art.town}
-        active="Home"
-        title="Adventurers’ Guild"
-      >
-        <View style={{ padding: 16, gap: 13 }}>
-          <View style={{ flexDirection: "row", gap: 5 }}>
-            {["Prepare", "Contracts", "Clans"].map((x) => (
-              <Button
-                key={x}
-                label={x}
-                small
-                tone={tab === x ? "gold" : "dark"}
-                style={{ flex: 1 }}
-                onPress={() => setTab(x)}
-              />
-            ))}
-          </View>
-          {tab === "Prepare" ? (
-            <>
-              <Copy>
-                Day {state.day} ·{" "}
-                {gateOpen(state.day)
-                  ? "Gate open"
-                  : `${daysToGate(state.day)} days to opening`}
-              </Copy>
-              <Panel>
-                <Icon name="sword-cross" size={35} />
-                <Copy title style={{ marginTop: 8 }}>
-                  Train together
-                </Copy>
-                <Copy muted>+45 XP per companion. 60 gold per day.</Copy>
-                <Divider />
-                <Button
-                  label="Train · 60 gold · +1 day"
-                  disabled={state.gold < 60}
-                  onPress={() => dispatch({ type: "TRAIN" })}
-                />
-              </Panel>
-              <Panel>
-                <Copy title>Town contracts</Copy>
-                <Copy muted style={{ marginTop: 7 }}>
-                  +125 gold and +1 guild standing per day.
-                </Copy>
-                <Divider />
-                <Button
-                  label="Work · +125 gold · +1 day"
-                  tone="blue"
-                  onPress={() => dispatch({ type: "WORK" })}
-                />
-              </Panel>
-              <Panel style={{ gap: 10 }}>
-                <Copy title>Rest at the inn</Copy>
-                <Copy muted>Restore HP and MP.</Copy>
-                <Button
-                  label="Rest · +1 day"
-                  tone="blue"
-                  onPress={() => dispatch({ type: "REST" })}
-                />
-              </Panel>
-              {!gateOpen(state.day) && (
-                <Panel style={{ gap: 10 }}>
-                  <Copy title>Prepare until opening</Copy>
-                  <Button
-                    label="Rest until opening"
-                    tone="blue"
-                    onPress={() =>
-                      dispatch({ type: "PREPARE_CYCLE", mode: "rest" })
-                    }
-                  />
-                  <Button
-                    label={`Work · +${daysToGate(state.day) * 125} gold`}
-                    onPress={() =>
-                      dispatch({ type: "PREPARE_CYCLE", mode: "work" })
-                    }
-                  />
-                  <Button
-                    label={`Train · ${daysToGate(state.day) * 60} gold`}
-                    tone="dark"
-                    disabled={state.gold < daysToGate(state.day) * 60}
-                    onPress={() =>
-                      dispatch({ type: "PREPARE_CYCLE", mode: "train" })
-                    }
-                  />
-                </Panel>
-              )}
-              <Button
-                label="Sell expedition spoils"
-                icon="sack"
-                onPress={() =>
-                  router.push({
-                    pathname: "/shop",
-                    params: { vendor: "guild", mode: "sell" },
-                  })
-                }
-              />
-              <Copy muted style={{ fontSize: 12, textAlign: "center" }}>
-                The guild pays a premium for monster cores.
-              </Copy>
-            </>
-          ) : tab === "Contracts" ? (
-            <>
-              {QUESTS.map((q) => {
-                const status = state.quests[q.id];
-                const progress = questProgress(state, q.id);
-                const ready = status === "accepted" && progress >= q.target;
-                return (
-                  <Panel
-                    key={q.id}
+      <Frame active="Home" title="Adventurers’ Guild">
+        <View style={{ position: "relative" }}>
+          <Image
+            source={art.guildScene}
+            contentFit="fill"
+            style={{ width: "100%", aspectRatio: 1.5 }}
+            accessibilityLabel="Seraphine: Brave souls like you keep this world standing. Take a contract, and make your mark."
+          />
+          <Surface
+            style={{
+              position: "absolute",
+              right: 9,
+              top: 10,
+              width: "43%",
+              padding: 10,
+              gap: 4,
+            }}
+          >
+            <Copy style={{ fontSize: 12 }}>Guild Rank</Copy>
+            <Copy title style={{ fontSize: 22 }}>
+              {standing >= 30 ? "Gold" : standing >= 10 ? "Silver" : "Bronze"}{" "}
+              {rank}
+            </Copy>
+            <Bar value={standing % 10} max={10} />
+            <Copy style={{ fontSize: 11 }}>{standing} standing</Copy>
+          </Surface>
+        </View>
+        <TabStrip
+          tabs={["Contracts", "Prepare", "Clans"]}
+          active={tab}
+          onChange={setTab}
+        />
+        <View style={{ padding: 10, gap: 8 }}>
+          {tab === "Contracts" ? (
+            QUESTS.map((q, index) => {
+              const status = state.quests[q.id],
+                progress = questProgress(state, q.id),
+                ready = status === "accepted" && progress >= q.target;
+              return (
+                <Surface key={q.id} parchment style={{ padding: 9, gap: 7 }}>
+                  <View
                     style={{
-                      borderColor: ready ? t.color.gold : t.color.line,
+                      flexDirection: "row",
                       gap: 9,
+                      alignItems: "center",
                     }}
                   >
-                    <Eyebrow>{q.faction}</Eyebrow>
-                    <Copy title style={{ fontSize: 18 }}>
-                      {q.title}
-                    </Copy>
-                    <Copy muted style={{ fontSize: 13 }}>
-                      {q.description}
-                    </Copy>
-                    <Bar
-                      value={progress}
-                      max={q.target}
-                      color={ready ? t.color.gold : t.color.blue}
-                      label={`${progress}/${q.target} · ${q.gold} gold · ${q.gems} crystals`}
+                    <Image
+                      source={
+                        [art.labyrinth, art.camp, art.clan, art.forge][index]
+                      }
+                      contentFit="cover"
+                      style={{ width: 50, height: 62, borderRadius: 3 }}
                     />
+                    <View style={{ flex: 1 }}>
+                      <Copy
+                        title
+                        style={{
+                          color: "#261d17",
+                          fontSize: 19,
+                          lineHeight: 22,
+                        }}
+                      >
+                        {q.title}
+                      </Copy>
+                      <Copy
+                        style={{
+                          color: "#433626",
+                          fontSize: 12,
+                          lineHeight: 16,
+                        }}
+                      >
+                        {q.description}
+                      </Copy>
+                      <Copy style={{ color: "#74512b", fontSize: 11 }}>
+                        {q.faction}
+                      </Copy>
+                    </View>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      gap: 10,
+                      alignItems: "center",
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Copy style={{ color: "#372619", fontSize: 12 }}>
+                        {q.gold} gold · {q.gems} crystals
+                      </Copy>
+                      <Copy
+                        style={{
+                          color: "#67482d",
+                          fontSize: 11,
+                          lineHeight: 14,
+                        }}
+                      >
+                        {progress}/{q.target}
+                      </Copy>
+                      <Bar value={progress} max={q.target} />
+                    </View>
                     <Button
                       label={
                         status === "claimed"
-                          ? "Contract fulfilled"
+                          ? "Claimed"
                           : ready
-                            ? "Turn in contract"
+                            ? "Claim"
                             : status === "accepted"
-                              ? "Contract in progress"
-                              : "Accept contract"
+                              ? "Accepted"
+                              : "Accept"
                       }
                       small
                       tone={ready ? "gold" : "blue"}
@@ -827,41 +815,129 @@ export function GuildScreen() {
                         )
                       }
                     />
-                  </Panel>
-                );
-              })}
+                  </View>
+                </Surface>
+              );
+            })
+          ) : tab === "Prepare" ? (
+            <>
+              <Copy style={{ color: t.color.gold }}>
+                Day {state.day} ·{" "}
+                {gateOpen(state.day)
+                  ? "Gate open"
+                  : daysToGate(state.day) + " days until opening"}
+              </Copy>
+              {[
+                {
+                  title: "Train together",
+                  detail: "+45 XP each · 60 gold · +1 day",
+                  action: "TRAIN" as const,
+                  disabled: state.gold < 60,
+                  label: "Train",
+                },
+                {
+                  title: "Town contracts",
+                  detail: "+125 gold · +1 standing · +1 day",
+                  action: "WORK" as const,
+                  disabled: false,
+                  label: "Work",
+                },
+                {
+                  title: "Rest at the inn",
+                  detail: "Restore HP and MP · +1 day",
+                  action: "REST" as const,
+                  disabled: false,
+                  label: "Rest",
+                },
+              ].map((x) => (
+                <Surface
+                  key={x.title}
+                  parchment
+                  style={{ padding: 13, gap: 9 }}
+                >
+                  <Copy title style={{ color: "#261d17" }}>
+                    {x.title}
+                  </Copy>
+                  <Copy style={{ color: "#493a2d", fontSize: 13 }}>
+                    {x.detail}
+                  </Copy>
+                  <Button
+                    label={x.label}
+                    small
+                    tone="blue"
+                    disabled={x.disabled}
+                    onPress={() => dispatch({ type: x.action })}
+                  />
+                </Surface>
+              ))}
+              {!gateOpen(state.day) && (
+                <Surface style={{ padding: 13, gap: 8 }}>
+                  <Copy title>Until the gate opens</Copy>
+                  <Button
+                    label="Rest until opening"
+                    small
+                    tone="blue"
+                    onPress={() =>
+                      dispatch({ type: "PREPARE_CYCLE", mode: "rest" })
+                    }
+                  />
+                  <Button
+                    label={"Work · +" + daysToGate(state.day) * 125 + " gold"}
+                    small
+                    onPress={() =>
+                      dispatch({ type: "PREPARE_CYCLE", mode: "work" })
+                    }
+                  />
+                  <Button
+                    label={"Train · " + daysToGate(state.day) * 60 + " gold"}
+                    small
+                    tone="dark"
+                    disabled={state.gold < daysToGate(state.day) * 60}
+                    onPress={() =>
+                      dispatch({ type: "PREPARE_CYCLE", mode: "train" })
+                    }
+                  />
+                </Surface>
+              )}
+              <Button
+                label="Sell expedition spoils"
+                small
+                onPress={() =>
+                  router.push({
+                    pathname: "/shop",
+                    params: { vendor: "guild", mode: "sell" },
+                  })
+                }
+              />
             </>
           ) : (
             <>
-              <Panel>
-                <Icon name="shield-check" size={42} />
+              <Image
+                source={art.clan}
+                style={{ width: "100%", aspectRatio: 1.7, borderRadius: 4 }}
+                contentFit="cover"
+              />
+              <Surface style={{ padding: 14, gap: 8 }}>
                 <Copy title>Adventurers’ Guild</Copy>
-                <Copy muted style={{ marginTop: 8 }}>
-                  Complete contracts to gain standing.
+                <Copy>
+                  Standing {standing} · Signing discount {standing * 5}g
                 </Copy>
-                <Divider />
-                <Copy style={{ color: t.color.gold }}>
-                  Standing {state.faction.guild} · Signing offers improve by 5g
-                  per standing
-                </Copy>
-              </Panel>
-              <Panel>
-                <Icon name="shield-star" size={42} />
+                <Ornament />
                 <Copy title>The White Stag</Copy>
-                <Copy muted style={{ marginTop: 8 }}>
-                  Commander Serin’s clan holds Floor 3. An alliance unlocks the
-                  missing-scouts contract on Floor 9.
-                </Copy>
-                <Divider />
                 <Copy
                   style={{
                     color: state.clanAlly ? t.color.green : t.color.gold,
                   }}
                 >
-                  Standing {state.faction.stag} ·{" "}
-                  {state.clanAlly ? "Allied" : "Meet them in the labyrinth"}
+                  {state.clanAlly
+                    ? "Allied"
+                    : "Meet Commander Serin on Floor 3"}
                 </Copy>
-              </Panel>
+                <Copy muted style={{ fontSize: 13 }}>
+                  Standing {state.faction.stag} · The scout contract opens with
+                  an alliance.
+                </Copy>
+              </Surface>
             </>
           )}
         </View>

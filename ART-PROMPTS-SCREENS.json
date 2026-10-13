@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-13",
+  "generator": "Built-in image_gen",
+  "sourceOfTruth": "The six additional designs in mock/",
+  "assets": [
+    {
+      "asset": "assets/art/app-icon.png",
+      "operation": "Unmodified copy of supplied icon",
+      "source": "C:/Users/yyaco/AppData/Local/Temp/codex-clipboard-3912fec7-69bd-44cc-ab1b-f9ee9957556c.png"
+    },
+    {
+      "asset": "assets/ui/menu-icons.png",
+      "operation": "Transparent icon generation",
+      "source": "mock/ChatGPT Image Oct 12, 2026, 10_01_22 PM-6.png",
+      "prompt": "4x3 atlas. Silver Home, Party, Labyrinth, Journal, More; gold Profile, Achievements, Settings; Save Data, Mail, Codex, Help. Isolated icons only, no text, frames, panels or navbar. Real alpha."
+    },
+    {
+      "asset": "assets/ui/supply-icons.png",
+      "operation": "Transparent pixel icon generation",
+      "prompt": "4x3 square-cell pixel atlas. Bread, red potion, antidote, ether; greater potion, core, herb, ore; leather roll, frost amulet, ember armor, venom ring. Real alpha, no text or UI."
+    },
+    {
+      "asset": "assets/art/tavern-scene.png",
+      "source": "mock/ChatGPT Image Oct 12, 2026, 10_01_18 PM-1.png",
+      "operation": "Scene extraction/recreation",
+      "prompt": "Same tavern counter scene and Elise speech: New faces! The labyrinth always needs more heroes. Care to join our story? High-neck opaque blouse, covered chest and shoulders. Remove header, tabs, recruitment rows, navbar and frame."
+    },
+    {
+      "asset": "assets/art/guild-scene.png",
+      "source": "mock/ChatGPT Image Oct 12, 2026, 10_01_18 PM-2.png",
+      "operation": "Scene extraction/recreation",
+      "prompt": "Same guild hall and Seraphine speech: Brave souls like you keep this world standing. Take a contract, and make your mark. Modest high-neck blouse and cloak. Remove rank panel and featured card, recreate hall. No header, rows, tabs, navbar or frame."
+    },
+    {
+      "asset": "assets/art/shop-scene.png",
+      "source": "mock/ChatGPT Image Oct 12, 2026, 10_01_19 PM-3.png",
+      "operation": "Scene extraction/recreation",
+      "prompt": "Same provisioner scene, wooden sign and baked parchment speech. Modest high-neck blouse and brown apron. Remove header, item rows, tabs, navbar and frame."
+    },
+    {
+      "asset": "assets/art/forge-scene.png",
+      "source": "mock/ChatGPT Image Oct 12, 2026, 10_01_20 PM-4.png",
+      "operation": "Scene extraction/recreation",
+      "prompt": "Same Bram smithing scene, forge, blue banner, integrated speech: Good equipment keeps good people alive. Remove portrait rail, stats, materials, controls, tabs, header and navbar."
+    },
+    {
+      "asset": "assets/art/journal-chapter.png",
+      "source": "mock/ChatGPT Image Oct 12, 2026, 10_01_21 PM-5.png",
+      "operation": "Scene extraction/recreation",
+      "prompt": "Only the large Chapter I — A Deeper Tomorrow parchment illustration with original text, blue castle and red-caped adventurer. No header, tabs, rows or navbar."
+    },
+    {
+      "asset": "assets/art/more-study.png",
+      "source": "mock/ChatGPT Image Oct 12, 2026, 10_01_22 PM-6.png",
+      "operation": "Background extraction/recreation",
+      "prompt": "Same candlelit medieval study, blue night castle window, books, globe, sleeping black cat, maps and lantern. Remove all UI, labels, buttons, profile, navbar and frame; reconstruct background."
+    }
+  ],
+  "ui": "Native React Native components render navbar, labels, selected state, borders, parchment, tabs and all dynamic values. Scene dialogue remains baked into artwork."
+}

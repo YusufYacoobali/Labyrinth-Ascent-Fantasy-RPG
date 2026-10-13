@@ -496,6 +496,9 @@ export type Action =
   | { type: "PREPARE_CYCLE"; mode: "rest" | "work" | "train" }
   | { type: "BUY"; item: "food" | "potion" }
   | { type: "BUY_ITEM"; id: string }
+  | { type: "BUY_BATCH"; items: { id: string; quantity: number }[] }
+  | { type: "CRAFT"; id: "iron-blade" | "leather" }
+  | { type: "RENAME"; name: string }
   | { type: "SELL"; id: string; vendor: Vendor; quantity: number }
   | { type: "EQUIP"; character: string; item: string }
   | { type: "FORGE"; id: string }
@@ -589,6 +592,61 @@ export function reducer(s: Game, a: Action): Game {
   if (a.type === "SETTING") return { ...s, [a.key]: a.value };
   if (a.type === "GUIDE") return { ...s, guideSeen: !a.show };
   if (a.type === "INTRO_COMPLETED") return { ...s, introSeen: true };
+  if (a.type === "RENAME") {
+    if (s.phase !== "town" || !a.name.trim()) return s;
+    return {
+      ...s,
+      party: s.party.map((c) =>
+        c.id === "hero" ? { ...c, name: a.name.trim().slice(0, 18) } : c,
+      ),
+    };
+  }
+  if (a.type === "BUY_BATCH") {
+    if (s.phase !== "town" || !a.items.length || a.items.length > ITEMS.length)
+      return s;
+    const valid = a.items.every(
+      (entry) =>
+        Number.isInteger(entry.quantity) &&
+        entry.quantity > 0 &&
+        entry.quantity <= 10 &&
+        ITEMS.some((item) => item.id === entry.id && item.kind !== "loot"),
+    );
+    if (!valid) return s;
+    const total = a.items.reduce(
+      (sum, entry) =>
+        sum +
+        buyPrice(
+          ITEMS.find((i) => i.id === entry.id)!,
+          s.day,
+        ) *
+          entry.quantity,
+      0,
+    );
+    if (s.gold < total) return note(s, "Not enough gold for this cart.");
+    let result = s;
+    for (const entry of a.items)
+      for (let n = 0; n < entry.quantity; n++)
+        result = reducer(result, { type: "BUY_ITEM", id: entry.id });
+    return result;
+  }
+  if (a.type === "CRAFT") {
+    if (s.phase !== "town" || !["iron-blade", "leather"].includes(a.id))
+      return s;
+    if (s.gold < 90 || (s.inventory["beast-core"] || 0) < 3)
+      return note(s, "You need 3 monster cores and 90 gold.");
+    return note(
+      {
+        ...s,
+        gold: s.gold - 90,
+        inventory: {
+          ...s.inventory,
+          "beast-core": s.inventory["beast-core"] - 3,
+          [a.id]: (s.inventory[a.id] || 0) + 1,
+        },
+      },
+      `${ITEMS.find((i) => i.id === a.id)!.name} crafted.`,
+    );
+  }
   if (a.type === "CREATE") {
     if (s.started) return s;
     const hero = makeCharacter(

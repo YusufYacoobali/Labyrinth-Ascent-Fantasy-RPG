@@ -153,8 +153,20 @@ function play(
         a = { ...a, kind: "skill", actor: twin.id, skill: "Twin Strike" };
       else if (mpLow && (s.inventory.ether || 0) > 0 && s.enemy.boss)
         a = { ...a, kind: "item", item: "ether" };
-      if (strategy === "attack" && a.kind !== "item")
+      if (
+        strategy === "attack" &&
+        a.kind !== "item" &&
+        !(a.kind === "skill" && a.skill === "Second Wind")
+      )
         a = { ...a, kind: "attack" };
+      // Healing-only play still uses its mana supplies during a safe window.
+      if (
+        strategy === "attack" &&
+        (s.inventory.ether || 0) > 0 &&
+        living.some((c) => c.skills.includes("Second Wind") && c.mp < 20) &&
+        ["charge", "recovery", "interrupted"].includes(e.battleIntent(s).kind)
+      )
+        a = { ...a, kind: "item", item: "ether" };
       if (a.kind === "guard" && !living.some((c) => !c.ailments.paralysis))
         a = { ...a, kind: "attack" };
       const previousId = s.effects.id;

@@ -553,22 +553,86 @@ test("Every floor has three distinct arrival choices and each resolves once", ()
     }
   }
 });
-test('Introduction completion persists separately from the town guide',()=>{
-  let s=reduce(e.initialGame(),{type:'INTRO_COMPLETED'});
-  assert.equal(s.introSeen,true);assert.equal(s.guideSeen,false);
-  s=e.normalizeSave(JSON.parse(JSON.stringify(s)));
-  assert.equal(s.introSeen,true);assert.equal(s.started,false);
-  s=reduce(s,{type:'CREATE',race:'elf',name:'Sylva',roll:.5});
-  assert.equal(s.introSeen,true);assert.equal(s.guideSeen,false);
+test("Introduction completion persists separately from the town guide", () => {
+  let s = reduce(e.initialGame(), { type: "INTRO_COMPLETED" });
+  assert.equal(s.introSeen, true);
+  assert.equal(s.guideSeen, false);
+  s = e.normalizeSave(JSON.parse(JSON.stringify(s)));
+  assert.equal(s.introSeen, true);
+  assert.equal(s.started, false);
+  s = reduce(s, { type: "CREATE", race: "elf", name: "Sylva", roll: 0.5 });
+  assert.equal(s.introSeen, true);
+  assert.equal(s.guideSeen, false);
 });
-test('Elise guide dismissal persists and can be explicitly reopened',()=>{
-  let s=reduce(create(),{type:'GUIDE'});assert.equal(s.guideSeen,true);
-  s=e.normalizeSave(JSON.parse(JSON.stringify(s)));assert.equal(s.guideSeen,true);
-  s=reduce(s,{type:'GUIDE',show:true});assert.equal(s.guideSeen,false);
-  assert.equal(s.introSeen,true);assert.equal(reduce(s,{type:'RESET'}).guideSeen,false);
+test("Elise guide dismissal persists and can be explicitly reopened", () => {
+  let s = reduce(create(), { type: "GUIDE" });
+  assert.equal(s.guideSeen, true);
+  s = e.normalizeSave(JSON.parse(JSON.stringify(s)));
+  assert.equal(s.guideSeen, true);
+  s = reduce(s, { type: "GUIDE", show: true });
+  assert.equal(s.guideSeen, false);
+  assert.equal(s.introSeen, true);
+  assert.equal(reduce(s, { type: "RESET" }).guideSeen, false);
 });
-test('Existing characters skip the removed launch screen and unfinished new saves retain onboarding',()=>{
-  const s=create();delete s.introSeen;assert.equal(e.normalizeSave(s).introSeen,true);
-  const fresh=e.initialGame();delete fresh.introSeen;assert.equal(e.normalizeSave(fresh).introSeen,false);
+test("Existing characters skip the removed launch screen and unfinished new saves retain onboarding", () => {
+  const s = create();
+  delete s.introSeen;
+  assert.equal(e.normalizeSave(s).introSeen, true);
+  const fresh = e.initialGame();
+  delete fresh.introSeen;
+  assert.equal(e.normalizeSave(fresh).introSeen, false);
+});
+
+test("Cart checkout is atomic and rejects invalid quantities", () => {
+  const s = create();
+  const batch = {
+    type: "BUY_BATCH",
+    items: [
+      { id: "rations", quantity: 2 },
+      { id: "potion", quantity: 1 },
+    ],
+  };
+  const result = reduce(s, batch);
+  assert.equal(result.gold, s.gold - 150);
+  assert.equal(result.food, s.food + 6);
+  assert.equal(result.potions, s.potions + 1);
+  const poor = { ...s, gold: 149 };
+  const rejected = reduce(poor, batch);
+  assert.equal(rejected.gold, 149);
+  assert.deepEqual(rejected.inventory, poor.inventory);
+  assert.equal(rejected.food, poor.food);
+  for (const quantity of [0, -1, 11, NaN, 1.5])
+    assert.equal(
+      reduce(s, { type: "BUY_BATCH", items: [{ id: "rations", quantity }] }),
+      s,
+    );
+  assert.equal(reduce(enter(), batch).gold, enter().gold);
+});
+test("Forge crafting consumes real cores and gold, then equipment can be used", () => {
+  const s = { ...create(), inventory: { "beast-core": 3 } };
+  const crafted = reduce(s, { type: "CRAFT", id: "iron-blade" });
+  assert.equal(crafted.gold, s.gold - 90);
+  assert.equal(crafted.inventory["beast-core"], 0);
+  assert.equal(crafted.inventory["iron-blade"], 1);
+  const equipped = reduce(crafted, {
+    type: "EQUIP",
+    character: "hero",
+    item: "iron-blade",
+  });
+  assert.equal(equipped.party[0].atk, crafted.party[0].atk + 7);
+  assert.equal(
+    reduce({ ...s, gold: 89 }, { type: "CRAFT", id: "leather" }).inventory
+      .leather,
+    undefined,
+  );
+});
+test("Profile name changes preserve character stats and only work in town", () => {
+  const s = create();
+  const renamed = reduce(s, { type: "RENAME", name: "  Thorne  " });
+  assert.equal(renamed.party[0].name, "Thorne");
+  assert.equal(renamed.party[0].atk, s.party[0].atk);
+  assert.equal(reduce(s, { type: "RENAME", name: "   " }), s);
+  const fighting = enter();
+  assert.equal(reduce(fighting, { type: "RENAME", name: "Changed" }), fighting);
 });
 console.log(`${count} gameplay checks passed.`);

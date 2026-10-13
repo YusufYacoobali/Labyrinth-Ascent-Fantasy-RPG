@@ -22,6 +22,8 @@ export default function RootLayout() {
       art.bosses,
       art.townGuide,
       art.townPlay,
+      art.menuIcons,
+      art.supplyIcons,
     ].map((source) => Asset.fromModule(source).uri);
     const scenes = [
       art.cover,
@@ -36,6 +38,12 @@ export default function RootLayout() {
       art.forge,
       art.relic,
       art.treasure,
+      art.shopScene,
+      art.guildScene,
+      art.forgeScene,
+      art.tavernScene,
+      art.journalChapter,
+      art.moreStudy,
     ].map((source) => Asset.fromModule(source).uri);
     // Reused atlases stay decoded; larger scenes warm the disk cache without pinning all of them in memory.
     void Image.prefetch(foreground, { cachePolicy: "memory-disk" })

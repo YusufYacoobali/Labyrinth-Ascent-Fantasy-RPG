@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-13",
+  "status": "complete",
+  "requirements": {
+    "appIcon": "Supplied artwork copied unchanged; SHA256 A463DD388B05B8B004C20B889B09B3356F7D9ACDEB39432DE8061FBF07CC15F2 matches source. Expo iOS/Android/web config references assets/art/app-icon.png.",
+    "navbar": "Native React Native layout, labels, press targets, gradients, borders and selected state. Only isolated generated glyphs use images. Old MockNavbar and navigation strip crops removed.",
+    "tabScreens": "New mock-based scene assets and coded controls for Tavern, Guild, Shop, Forge, Journal and More; Party portraits and tabs adapted with shared ornamented panels. Real inventory, cart checkout, crafting, contracts, settings, profile and discovered chapters.",
+    "labyrinth": "Final exported entry route: zero Main navigation elements; Expedition settings is the only top-bar button. Same frame handles combat, encounters, essences and results.",
+    "onboarding": "Previously verified all ten plate tops at 59px simulated safe inset; approved content and transitions preserved.",
+    "home": "Elise only in dismissible guide; dismissal survives reload and Help explicitly reopens it. Separate launch screen removed.",
+    "modesty": "Covered chest/shoulders on all new female NPC illustrations, consistent with existing modest portraits, sprites and onboarding.",
+    "combat": "Deterministic announced targets, Guard, Focus, Burst, cooldowns, break/interrupt windows, previews and per-target effects. Actual UI tested heavy multi-target guard, break, potion, victory and saved battle reload."
+  },
+  "validation": {
+    "typecheck": "passed",
+    "lint": "passed without warnings",
+    "automatedChecks": 53,
+    "balanceRuns": 128,
+    "tacticalCompletions": "64/64",
+    "attackAndHealingAverageFloor": 9.453125,
+    "exports": [
+      "Android Hermes bytecode",
+      "iOS Hermes bytecode",
+      "static web, 15 routes; temporary QA route removed"
+    ],
+    "browser": [
+      "Cart: 150g buys six rations plus potion, totals verified",
+      "Guild acceptance and claim pays 220g and 10 gems",
+      "Forge: 120g upgrades hero +6ATK/+2DEF; crafting disabled without 3 cores",
+      "More sound toggle, Codex links and cold journal deep-link verified",
+      "Final battle: turn2, enemy244/397, hero180/195 and momentum1 retained on reload; action buttons fit within844px viewport",
+      "Final entry: navbar count0, header settings-only"
+    ]
+  },
+  "artifacts": [
+    "verification/final-more.jpg",
+    "verification/final-shop.jpg",
+    "verification/final-party.jpg",
+    "verification/final-forge.jpg",
+    "verification/onboarding-safe-area.jpg",
+    "verification/balance-report.json",
+    "verification/final-build-verified"
+  ],
+  "preview": "http://localhost:8082",
+  "exportPreview": "http://localhost:8083/more"
+}

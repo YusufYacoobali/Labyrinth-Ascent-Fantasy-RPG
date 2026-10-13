@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Pressable } from "react-native";
+import { View, Pressable, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import {
   art,
@@ -17,12 +17,22 @@ import { RACES, resist, SKILLS } from "@/game/engine";
 import { ITEMS } from "@/game/world";
 import { useGame } from "@/game/provider";
 import { Guard } from "./town";
+import {
+  Surface,
+  TabStrip,
+  Ornament,
+  ItemGlyph,
+} from "@/components/native-chrome";
+import { Image } from "expo-image";
 import { theme as t } from "@/theme";
 export function PartyScreen() {
   const { state, dispatch } = useGame();
   const [selected, setSelected] = useState(state.party[0]?.id);
   const [tab, setTab] = useState("Character");
   const [catalog, setCatalog] = useState(false);
+  const { width } = useWindowDimensions();
+  const portraitSize =
+    (Math.min(width, 460) - 44) / Math.max(4, state.party.length);
   const c = state.party.find((c) => c.id === selected) || state.party[0];
   if (!c)
     return (
@@ -39,7 +49,7 @@ export function PartyScreen() {
   return (
     <Guard>
       <Frame active="Party" title="Your Party">
-        <View style={{ padding: 13, gap: 13 }}>
+        <View style={{ padding: 10, gap: 10 }}>
           <View style={{ flexDirection: "row", gap: 6 }}>
             {state.party.map((p) => (
               <Pressable
@@ -51,13 +61,14 @@ export function PartyScreen() {
                 style={{
                   flex: 1,
                   borderWidth: 1,
-                  borderColor: p.id === c.id ? t.color.blue : t.color.goldDim,
+                  borderColor: p.id === c.id ? "#92d4ff" : t.color.goldDim,
                   borderRadius: 5,
                   overflow: "hidden",
                   backgroundColor: t.color.panel,
+                  boxShadow: p.id === c.id ? "0 0 7px #399cff88" : undefined,
                 }}
               >
-                <Atlas index={p.portrait} size={94} />
+                <Atlas index={p.portrait} size={portraitSize} />
                 <View style={{ padding: 5, alignItems: "center" }}>
                   <Copy
                     title
@@ -94,19 +105,11 @@ export function PartyScreen() {
               </Pressable>
             )}
           </View>
-          <View style={{ flexDirection: "row", gap: 3 }}>
-            {["Character", "Equipment", "Skills", "Details"].map((x) => (
-              <Button
-                key={x}
-                small
-                compact
-                label={x}
-                tone={tab === x ? "gold" : "dark"}
-                onPress={() => setTab(x)}
-                style={{ flex: 1 }}
-              />
-            ))}
-          </View>
+          <TabStrip
+            tabs={["Character", "Equipment", "Skills", "Details"]}
+            active={tab}
+            onChange={setTab}
+          />
           {tab === "Character" ? (
             <Panel>
               <View style={{ flexDirection: "row", gap: 13 }}>
@@ -486,126 +489,227 @@ export function PartyScreen() {
 
 export function BlacksmithScreen() {
   const { state, dispatch } = useGame();
-  const [tab, setTab] = useState("Temper");
+  const [tab, setTab] = useState("Upgrade");
   const [selected, setSelected] = useState(state.party[0]?.id);
-  const c = state.party.find((c) => c.id === selected) || state.party[0];
+  const c = state.party.find((p) => p.id === selected) || state.party[0];
+  if (!c)
+    return (
+      <Guard>
+        <View />
+      </Guard>
+    );
+  const weapon = ITEMS.find(
+    (i) => c.equipment.includes(i.id) && i.kind === "weapon",
+  );
+  const cost = 120 + c.gear * 80;
   return (
     <Guard>
-      <Frame background={art.forge} active="Home" title="The Blacksmith">
-        <View style={{ padding: 18, gap: 14 }}>
-          <View style={{ flexDirection: "row", gap: 7 }}>
-            {["Temper", "Refine"].map((x) => (
-              <Button
-                key={x}
-                label={x}
-                small
-                tone={tab === x ? "gold" : "dark"}
-                style={{ flex: 1 }}
-                onPress={() => setTab(x)}
-              />
+      <Frame active="Home" title="Ironbell Forge" portrait={c.portrait}>
+        <TabStrip
+          tabs={["Upgrade", "Craft", "Enhance"]}
+          active={tab}
+          onChange={setTab}
+        />
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 7,
+            padding: 9,
+            alignItems: "flex-start",
+          }}
+        >
+          <View style={{ width: 66, gap: 7 }}>
+            {state.party.map((p) => (
+              <Pressable
+                key={p.id}
+                accessibilityRole="button"
+                accessibilityLabel={"Forge for " + p.name}
+                accessibilityState={{ selected: c.id === p.id }}
+                onPress={() => setSelected(p.id)}
+                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+              >
+                <Surface
+                  selected={c.id === p.id}
+                  style={{ alignItems: "center", padding: 3 }}
+                >
+                  <Atlas index={p.portrait} size={58} />
+                  <Copy
+                    title
+                    numberOfLines={1}
+                    style={{ fontSize: 16, lineHeight: 19 }}
+                  >
+                    {p.name}
+                  </Copy>
+                  <Copy style={{ fontSize: 11, lineHeight: 15 }}>
+                    Lv. {p.level}
+                  </Copy>
+                </Surface>
+              </Pressable>
             ))}
           </View>
-          {tab === "Temper" ? (
-            <>
-              <Eyebrow>PERMANENT WEAPON UPGRADES</Eyebrow>
-              <Copy muted>
-                Every temper adds 6 attack and 2 defense, even when you change
-                equipment.
-              </Copy>
-              {state.party.map((c) => (
-                <Panel key={c.id}>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      gap: 13,
-                      alignItems: "center",
-                    }}
-                  >
-                    <Atlas index={c.portrait} size={64} />
-                    <View style={{ flex: 1 }}>
-                      <Copy title>{c.name}</Copy>
-                      <Copy muted style={{ fontSize: 12 }}>
-                        {c.job} · Temper +{c.gear}
-                      </Copy>
-                      <Copy style={{ fontSize: 12, color: t.color.gold }}>
-                        ATK {c.atk} · DEF {c.def}
-                      </Copy>
-                    </View>
-                    <Icon name="sword" size={34} />
-                  </View>
-                  <Divider />
-                  <Button
-                    label={`Upgrade · ${120 + c.gear * 80} gold`}
-                    disabled={state.gold < 120 + c.gear * 80}
-                    onPress={() => dispatch({ type: "FORGE", id: c.id })}
-                  />
-                </Panel>
-              ))}
-            </>
-          ) : (
-            <>
-              <Eyebrow>CRYSTAL REFINEMENT</Eyebrow>
-              <Copy muted style={{ fontSize: 13 }}>
-                The forge can bind elemental wards from 30 crystals and 100
-                gold. Boss essences unlock the full skill catalog for free.
-              </Copy>
-              <View style={{ flexDirection: "row", gap: 5 }}>
-                {state.party.map((p) => (
-                  <Button
-                    key={p.id}
-                    label={p.name}
-                    small
-                    style={{ flex: 1 }}
-                    tone={selected === p.id ? "blue" : "dark"}
-                    onPress={() => setSelected(p.id)}
-                  />
-                ))}
-              </View>
-              {SKILLS.filter(
-                (s) => s.passive && s.name !== "Inspiring Presence",
-              ).map((skill) => (
-                <Panel
-                  key={skill.name}
-                  style={{ gap: 10, borderColor: skill.color }}
+          <View style={{ flex: 1, gap: 8 }}>
+            <Image
+              source={art.forgeScene}
+              contentFit="fill"
+              style={{ width: "100%", aspectRatio: 1.5, borderRadius: 4 }}
+              accessibilityLabel="Bram: Good equipment keeps good people alive."
+            />
+            {tab === "Upgrade" ? (
+              <Surface style={{ padding: 12, gap: 9 }}>
+                <View
+                  style={{ flexDirection: "row", gap: 8, alignItems: "center" }}
                 >
-                  <View
+                  <Surface
                     style={{
-                      flexDirection: "row",
-                      gap: 12,
+                      width: 61,
+                      height: 67,
+                      justifyContent: "center",
                       alignItems: "center",
                     }}
                   >
-                    <Icon name={skill.icon} size={35} color={skill.color} />
-                    <View style={{ flex: 1 }}>
-                      <Copy title style={{ fontSize: 17 }}>
-                        {skill.name}
-                      </Copy>
-                      <Copy muted style={{ fontSize: 12 }}>
-                        {skill.description}
-                      </Copy>
-                    </View>
+                    <Icon name="sword" size={48} />
+                    <Copy style={{ fontSize: 12 }}>+{c.gear}</Copy>
+                  </Surface>
+                  <View style={{ flex: 1 }}>
+                    <Copy title style={{ fontSize: 20, lineHeight: 23 }}>
+                      {weapon?.name || "Wanderer’s Blade"}
+                    </Copy>
+                    <Copy style={{ color: t.color.green }}>
+                      +{c.gear} → +{c.gear + 1}
+                    </Copy>
                   </View>
+                </View>
+                <Ornament />
+                {[
+                  ["ATK", c.atk, c.atk + 6],
+                  ["DEF", c.def, c.def + 2],
+                  ["SPD", c.speed, c.speed],
+                ].map(([label, before, after]) => (
+                  <View
+                    key={label}
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Copy>{label}</Copy>
+                    <Copy>
+                      {before} →{" "}
+                      <Copy
+                        style={{
+                          color:
+                            before === after ? t.color.text : t.color.green,
+                        }}
+                      >
+                        {after}
+                      </Copy>
+                    </Copy>
+                  </View>
+                ))}
+                <Ornament />
+                <Copy title style={{ fontSize: 18, textAlign: "center" }}>
+                  Required Materials
+                </Copy>
+                <Surface style={{ padding: 8, alignItems: "center", gap: 4 }}>
+                  <Icon name="gold" size={35} />
+                  <Copy
+                    style={{
+                      color: state.gold >= cost ? t.color.gold : t.color.red,
+                    }}
+                  >
+                    {state.gold.toLocaleString()}/{cost} gold
+                  </Copy>
+                </Surface>
+                <Button
+                  label={"Upgrade · " + cost + " gold"}
+                  disabled={state.gold < cost}
+                  onPress={() => dispatch({ type: "FORGE", id: c.id })}
+                />
+                <Copy muted style={{ fontSize: 11, lineHeight: 15 }}>
+                  Tempering stays with {c.name} when equipment changes.
+                </Copy>
+              </Surface>
+            ) : tab === "Craft" ? (
+              <>
+                {ITEMS.filter((i) =>
+                  ["iron-blade", "leather"].includes(i.id),
+                ).map((item) => (
+                  <Surface key={item.id} style={{ padding: 12, gap: 8 }}>
+                    <ItemGlyph id={item.id} size={43} />
+                    <Copy title style={{ fontSize: 19 }}>
+                      {item.name}
+                    </Copy>
+                    <Copy>{item.description}</Copy>
+                    <Copy muted style={{ fontSize: 12 }}>
+                      3 monster cores · 90 gold
+                    </Copy>
+                    <Copy style={{ fontSize: 12, color: t.color.gold }}>
+                      Cores {state.inventory["beast-core"] || 0}/3 · Owned{" "}
+                      {state.inventory[item.id] || 0}
+                    </Copy>
+                    <Button
+                      label="Craft"
+                      small
+                      disabled={
+                        state.gold < 90 ||
+                        (state.inventory["beast-core"] || 0) < 3
+                      }
+                      onPress={() =>
+                        dispatch({
+                          type: "CRAFT",
+                          id: item.id as "iron-blade" | "leather",
+                        })
+                      }
+                    />
+                    <Button
+                      label={"Equip on " + c.name}
+                      small
+                      tone="blue"
+                      disabled={!(state.inventory[item.id] || 0)}
+                      onPress={() =>
+                        dispatch({
+                          type: "EQUIP",
+                          character: c.id,
+                          item: item.id,
+                        })
+                      }
+                    />
+                  </Surface>
+                ))}
+              </>
+            ) : (
+              SKILLS.filter(
+                (skill) => skill.passive && skill.name !== "Inspiring Presence",
+              ).map((skill) => (
+                <Surface key={skill.name} style={{ padding: 12, gap: 8 }}>
+                  <Icon name={skill.icon} size={36} color={skill.color} />
+                  <Copy title style={{ fontSize: 19 }}>
+                    {skill.name}
+                  </Copy>
+                  <Copy muted style={{ fontSize: 13 }}>
+                    {skill.description}
+                  </Copy>
                   <Button
                     label={
-                      c?.skills.includes(skill.name)
-                        ? "Already bound"
-                        : "Refine · 30 crystals + 100 gold"
+                      c.skills.includes(skill.name)
+                        ? "Bound"
+                        : "Enhance · 30 crystals + 100g"
                     }
                     small
                     tone="blue"
                     disabled={
                       state.gems < 30 ||
                       state.gold < 100 ||
-                      c?.skills.includes(skill.name)
+                      c.skills.includes(skill.name)
                     }
                     onPress={() =>
                       dispatch({ type: "ENCHANT", id: c.id, skill: skill.name })
                     }
                   />
-                </Panel>
-              ))}
-            </>
-          )}
+                </Surface>
+              ))
+            )}
+          </View>
         </View>
       </Frame>
     </Guard>

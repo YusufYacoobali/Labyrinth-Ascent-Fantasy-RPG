@@ -20,7 +20,8 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme as t } from "@/theme";
 import { useGame } from "@/game/provider";
-import { BevelFrame, MockNavbar, ChoiceGlyph } from "./mock-chrome";
+import { BevelFrame, ChoiceGlyph } from "./mock-chrome";
+import { MenuIcon, NativeNavbar, Surface } from "./native-chrome";
 export const art = {
   cover: require("../../assets/art/cover-modest.png"),
   town: require("../../assets/art/town.png"),
@@ -44,6 +45,14 @@ export const art = {
   items: require("../../assets/art/items.png"),
   cave: require("../../assets/art/cave.png"),
   splashMock: require("../../assets/art/splash-mock.png"),
+  tavernScene: require("../../assets/art/tavern-scene.png"),
+  shopScene: require("../../assets/art/shop-scene.png"),
+  guildScene: require("../../assets/art/guild-scene.png"),
+  forgeScene: require("../../assets/art/forge-scene.png"),
+  journalChapter: require("../../assets/art/journal-chapter.png"),
+  menuIcons: require("../../assets/ui/menu-icons.png"),
+  supplyIcons: require("../../assets/ui/supply-icons.png"),
+  moreStudy: require("../../assets/art/more-study.png"),
 };
 export function Copy({
   children,
@@ -236,7 +245,13 @@ export function Panel({
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
-  return <View style={[styles.panel, style]}>{children}</View>;
+  const parchment =
+    StyleSheet.flatten(style)?.backgroundColor === t.color.parchment;
+  return (
+    <Surface parchment={parchment} style={[{ padding: 14 }, style]}>
+      {children}
+    </Surface>
+  );
 }
 export function Choice({
   label,
@@ -272,20 +287,22 @@ export function Choice({
       <BevelFrame
         tone={tone}
         style={{
-          minHeight: 58,
-          padding: 12,
+          minHeight: 56,
+          paddingVertical: 8,
+          paddingLeft: 24,
+          paddingRight: 16,
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
+          gap: 24,
         }}
       >
         {icon &&
           (["sword", "magnify", "alert-outline"].includes(icon) ? (
-            <ChoiceGlyph name={icon} />
+            <ChoiceGlyph name={icon} size={40} />
           ) : (
             <Icon
               name={icon}
-              size={26}
+              size={40}
               color={
                 tone === "blue"
                   ? "#b6e7ff"
@@ -297,12 +314,12 @@ export function Choice({
           ))}
         <View style={{ flex: 1 }}>
           <Copy
-            style={{ fontFamily: t.font.bold, fontSize: 16, lineHeight: 20 }}
+            style={{ fontFamily: t.font.body, fontSize: 16, lineHeight: 19 }}
           >
             {label}
           </Copy>
           {!!detail && (
-            <Copy style={{ fontSize: 13, lineHeight: 18, color: "#d9dce4" }}>
+            <Copy style={{ fontSize: 13, lineHeight: 17, color: "#d9dce4" }}>
               {detail}
             </Copy>
           )}
@@ -381,12 +398,34 @@ export function Header({
   subtitle,
   back = true,
   portrait,
+  expedition = false,
+  onSettings,
 }: {
   title: string;
   subtitle?: string;
   back?: boolean;
   portrait?: number;
+  expedition?: boolean;
+  onSettings?: () => void;
 }) {
+  if (expedition)
+    return (
+      <View
+        style={[styles.header, { minHeight: 52, justifyContent: "center" }]}
+      >
+        <Copy title style={{ fontSize: 22, textAlign: "center", flex: 1 }}>
+          {title}
+        </Copy>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Expedition settings"
+          onPress={onSettings}
+          style={{ padding: 8, position: "absolute", right: 8 }}
+        >
+          <MenuIcon index={7} size={27} />
+        </Pressable>
+      </View>
+    );
   return (
     <View style={styles.header}>
       {portrait !== undefined ? (
@@ -434,21 +473,38 @@ const tabs = [
 ] as const;
 export function Nav({ active }: { active: string }) {
   const { state } = useGame();
+  if (state.phase !== "town") return null;
   return (
-    <MockNavbar active={active}>
-      {tabs.map((tab) => (
-        <Pressable
-          key={tab.path}
-          accessibilityRole="tab"
-          accessibilityLabel={tab.label}
-          accessibilityState={{ selected: active === tab.label }}
-          onPress={() =>
-            router.replace(state.phase !== "town" ? "/expedition" : tab.path)
-          }
-          style={{ flex: 1, height: "100%" }}
-        />
-      ))}
-    </MockNavbar>
+    <NativeNavbar
+      active={active}
+      tabs={tabs}
+      onSelect={(path) => router.replace(path as (typeof tabs)[number]["path"])}
+    />
+  );
+}
+export function SettingsControls() {
+  const { state, dispatch } = useGame();
+  return (
+    <View style={{ gap: 9 }}>
+      <Button
+        label={`Sound ${state.sound ? "on" : "off"}`}
+        icon={state.sound ? "volume-high" : "volume-off"}
+        small
+        tone={state.sound ? "blue" : "dark"}
+        onPress={() =>
+          dispatch({ type: "SETTING", key: "sound", value: !state.sound })
+        }
+      />
+      <Button
+        label={`Haptics ${state.haptics ? "on" : "off"}`}
+        icon="vibrate"
+        small
+        tone={state.haptics ? "blue" : "dark"}
+        onPress={() =>
+          dispatch({ type: "SETTING", key: "haptics", value: !state.haptics })
+        }
+      />
+    </View>
   );
 }
 export function Frame({
@@ -462,6 +518,7 @@ export function Frame({
   scroll = true,
   hideNav = false,
   fullBleed = false,
+  expedition = false,
 }: {
   children: React.ReactNode;
   background?: ImageSource;
@@ -473,7 +530,9 @@ export function Frame({
   scroll?: boolean;
   hideNav?: boolean;
   fullBleed?: boolean;
+  expedition?: boolean;
 }) {
+  const [settings, setSettings] = useState(false);
   const inset = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { state, dispatch, saveError, retrySave } = useGame();
@@ -530,6 +589,8 @@ export function Frame({
             subtitle={subtitle}
             back={back}
             portrait={portrait}
+            expedition={expedition}
+            onSettings={() => setSettings(true)}
           />
         )}
         <View style={{ flex: 1 }}>
@@ -572,7 +633,31 @@ export function Frame({
             </Copy>
           </Pressable>
         )}
-        {!hideNav && active && <Nav active={active} />}
+        {!hideNav && !expedition && active && <Nav active={active} />}
+        {settings && (
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                zIndex: 20,
+                backgroundColor: "rgba(3,8,14,.88)",
+                paddingTop: inset.top + 65,
+                paddingHorizontal: 22,
+              },
+            ]}
+          >
+            <Panel style={{ gap: 16, borderColor: t.color.goldDim }}>
+              <Copy title style={{ textAlign: "center" }}>
+                Settings
+              </Copy>
+              <SettingsControls />
+              <Button
+                label="Resume expedition"
+                onPress={() => setSettings(false)}
+              />
+            </Panel>
+          </View>
+        )}
       </View>
     </View>
   );

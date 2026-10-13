@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View, Platform } from "react-native";
+import { View, Platform, type StyleProp, type ViewStyle } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -162,9 +162,16 @@ export function DamageNumber({
     </Animated.View>
   );
 }
-export function Reveal({ children }: { children: React.ReactNode }) {
+export function Reveal({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
   return (
     <Animated.View
+      style={style}
       entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)}
     >
       {children}
