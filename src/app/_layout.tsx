@@ -32,6 +32,9 @@ export default function RootLayout() {
       art.recruitPortraits,
       art.recruitSprites,
       art.townItemIcons,
+      art.resources,
+      art.parchment,
+      art.floorEnemies,
     ].map((source) => Asset.fromModule(source).uri);
     const scenes = [
       art.cover,

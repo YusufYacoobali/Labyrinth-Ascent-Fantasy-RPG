@@ -24,7 +24,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme as t } from "@/theme";
 import { useGame } from "@/game/provider";
 import { BevelFrame } from "./mock-chrome";
-import { MenuIcon, NativeNavbar, Surface } from "./native-chrome";
+import {
+  MenuIcon,
+  NativeNavbar,
+  Surface,
+  ResourceGlyph,
+} from "./native-chrome";
 export const art = {
   cover: require("../../assets/art/cover-modest.png"),
   town: require("../../assets/art/town.png"),
@@ -64,6 +69,9 @@ export const art = {
   scavenger: require("../../assets/story/bonegnaw-sprite.png"),
   storyGlyphs: require("../../assets/ui/story-glyphs.png"),
   moreStudy: require("../../assets/art/more-study.png"),
+  parchment: require("../../assets/ui/parchment-ui-2.png"),
+  resources: require("../../assets/ui/resources-ui-2.png"),
+  floorEnemies: require("../../assets/story/floor-enemies-ui-2.png"),
 };
 export function Copy({
   children,
@@ -144,12 +152,37 @@ export function Atlas({
   size = 64,
   sprite = false,
   style,
+  enemyFloor,
 }: {
   index: number;
   size?: number;
   sprite?: boolean;
   style?: StyleProp<ViewStyle>;
+  enemyFloor?: number;
 }) {
+  const floorEnemy =
+    enemyFloor === undefined
+      ? undefined
+      : ({ 3: 0, 5: 1, 6: 2, 8: 3, 10: 4, 11: 5 } as Record<number, number>)[
+          enemyFloor
+        ];
+  if (sprite && floorEnemy !== undefined)
+    return (
+      <View style={[{ width: size, height: size, overflow: "hidden" }, style]}>
+        <Image
+          source={art.floorEnemies}
+          cachePolicy="memory-disk"
+          contentFit="fill"
+          style={{
+            position: "absolute",
+            width: size * 3,
+            height: size * 2,
+            left: -(floorEnemy % 3) * size,
+            top: -Math.floor(floorEnemy / 3) * size,
+          }}
+        />
+      </View>
+    );
   if (sprite && index === 20)
     return (
       <View style={[{ width: size, height: size }, style]}>
@@ -457,11 +490,11 @@ export function Resources() {
   const { state } = useGame();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-      <Icon name="circle-double" size={17} />
+      <ResourceGlyph index={0} size={22} />
       <Copy style={{ fontFamily: t.font.bold, fontSize: 12 }}>
         {state.gold.toLocaleString()}
       </Copy>
-      <Icon name="diamond-stone" size={16} color={t.color.blue} />
+      <ResourceGlyph index={1} size={21} />
       <Copy style={{ fontFamily: t.font.bold, fontSize: 12 }}>
         {state.gems}
       </Copy>
@@ -1118,7 +1151,16 @@ export function Frame({
               </Copy>
               <SettingsControls />
               <Button
-                label="Resume expedition"
+                label="Try pixel combat"
+                tone="blue"
+                onPress={() => router.push("/combat-trial")}
+              />
+              <Button
+                label={
+                  title === "Combat trial"
+                    ? "Resume fight"
+                    : "Resume expedition"
+                }
                 onPress={() => setSettings(false)}
               />
             </Panel>

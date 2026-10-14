@@ -32,8 +32,14 @@ export function PartyScreen() {
   const [tab, setTab] = useState("Character");
   const [catalog, setCatalog] = useState(false);
   const { width } = useWindowDimensions();
-  const portraitSize =
-    (Math.min(width, 460) - 44) / Math.max(4, state.party.length);
+  const portraitSize = Math.min(
+    132,
+    (Math.min(width, 460) -
+      22 -
+      6 * (state.party.length + (state.party.length < 4 ? 1 : 0) - 1) -
+      (state.party.length < 4 ? 40 : 0)) /
+      Math.max(1, state.party.length),
+  );
   const c = state.party.find((c) => c.id === selected) || state.party[0];
   if (!c)
     return (
@@ -235,7 +241,15 @@ export function PartyScreen() {
                                       : item.resist
                                         ? `${item.resist.amount}% ${item.resist.element}`
                                         : item.name
-                                : "Starter"}
+                                : kind === "armor"
+                                  ? "Armor"
+                                  : kind === "helmet"
+                                    ? "Head"
+                                    : kind === "charm"
+                                      ? "Charm"
+                                      : kind === "boots"
+                                        ? "Boots"
+                                        : "Weapon"}
                             </Copy>
                           </Panel>
                         </Pressable>

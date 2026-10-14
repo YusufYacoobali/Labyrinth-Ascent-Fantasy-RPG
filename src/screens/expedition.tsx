@@ -1,7 +1,16 @@
 import { EventArt } from "@/components/story-art";
-import { BattleBackdrop } from "@/components/battle-backdrop";
+import CombatStage from "@/components/combat-stage";
+import {
+  battleCue,
+  battleEnemyAt,
+  battlePartyAt,
+  cueContact,
+  cueResponse,
+  cueDuration,
+  type CombatCue,
+} from "@/game/combat-animation";
 import { StoryCard } from "@/components/story-card";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "react-native-reanimated";
 import {
   View,
@@ -25,7 +34,6 @@ import {
   Panel,
 } from "@/components/game-ui";
 import {
-  BattleSprite,
   DamageNumber,
   Reveal,
   useCombatFeedback,
@@ -237,46 +245,124 @@ export function LabyrinthScreen() {
   );
 }
 
-function Combat({
+export function Combat({
   feedback,
 }: {
   feedback: ReturnType<typeof useCombatFeedback>;
 }) {
   const { state: savedState, dispatch } = useGame();
   const [preview, setPreview] = useState<Game | null>(null);
+  const [cue, setCue] = useState<CombatCue | null>(null);
+  const [impactShown, setImpactShown] = useState(false);
+  const [elapsed, setElapsed] = useState(-1);
+  const [responseShown, setResponseShown] = useState(false);
+  const [sceneReady, setSceneReady] = useState(false);
+  const feedbackRef = useRef(feedback);
+  useEffect(() => {
+    feedbackRef.current = feedback;
+  }, [feedback]);
+  const onSceneReady = useCallback(() => setSceneReady(true), []);
   const state = preview || savedState;
   const pending = !!preview;
+  const blocked = pending || !sceneReady;
   const reduced = useReducedMotion();
   const viewport = useWindowDimensions();
   const safeArea = useSafeAreaInsets();
   const usableHeight = viewport.height - safeArea.top - safeArea.bottom;
-  const compactBattle = usableHeight < 790;
-  const smallBattle = usableHeight < 700;
+  const compactBattle = usableHeight < 900;
+  const smallBattle = usableHeight < 760;
   const [pendingAction, setPendingAction] = useState<Action | null>(null);
   useEffect(() => {
     if (!pendingAction) return;
+    const sounds =
+      (reduced ? cue?.beats?.slice(0, 1) : cue?.beats)?.map((beat) =>
+        setTimeout(
+          () =>
+            feedbackRef.current(
+              beat.kind === "skill" || beat.kind === "burst"
+                ? "skill"
+                : beat.kind === "focus"
+                  ? "guard"
+                  : beat.kind === "item"
+                    ? "item"
+                    : beat.kind === "guard"
+                      ? "guard"
+                      : "attack",
+            ),
+          reduced ? 0 : beat.contact,
+        ),
+      ) || [];
+    const steps = [
+      ...(cue?.beats?.flatMap((b) => [b.start, b.contact]) || []),
+      cue?.poisonAt,
+    ]
+      .filter((at): at is number => at !== undefined)
+      .map((at) =>
+        setTimeout(() => setElapsed(reduced ? Infinity : at), reduced ? 0 : at),
+      );
+    const contact = setTimeout(
+      () => setImpactShown(true),
+      cueContact(cue, reduced),
+    );
+    const response = setTimeout(
+      () => {
+        setResponseShown(true);
+        if (cue?.enemyAttacks) feedbackRef.current("attack");
+      },
+      cueResponse(cue, reduced),
+    );
     const timer = setTimeout(
       () => {
         dispatch(pendingAction);
         setPreview(null);
         setPendingAction(null);
+        setCue(null);
       },
-      preview?.enemy?.hp === 0 ? (reduced ? 300 : 1000) : reduced ? 120 : 380,
+      cue ? cueDuration(cue, reduced) : 280,
     );
-    return () => clearTimeout(timer);
-  }, [dispatch, pendingAction, reduced, preview?.enemy?.hp]);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(contact);
+      clearTimeout(response);
+      steps.forEach(clearTimeout);
+      sounds.forEach(clearTimeout);
+    };
+  }, [
+    dispatch,
+    pendingAction,
+    reduced,
+    preview?.enemy?.hp,
+    cue,
+    savedState.floor,
+  ]);
   const [selected, setSelected] = useState(
     state.party.find((c) => c.hp > 0)?.id,
   );
   const [menu, setMenu] = useState<"skill" | "item" | null>(null);
   const [retreat, setRetreat] = useState(false);
-  const e = state.enemy!;
+  const e = pending
+    ? battleEnemyAt(savedState, state, cue, elapsed)
+    : state.enemy!;
+  const activeBeat = pending
+    ? cue?.beats?.find((b) => elapsed >= b.start && elapsed < b.end)
+    : undefined;
+  const displayedParty = pending
+    ? battlePartyAt(savedState, state, cue, impactShown, responseShown)
+    : state.party;
+  const commandingParty = pending ? savedState.party : state.party;
   const actor =
-    state.party.find((c) => c.id === selected && c.hp > 0) ||
-    state.party.find((c) => c.hp > 0) ||
-    state.party[0];
-  const intent = battleIntent(state);
-  const forecast = battleForecast(state);
+    commandingParty.find(
+      (c) => c.id === (pending ? cue?.actor : selected) && c.hp > 0,
+    ) ||
+    commandingParty.find((c) => c.hp > 0) ||
+    commandingParty[0];
+  const tacticalState = pending ? savedState : state;
+  const intent = battleIntent(tacticalState);
+  const interrupted =
+    pending && impactShown && (state.effects.stunned || e.hp <= 0);
+  const forecast = interrupted
+    ? {}
+    : battleForecast(tacticalState, pending && cue?.kind === "guard", actor.id);
   const heavy = intent.kind === "heavy";
   const expectedHits = Object.values(forecast);
   const targetNames = Object.keys(forecast)
@@ -296,7 +382,7 @@ function Combat({
       skill?: Skill,
       item?: string,
     ) => {
-      if (pending) return;
+      if (blocked) return;
       const action: Action = {
         type: "BATTLE",
         kind,
@@ -307,23 +393,24 @@ function Combat({
       };
       const result = reducer(savedState, action);
       if (result.effects.id !== savedState.effects.id) {
-        feedback(
-          kind === "burst" ? "skill" : kind === "focus" ? "guard" : kind,
-        );
         setPreview({ ...result, phase: "combat" });
+        setCue(battleCue(savedState, result, action));
+        setImpactShown(false);
+        setElapsed(-1);
+        setResponseShown(false);
         setPendingAction(action);
       } else dispatch(action);
       setMenu(null);
     },
-    [pending, actor.id, savedState, feedback, dispatch],
+    [blocked, actor.id, savedState, dispatch],
   );
   return (
     <View
       style={{
         flex: 1,
-        padding: 12,
+        padding: smallBattle ? 8 : 12,
         minHeight: smallBattle ? 480 : compactBattle ? 520 : 565,
-        gap: compactBattle ? 5 : 10,
+        gap: smallBattle ? 4 : compactBattle ? 5 : 10,
       }}
     >
       {!smallBattle && (
@@ -336,11 +423,11 @@ function Combat({
         >
           <Eyebrow>{FLOORS[state.floor - 1].name}</Eyebrow>
           <Copy muted style={{ fontSize: 10 }}>
-            TURN {state.turn} · {state.food} rations
+            TURN {tacticalState.turn} · {state.food} rations
           </Copy>
         </View>
       )}
-      <Panel style={{ padding: 10, gap: 7 }}>
+      <Panel style={{ padding: smallBattle ? 8 : 10, gap: 7 }}>
         <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
           <Icon
             name={e.boss ? "skull" : "skull-outline"}
@@ -355,7 +442,7 @@ function Combat({
               }}
             >
               {e.name}
-              {smallBattle ? " · T" + state.turn : ""}
+              {smallBattle ? " · T" + tacticalState.turn : ""}
             </Copy>
             <Bar value={e.hp} max={e.maxHp} color={t.color.red} />
           </View>
@@ -378,22 +465,24 @@ function Combat({
           >
             {e.hp <= 0
               ? "Defeated"
-              : smallBattle
-                ? heavy
-                  ? "HEAVY · " + incoming
-                  : intent.kind === "strike"
-                    ? incoming
-                    : intent.kind === "charge"
-                      ? "Charging · Heavy attack next"
-                      : intent.label
-                : `${heavy ? "HEAVY · " : ""}${intent.label}`}
+              : interrupted
+                ? "Interrupted"
+                : smallBattle
+                  ? heavy
+                    ? "HEAVY · " + incoming
+                    : intent.kind === "strike"
+                      ? incoming
+                      : intent.kind === "charge"
+                        ? "Charging · Heavy attack next"
+                        : intent.label
+                  : `${heavy ? "HEAVY · " : ""}${intent.label}`}
           </Copy>
           {e.poison > 0 && (
             <Copy style={{ fontSize: 10, color: t.color.green }}>
               Venom {e.poison}t
             </Copy>
           )}
-          {state.effects.stunned && (
+          {impactShown && state.effects.stunned && (
             <Copy style={{ fontSize: 10, color: "#ccabef" }}>Interrupted</Copy>
           )}
         </View>
@@ -425,31 +514,27 @@ function Combat({
       <View
         style={{
           flex: 1,
-          minHeight: smallBattle ? 112 : 140,
+          minHeight: smallBattle ? 240 : compactBattle ? 280 : 340,
           alignItems: "center",
           justifyContent: "center",
           position: "relative",
         }}
       >
-        <View
-          style={{
-            position: "absolute",
-            bottom: 8,
-            width: 135,
-            height: 18,
-            borderRadius: 100,
-            backgroundColor: "rgba(0,0,0,.25)",
-          }}
+        <CombatStage
+          state={state}
+          selected={actor.id}
+          cue={cue}
+          busy={blocked}
+          onSelect={setSelected}
+          onReady={onSceneReady}
+          healthParty={displayedParty}
+          threatened={Object.keys(forecast)}
         />
-        <BattleSprite
-          index={e.sprite}
-          size={smallBattle ? 112 : compactBattle ? 140 : 180}
-          effect={state.effects.id}
-          hit={state.effects.damage > 0 || state.effects.poisonDamage > 0}
-          dying={pending && e.hp <= 0}
-        />
-        {pending && e.hp <= 0 && (
-          <View style={{ position: "absolute", top: 0, left: 0, right: 0 }}>
+        {pending && preview?.enemy?.hp === 0 && (
+          <Reveal
+            delay={reduced ? 0 : (cue?.deathAt ?? cueContact(cue)) + 1160}
+            style={{ position: "absolute", top: 0, left: 0, right: 0 }}
+          >
             <Copy
               title
               style={{
@@ -460,22 +545,29 @@ function Combat({
             >
               Victory
             </Copy>
-          </View>
+          </Reveal>
         )}
-        {state.effects.damage > 0 && (
-          <DamageNumber
-            key={`hit-${state.effects.id}`}
-            amount={state.effects.damage}
-            critical={state.effects.critical}
-            id={state.effects.id}
-          />
-        )}
-        {state.effects.poisonDamage > 0 && (
+        {pending &&
+          cue?.beats
+            ?.filter((b) => b.damage > 0)
+            .map((beat) => (
+              <DamageNumber
+                key={`hit-${state.effects.id}-${beat.actor}`}
+                amount={beat.damage}
+                critical={state.effects.critical && beat.actor === cue.actor}
+                id={state.effects.id}
+                delay={reduced ? 0 : beat.contact}
+                anchor={0.77}
+              />
+            ))}
+        {pending && state.effects.poisonDamage > 0 && (
           <DamageNumber
             key={`venom-${state.effects.id}`}
             amount={state.effects.poisonDamage}
             poison
             id={state.effects.id}
+            delay={reduced ? 0 : (cue?.poisonAt ?? cueContact(cue))}
+            anchor={0.77}
           />
         )}
         {state.effects.id > 0 && (
@@ -486,9 +578,20 @@ function Combat({
                 lineHeight: 17,
                 textAlign: "center",
                 color: state.effects.broken ? t.color.gold : t.color.text,
+                backgroundColor: "rgba(5,13,23,.8)",
+                paddingVertical: 5,
+                paddingHorizontal: 8,
               }}
             >
-              {state.log[0]}
+              {pending
+                ? e.hp <= 0
+                  ? `${e.name} is defeated.`
+                  : activeBeat
+                    ? `${activeBeat.name} ${activeBeat.kind === "skill" ? `uses ${pendingAction?.type === "BATTLE" ? pendingAction.skill : "a skill"}.` : activeBeat.kind === "attack" || activeBeat.kind === "burst" ? "attacks." : activeBeat.kind === "focus" ? "focuses." : activeBeat.kind === "guard" ? "guards." : "uses an item."}`
+                    : responseShown
+                      ? state.log[0]
+                      : ""
+                : state.log[0]}
             </Copy>
           </View>
         )}
@@ -596,7 +699,7 @@ function Combat({
                                       "t wait"
                                 }
                                 disabled={
-                                  pending ||
+                                  blocked ||
                                   actor.mp < skill.cost ||
                                   actor.ailments.paralysis > 0 ||
                                   (actor.cooldowns[name] || 0) > 0
@@ -635,7 +738,7 @@ function Combat({
                               icon={item.icon}
                               tone={id === "antidote" ? "green" : "blue"}
                               trailing={"×" + n}
-                              disabled={pending || n < 1}
+                              disabled={blocked || n < 1}
                               onPress={() =>
                                 handleBattle("item", undefined, id)
                               }
@@ -649,96 +752,8 @@ function Combat({
           </View>
         )}
       </View>
-      <View style={{ flexDirection: "row", gap: 5 }}>
-        {state.party.map((c) => (
-          <Pressable
-            key={c.id}
-            accessibilityRole="button"
-            accessibilityLabel={`Command ${c.name}`}
-            accessibilityState={{
-              selected: actor.id === c.id,
-              disabled: c.hp <= 0,
-            }}
-            disabled={c.hp <= 0}
-            onPress={() => {
-              setSelected(c.id);
-            }}
-            style={{ flex: 1 }}
-          >
-            <Panel
-              style={{
-                padding: 5,
-                borderColor:
-                  actor.id === c.id
-                    ? t.color.blue
-                    : Object.keys(forecast).includes(c.id)
-                      ? t.color.red
-                      : t.color.line,
-                opacity: c.hp > 0 ? 1 : 0.35,
-              }}
-            >
-              <View style={{ alignItems: "center" }}>
-                <BattleSprite
-                  index={c.portrait}
-                  size={smallBattle ? 32 : compactBattle ? 48 : 57}
-                  effect={state.effects.id}
-                  hit={!!state.effects.targets[c.id]}
-                />
-              </View>
-              <Copy
-                numberOfLines={1}
-                style={{
-                  fontSize: 10,
-                  lineHeight: 14,
-                  textAlign: "center",
-                  fontFamily: t.font.bold,
-                }}
-              >
-                {c.name}
-              </Copy>
-              <Bar
-                value={c.hp}
-                max={c.maxHp}
-                color={t.color.green}
-                label={`HP ${c.hp}/${c.maxHp}`}
-              />
-              <View style={{ height: 4 }} />
-              <Bar value={c.mp} max={c.maxMp} label={`MP ${c.mp}`} />
-              <View
-                style={{
-                  height: 15,
-                  flexDirection: "row",
-                  gap: 3,
-                  justifyContent: "center",
-                }}
-              >
-                {!!c.ailments.ward && (
-                  <Icon name="shield-check" size={12} color={t.color.green} />
-                )}
-                {c.ailments.poison > 0 && (
-                  <Icon name="snake" size={12} color={t.color.green} />
-                )}
-                {c.ailments.paralysis > 0 && (
-                  <Icon name="lightning-bolt" size={12} color="#ccabef" />
-                )}
-                {!!state.effects.targets[c.id] && (
-                  <Copy
-                    style={{
-                      fontSize: 10,
-                      lineHeight: 13,
-                      color: t.color.red,
-                    }}
-                  >
-                    −{state.effects.targets[c.id]}
-                  </Copy>
-                )}
-              </View>
-            </Panel>
-          </Pressable>
-        ))}
-      </View>
       <Copy style={{ fontSize: 11, lineHeight: 15, color: t.color.gold }}>
-        MOMENTUM {state.momentum}/3 · Attack, Guard or Focus: +1
+        {actor.name} · Momentum {state.momentum}/3
       </Copy>
       <View style={{ flexDirection: "row", gap: 5 }}>
         <Button
@@ -746,7 +761,7 @@ function Combat({
           icon="shield"
           tone="dark"
           small
-          disabled={pending || actor.ailments.paralysis > 0}
+          disabled={blocked || actor.ailments.paralysis > 0}
           style={{ flex: 1 }}
           onPress={() => handleBattle("guard")}
         />
@@ -756,7 +771,7 @@ function Combat({
           tone="blue"
           small
           disabled={
-            pending || actor.ailments.paralysis > 0 || actor.mp === actor.maxMp
+            blocked || actor.ailments.paralysis > 0 || actor.mp === actor.maxMp
           }
           style={{ flex: 1 }}
           onPress={() => handleBattle("focus")}
@@ -765,30 +780,32 @@ function Combat({
           label="Burst · 2"
           icon="sword-cross"
           small
-          disabled={pending || state.momentum < 2}
+          disabled={blocked || state.momentum < 2}
           style={{ flex: 1 }}
           onPress={() => handleBattle("burst")}
         />
       </View>
-      <Copy
-        muted
-        style={{
-          fontSize: smallBattle ? 10 : 11,
-          lineHeight: smallBattle ? 13 : 15,
-        }}
-      >
-        {smallBattle
-          ? "Guard ½ damage · Focus +20 MP · Burst +35% / 50 break"
-          : compactBattle
-            ? "Guard: ½ damage, +4 MP · Focus: +20 MP · Burst: +35% damage, 50 break."
-            : "Guard: half damage, protect with " +
-              actor.name +
-              ". Focus: +20 MP, allies strike at 55%. Burst: +35% damage, 50 break."}
-      </Copy>
+      {!smallBattle && (
+        <Copy
+          muted
+          style={{
+            fontSize: smallBattle ? 10 : 11,
+            lineHeight: smallBattle ? 13 : 15,
+          }}
+        >
+          {smallBattle
+            ? "Guard ½ damage · Focus +20 MP · Burst +35% / 50 break"
+            : compactBattle
+              ? "Guard: ½ damage, +4 MP · Focus: +20 MP · Burst: +35% damage, 50 break."
+              : "Guard: half damage, protect with " +
+                actor.name +
+                ". Focus: +20 MP, allies strike at 55%. Burst: +35% damage, 50 break."}
+        </Copy>
+      )}
       <View style={{ flexDirection: "row", gap: 5 }}>
         <Button
           label="Attack"
-          disabled={pending}
+          disabled={blocked}
           small
           icon="sword"
           tone="red"
@@ -797,7 +814,7 @@ function Combat({
         />
         <Button
           label="Skill"
-          disabled={pending}
+          disabled={blocked}
           small
           icon="creation"
           tone="blue"
@@ -809,7 +826,7 @@ function Combat({
         />
         <Button
           label="Item"
-          disabled={pending}
+          disabled={blocked}
           small
           icon="bottle-tonic"
           style={{ flex: 1 }}
@@ -820,7 +837,7 @@ function Combat({
         />
         <Button
           label="Flee"
-          disabled={pending}
+          disabled={blocked}
           small
           icon="run-fast"
           tone="dark"
@@ -1151,11 +1168,6 @@ export function ExpeditionScreen() {
   return (
     <Guard expedition>
       <Frame
-        backdrop={
-          state.phase === "combat" ? (
-            <BattleBackdrop floor={state.floor} />
-          ) : undefined
-        }
         background={
           [
             "combat",

@@ -13,6 +13,34 @@ import { LinearGradient } from "expo-linear-gradient";
 import { TOWN_ITEMS } from "@/game/town-content";
 import { theme as t } from "@/theme";
 
+export function ResourceGlyph({
+  index,
+  size = 23,
+}: {
+  index: number;
+  size?: number;
+}) {
+  return (
+    <View
+      pointerEvents="none"
+      style={{ width: size, height: size, overflow: "hidden" }}
+    >
+      <Image
+        source={require("../../assets/ui/resources-ui-2.png")}
+        cachePolicy="memory-disk"
+        contentFit="fill"
+        style={{
+          position: "absolute",
+          width: size * 2,
+          height: size * 2,
+          left: -(index % 2) * size,
+          top: -Math.floor(index / 2) * size,
+        }}
+      />
+    </View>
+  );
+}
+
 export function ItemGlyph({ id, size = 36 }: { id: string; size?: number }) {
   const supplies: Record<string, number> = {
     rations: 0,
@@ -163,6 +191,15 @@ export function Surface({
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
+      {parchment && (
+        <Image
+          source={require("../../assets/ui/parchment-ui-2.png")}
+          pointerEvents="none"
+          contentFit="fill"
+          cachePolicy="memory-disk"
+          style={[StyleSheet.absoluteFill, { opacity: 0.58 }]}
+        />
+      )}
       <View
         pointerEvents="none"
         style={[

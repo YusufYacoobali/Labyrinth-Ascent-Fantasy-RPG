@@ -1,0 +1,170 @@
+[
+  {
+    "asset": "barbarian-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-dbd33347-433c-461e-a2df-91fd64ec02db.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows. Character: the dark brown-haired muscular BARBARIAN in middle-right of sprites-modest.png reference, short beard, fur-lined dark cloak, brown leather and antique gold bracers, broad steel battle axe with gold detail. Hero only, not other reference characters. Idle cape fur subtly moves. Attack axe swings with weight. Special ability is a fierce TWIN AXE STRIKE with two restrained gold-white crescent slash trails; no magic fire. Keep armor opaque and full-body boots. Eight poses in each action row clearly differ. Transparent alpha throughout.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      {
+        "name": "idle",
+        "row": 0,
+        "frames": 6
+      },
+      {
+        "name": "walk",
+        "row": 1,
+        "frames": 8
+      },
+      {
+        "name": "attack",
+        "row": 2,
+        "frames": 8
+      },
+      {
+        "name": "hit",
+        "row": 3,
+        "frames": 4
+      },
+      {
+        "name": "death",
+        "row": 4,
+        "frames": 8
+      },
+      {
+        "name": "special",
+        "row": 5,
+        "frames": 8
+      }
+    ]
+  },
+  {
+    "asset": "kael-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-526de6cb-d281-4073-bb64-5bfcd110ac5b.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows. Character: KAEL, ONLY upper-left figure from sprites-modest.png: young dark brown-haired human knight, blue scarf and short blue cape, dark steel armor with antique gold trim, silver sword in right hand, compact dark steel shield strapped on left arm. Face right. Tight matching identity in every cell; friendly determined anime face, fully clothed. Row3 sword swing with weight and white-gold slash at contact. Row6 SHIELD BASH: crouch behind shield, drive it forward, brilliant restrained BLUE shock ring on impact, recover. Cape and hair follow motion with a one-frame delay, no extra characters. Keep cell grid and boots baseline identical across 48 frames. True transparent background, crisp pixel animation sheet.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      {
+        "name": "idle",
+        "row": 0,
+        "frames": 6
+      },
+      {
+        "name": "walk",
+        "row": 1,
+        "frames": 8
+      },
+      {
+        "name": "attack",
+        "row": 2,
+        "frames": 8
+      },
+      {
+        "name": "hit",
+        "row": 3,
+        "frames": 4
+      },
+      {
+        "name": "death",
+        "row": 4,
+        "frames": 8
+      },
+      {
+        "name": "special",
+        "row": 5,
+        "frames": 8
+      }
+    ]
+  },
+  {
+    "asset": "goblin-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-ee71d7a9-4e04-4c56-80f0-0bbf475611a1.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows. Character: GOBLIN SCOUT, ONLY lower-left of sprites-modest.png reference: squat green goblin with pointed ears, yellow-orange eyes, old leather armor, iron axe and battered round wooden shield with iron boss. Faces LEFT toward player party (all poses left). Each frame consistent clothing, head, height and proportions. Row3 axe chop includes weighted windup, stepping forward, sharp swing and recoil. Row6 special heavy BONE CLEAVE-like axe chop: larger overhead windup then orange-white slash, not a spell. Idle ears and leather flap subtly bob; walking changes legs. Death falls backward right and ends prone. Every frame fits its same square cell including shield/axe; true transparent alpha with no ground or scenery. Generate clear distinct sequential animation poses, 8x6 exact grid.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      {
+        "name": "idle",
+        "row": 0,
+        "frames": 6
+      },
+      {
+        "name": "walk",
+        "row": 1,
+        "frames": 8
+      },
+      {
+        "name": "attack",
+        "row": 2,
+        "frames": 8
+      },
+      {
+        "name": "hit",
+        "row": 3,
+        "frames": 4
+      },
+      {
+        "name": "death",
+        "row": 4,
+        "frames": 8
+      },
+      {
+        "name": "special",
+        "row": 5,
+        "frames": 8
+      }
+    ]
+  },
+  {
+    "asset": "roadkeeper-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-1d4b1c35-0af5-49bd-8747-3ec9f457ad61.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows. Character: BONE ROADKEEPER, ONLY upper-right figure from bosses.png: tall skeletal warrior in rusty dark steel shoulder/chest armor with antique gold trim, torn burgundy half-cape, battered dark shield with small gold sigil, long worn silver sword. Faces LEFT toward party, consistent same skeleton, sword and armor all cells. Row3 sequential heavy sword cleave with silver-gold contact crescent. Row6 larger overhead BONE CLEAVE windup and forceful weighted downward cut; no magic spell. Row4 skull jerks, armor recoils when hurt. Row5 knees buckle, skeleton collapses into a coherent fallen pile of old armor and bones, remains fallen at end, no gore. Idle cape fabric flickers slightly. Transparent alpha, no scenery, no water/ground, no text. Exact 8x6 square-cell grid and stable skeleton scale across every frame.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      {
+        "name": "idle",
+        "row": 0,
+        "frames": 6
+      },
+      {
+        "name": "walk",
+        "row": 1,
+        "frames": 8
+      },
+      {
+        "name": "attack",
+        "row": 2,
+        "frames": 8
+      },
+      {
+        "name": "hit",
+        "row": 3,
+        "frames": 4
+      },
+      {
+        "name": "death",
+        "row": 4,
+        "frames": 8
+      },
+      {
+        "name": "special",
+        "row": 5,
+        "frames": 8
+      }
+    ]
+  }
+]

@@ -65,7 +65,7 @@ export function walkthroughTip(s: Game): Guidance | null {
       s.day % 30 === 0 ? "The gate is open" : "Prepare for opening day",
       s.day % 30 === 0
         ? "Enter from the Labyrinth tab. You will stay inside for 30 days, so check your party and supplies first."
-          : "The gate opens every 30 days. Use Rest at the inn to reach opening day, or train more at the Guild. Spending a day on opening day skips it.",
+        : "The gate opens every 30 days. Use Rest at the inn to reach opening day, or train more at the Guild. Spending a day on opening day skips it.",
       { destination: "/labyrinth", button: "Open Labyrinth" },
     );
   }
@@ -90,7 +90,7 @@ export function walkthroughTip(s: Game): Guidance | null {
       return tip(
         "guard",
         "A heavy attack is coming",
-        "Tap Guard to halve incoming damage. The red target portraits show who is threatened. Read the enemy’s intent before every turn.",
+        "Tap Guard to halve incoming damage. Red markers above your characters show who is threatened. Read the enemy’s intent before every turn.",
       );
     if (
       living.some((c) => c.hp < c.maxHp * 0.5) &&
@@ -106,7 +106,7 @@ export function walkthroughTip(s: Game): Guidance | null {
       return tip(
         "attack",
         "Command your first turn",
-        "Tap a party portrait to choose who leads this action, then Attack. Living allies support the strike. Watch enemy HP, break and the next intent.",
+        "Tap a character or their HP/MP panel to choose who leads this action, then Attack. The blue ring marks your selection. Living allies support the strike.",
       );
     if (
       !done("skill") &&

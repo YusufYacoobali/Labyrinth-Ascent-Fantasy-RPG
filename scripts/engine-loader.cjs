@@ -27,6 +27,9 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  visuals: load("src/game/combat-visuals.ts"),
+  trial: load("src/game/combat-trial.ts"),
+  animation: load("src/game/combat-animation.ts"),
   walkthrough: load("src/game/walkthrough.ts"),
   maps: load("src/game/floor-map.ts"),
   fatigue: load("src/game/exhaustion.ts"),

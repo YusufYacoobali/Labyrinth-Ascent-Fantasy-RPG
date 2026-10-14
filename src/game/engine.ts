@@ -133,6 +133,7 @@ export interface BattleEffect {
   poisonDamage: number;
   stunned: boolean;
   targets: Record<string, number>;
+  strikes?: Record<string, number>;
   broken: boolean;
 }
 export interface Game {
@@ -597,7 +598,7 @@ export function floorEnvironment(floor: number, route: Route | null): string {
           : "dungeon"
     : env;
 }
-function enemyFor(
+export function enemyFor(
   floor: number,
   route: Route | null = null,
   partySize = 1,
@@ -648,7 +649,7 @@ function note(s: Game, message: string): Game {
     journal: [`Day ${s.day} · ${message}`, ...s.journal].slice(0, 100),
   };
 }
-function gainXp(c: Character, amount: number): Character {
+export function gainXp(c: Character, amount: number): Character {
   let n = { ...c, xp: c.xp + amount };
   while (n.xp >= n.level * 70) {
     n = {

@@ -1,0 +1,30 @@
+import type { MotionKey } from "@/game/combat-visuals";
+
+// Metro needs literal asset paths; the canvas decodes only the current combatants.
+export const MOTION_SHEETS: Record<MotionKey, number> = {
+  kael: require("../../assets/combat/kael-motion.png"),
+  barbarian: require("../../assets/combat/barbarian-motion.png"),
+  lyria: require("../../assets/combat/lyria-motion.png"),
+  bram: require("../../assets/combat/bram-motion.png"),
+  elowen: require("../../assets/combat/elowen-motion.png"),
+  mira: require("../../assets/combat/mira-motion.png"),
+  torren: require("../../assets/combat/torren-motion.png"),
+  sigrun: require("../../assets/combat/sigrun-motion.png"),
+  finn: require("../../assets/combat/finn-motion.png"),
+  eira: require("../../assets/combat/eira-motion.png"),
+  "human-mage": require("../../assets/combat/human-mage-motion.png"),
+  goblin: require("../../assets/combat/goblin-motion.png"),
+  roadkeeper: require("../../assets/combat/roadkeeper-motion.png"),
+  guardian: require("../../assets/combat/guardian-motion.png"),
+  broodmother: require("../../assets/combat/broodmother-motion.png"),
+  revenant: require("../../assets/combat/revenant-motion.png"),
+  blight: require("../../assets/combat/blight-motion.png"),
+  frostfang: require("../../assets/combat/frostfang-motion.png"),
+  sentinel: require("../../assets/combat/sentinel-motion.png"),
+  ashen: require("../../assets/combat/ashen-motion.png"),
+  "pale-hunter": require("../../assets/combat/pale-hunter-motion.png"),
+  "kings-blade": require("../../assets/combat/kings-blade-motion.png"),
+  "hollow-king": require("../../assets/combat/hollow-king-motion.png"),
+  plunderer: require("../../assets/combat/plunderer-motion.png"),
+  bonegnaw: require("../../assets/combat/bonegnaw-motion.png"),
+};

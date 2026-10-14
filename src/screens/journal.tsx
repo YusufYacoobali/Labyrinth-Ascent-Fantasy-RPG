@@ -227,7 +227,12 @@ export function JournalScreen() {
                     alignItems: "center",
                   }}
                 >
-                  <Atlas sprite index={floor.sprite} size={62} />
+                  <Atlas
+                    sprite
+                    index={floor.sprite}
+                    size={62}
+                    enemyFloor={floor.id}
+                  />
                   <View style={{ flex: 1 }}>
                     <Copy title style={{ fontSize: 19 }}>
                       {floor.id <= state.bestFloor
@@ -635,6 +640,11 @@ export function MoreScreen() {
                         state.phase === "town" ? "/town" : "/expedition",
                       );
                     }}
+                  />
+                  <Button
+                    label="Try pixel combat"
+                    tone="blue"
+                    onPress={() => router.push("/combat-trial")}
                   />
                   <Button
                     label="How to play in town"

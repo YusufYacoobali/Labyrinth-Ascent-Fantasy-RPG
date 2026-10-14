@@ -56,12 +56,14 @@ export function BattleSprite({
   effect = 0,
   hit = false,
   dying = false,
+  enemyFloor,
 }: {
   index: number;
   size?: number;
   effect?: number;
   hit?: boolean;
   dying?: boolean;
+  enemyFloor?: number;
 }) {
   const reduced = useReducedMotion();
   const x = useSharedValue(0);
@@ -112,7 +114,7 @@ export function BattleSprite({
   }));
   return (
     <Animated.View style={style}>
-      <Atlas sprite index={index} size={size} />
+      <Atlas sprite index={index} size={size} enemyFloor={enemyFloor} />
     </Animated.View>
   );
 }
@@ -121,29 +123,39 @@ export function DamageNumber({
   critical = false,
   poison = false,
   id,
+  delay = 0,
+  anchor = 0.5,
 }: {
   amount: number;
   critical?: boolean;
   poison?: boolean;
   id: number;
+  delay?: number;
+  anchor?: number;
 }) {
   const reduced = useReducedMotion();
   const y = useSharedValue(8);
   const opacity = useSharedValue(0);
   useEffect(() => {
     y.set(
-      withTiming(reduced ? 0 : -25, {
-        duration: 520,
-        easing: Easing.bezier(0.23, 1, 0.32, 1),
-      }),
-    );
-    opacity.set(
-      withSequence(
-        withTiming(1, { duration: 90 }),
-        withDelay(350, withTiming(0, { duration: 150 })),
+      withDelay(
+        reduced ? 0 : delay,
+        withTiming(reduced ? 0 : -25, {
+          duration: 520,
+          easing: Easing.bezier(0.23, 1, 0.32, 1),
+        }),
       ),
     );
-  }, [id, reduced, y, opacity]);
+    opacity.set(
+      withDelay(
+        reduced ? 0 : delay,
+        withSequence(
+          withTiming(1, { duration: 90 }),
+          withDelay(350, withTiming(0, { duration: 150 })),
+        ),
+      ),
+    );
+  }, [id, reduced, y, opacity, delay]);
   const style = useAnimatedStyle(() => ({
     opacity: opacity.get(),
     transform: [{ translateY: y.get() }],
@@ -155,8 +167,9 @@ export function DamageNumber({
         {
           position: "absolute",
           top: poison ? 75 : 32,
-          left: 0,
-          right: 0,
+          left: `${anchor * 100}%`,
+          width: 160,
+          marginLeft: -80,
           alignItems: "center",
         },
         style,
@@ -186,14 +199,18 @@ export function DamageNumber({
 export function Reveal({
   children,
   style,
+  delay = 0,
 }: {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  delay?: number;
 }) {
   return (
     <Animated.View
       style={style}
-      entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)}
+      entering={FadeIn.delay(delay)
+        .duration(180)
+        .reduceMotion(ReduceMotion.System)}
     >
       {children}
     </Animated.View>

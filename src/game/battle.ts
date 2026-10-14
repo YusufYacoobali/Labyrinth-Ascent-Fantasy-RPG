@@ -181,6 +181,7 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
     poiseDamage = 0;
   const logs: string[] = [];
   const targets: Record<string, number> = {};
+  const strikes: Record<string, number> = {};
   if (a.kind === "item") {
     if (id === "potion") potions--;
     else inventory[id]--;
@@ -276,7 +277,7 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
           ? 0
           : enemy.guard *
             (c.traitRevealed && c.trait === "Moon Sight" ? 0.5 : 1);
-      damage +=
+      const hit =
         mult > 0
           ? Math.max(
               2,
@@ -285,6 +286,8 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
               ),
             )
           : 0;
+      damage += hit;
+      if (hit > 0) strikes[c.id] = hit;
       if (!cast) return c;
       logs.push(`${c.name} uses ${skill}.`);
       if (skill === "Venom Fang") enemy.poison = 3;
@@ -369,6 +372,7 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
     poisonDamage,
     stunned: false,
     targets,
+    strikes,
     broken,
   };
   if (enemy.hp === 0)

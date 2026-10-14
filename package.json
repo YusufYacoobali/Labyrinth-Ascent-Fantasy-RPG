@@ -10,6 +10,7 @@
     "@expo/ui": "~57.0.23",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@shopify/react-native-skia": "2.6.2",
     "expo": "~57.0.28",
     "expo-asset": "~57.0.19",
     "expo-audio": "~57.0.5",
@@ -45,12 +46,13 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
+    "postinstall": "setup-skia-web public",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node scripts/test-engine.cjs && node scripts/test-combat.cjs && node scripts/test-town.cjs && node scripts/test-exploration.cjs && node scripts/test-maps.cjs && node scripts/test-walkthrough.cjs",
+    "test": "node scripts/test-engine.cjs && node scripts/test-combat.cjs && node scripts/test-town.cjs && node scripts/test-exploration.cjs && node scripts/test-maps.cjs && node scripts/test-walkthrough.cjs && node scripts/test-animation.cjs",
     "playtest": "node scripts/playtest.cjs",
     "typecheck": "tsc --noEmit",
     "export": "expo export --platform all",

@@ -128,3 +128,29 @@ export function useGame() {
   if (!c) throw new Error("Game provider missing");
   return c;
 }
+
+/** A visual trial is a separate, disposable game session; it never writes the saved expedition. */
+export function CombatTrialProvider({
+  initial,
+  children,
+}: {
+  initial: Game;
+  children: React.ReactNode;
+}) {
+  const [state, dispatch] = useReducer(reducer, initial);
+  return (
+    <Context.Provider
+      value={{
+        state,
+        dispatch,
+        ready: true,
+        saveError: "",
+        retrySave: () => {},
+        pendingTownAction: null,
+        confirmTownAction: () => {},
+      }}
+    >
+      {children}
+    </Context.Provider>
+  );
+}

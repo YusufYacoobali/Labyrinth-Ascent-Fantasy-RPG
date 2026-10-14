@@ -1,0 +1,422 @@
+[
+  {
+    "asset": "lyria-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-6065aee4-4030-42f5-af64-6ec475a93123.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/art/sprites-modest.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nReference image is character identity only: TOP RIGHT silver-haired elf Lyria, black-white-gold fully covered tunic armor, pointed ears, bow. Create ONLY Lyria. Row3 is drawing bow, aiming, release arrow then recovery. Row6 green venom arrow magic, no sword. Fully opaque covered chest and shoulders.\nInput image is identity/style reference, NOT edit target; output ONLY the named character animation sheet.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "bram-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-868fb5c6-f75b-419f-b57e-e64c40443272.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/art/sprites-modest.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nReference identity: MIDDLE LEFT red-bearded dwarf Bram, stocky heavy dark gold armor and axe, compact iron shield. Create ONLY Bram. Row3 axe swing. Row6 Shield Bash, wind up shield and strike with gold-blue impact.\nInput image is identity/style reference, NOT edit target; output ONLY the named character animation sheet.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "elowen-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-603f1913-1242-46dd-a980-db6d3673a31b.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/art/town-recruits-sprites.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nReference identity: TOP LEFT auburn braided elf Elowen, green cloak, opaque high-neck white armored robe, emerald crystalline staff. Create ONLY Elowen. Row3 staff green magic cast without walking forward. Row6 Second Wind restorative emerald leaves/light around staff and body. Fully covered chest and shoulders.\nInput image is identity/style reference, NOT edit target; output ONLY the named character animation sheet.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "mira-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-1a9371c9-aeb0-4ad1-b94f-9b085cb4126e.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/art/town-recruits-sprites.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nIdentity reference TOP CENTER: Mira short violet-haired human female Mage, dark blue high-neck gold-trim opaque robe, book and wand. ONLY Mira. Row3 basic violet magic bolt staff cast planted feet. Row6 stronger blue-violet Arcane Bolt. Covered chest shoulders and legs.\nInput is identity/style reference only. Output only named character sheet.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "torren-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-759fbf10-ca6b-4373-91bb-9e1b6755f850.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/art/town-recruits-sprites.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nIdentity reference TOP RIGHT: Torren stocky older white-haired white-bearded dwarf veteran, heavy grey-blue iron armor, large square iron shield, hammer. ONLY Torren. Row3 hammer swing, Row6 Shield Bash explosive golden shield impact. Keep distinctive white beard.\nInput is identity/style reference only. Output only named character sheet.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "sigrun-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-b1385537-4632-44e0-9923-e2ea3ce385ed.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/art/town-recruits-sprites.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nIdentity reference BOTTOM LEFT: Sigrun muscular auburn/red braided hair barbarian woman, fully covered dark leather/plate armor, fur cloak, double-headed axe. ONLY Sigrun. Row3 axe swing, Row6 Twin Strike two consecutive red-gold crescent axe blows. All chest shoulders waist and upper legs opaque armor, no revealing costume.\nInput is identity/style reference only. Output only named character sheet.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "finn-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-0db47ea8-34c1-4268-9b27-7360ee009e3f.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/art/town-recruits-sprites.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nIdentity reference BOTTOM CENTER: Finn sandy brown-haired young human duelist, red scarf, leather tunic armor, slender silver rapier. ONLY Finn. Row3 quick fencing thrust, Row6 Nerve Lock precise blue-violet rapier strike. Keep silhouette lighter than heavy knights.\nInput image identity/style reference only, not edit target. Output only named character animation sheet.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "eira-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-68482341-5302-4c5c-a187-3ef9b4276afb.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/art/town-recruits-sprites.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nIdentity reference BOTTOM RIGHT: Eira pale blue short-haired elf archer, fully covered blue-silver frost armor and fur cape, ornate frost bow. ONLY Eira. Row3 draw bow shoot release recover. Row6 Nerve Lock bright frost arrow, crystalline blue impact. Chest shoulders legs fully covered.\nInput image identity/style reference only, not edit target. Output only named character animation sheet.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "human-mage-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-c79aca5c-6cbc-477a-ace6-abb6b19b3861.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/art/sprites-modest.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nReference TOP LEFT Kael dark brown hair amber eyes anime human male. Create his HUMAN HERO MAGE alternate class, preserve his face/hair, wear full navy hoodless gold-trim mage robe and blue cape; book and simple crystal staff instead of sword/shield. Row3 blue magical bolt cast planted feet. Row6 Arcane Bolt brilliant blue-violet spell. Only this mage sheet.\nInput image identity/style reference only, not edit target. Output only named character animation sheet.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "guardian-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-e854bcb1-04ea-4a67-91db-6b46f888d6f3.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/story/floor-enemies-ui-2.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nIdentity reference TOP LEFT blue-rune stone golem Runestone Guardian. Only this hulking rocky guardian, broad square stone fists, brilliant cyan eye/rune cracks, no fire. Face LEFT toward party (override right). Row3 double stone fist ground slam; row6 charged cyan rune shockwave ground slam. Row5 stone knees buckle, collapse to rubble with cyan glow extinguished; keep debris inside cells. Match pixel character details, golem anatomy rather than humanoid chibi.\nInput reference identity/style only. Output ONLY named creature animation sheet.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "broodmother-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-40fc9589-24df-46b6-bcf5-e65d3b824cc3.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/art/bosses.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nIdentity reference TOP CENTER purple black Venom Broodmother spider with red eyes and eight legs. Only this spider. Face LEFT (override right). Row2 eight legs walking. Row3 fang bite and leg slash. Row6 green venom spit and purple toxic glow. Row5 legs fold and body collapses. Keep leg span inside equal cells; creature anatomy not humanoid.\nInput reference identity/style only. Output ONLY named creature animation sheet.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "revenant-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-2e8dbb17-6e04-45a3-858c-f3b6280b291a.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/story/floor-enemies-ui-2.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces RIGHT toward enemy. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nIdentity reference TOP CENTER Echo Revenant: hooded black armored undead knight, narrow cyan glowing eyes, long sword, spectral blue ribbon cloak. Only this revenant. Face LEFT (override right). Row3 sword slash with cool spectral blue arc. Row6 soul strike blue spectral sword. Row5 collapse with blue spirit fading. Do not replace with skeleton or gold knight.\nInput reference identity/style only. Output ONLY named creature animation sheet.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "blight-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-5536095e-9e0e-4e13-b3e0-ce0b9cc210c4.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/story/floor-enemies-ui-2.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces LEFT toward party. All attacks point LEFT. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nReference TOP RIGHT Blight Warden: ragged green-black plague hood, glowing acid-green eye, long green robes, chains and alchemy vials, hunched gaunt staff caster. Face LEFT. Row3 toxic green staff pulse planted feet. Row6 large venom magic wave aimed left. Death collapse robes, light fades. ONLY this plague warden.\nInput image is identity/style reference only. Output ONLY named creature animation sheet. Every cell including magic release must retain the full creature body; no effect-only empty body frames.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "frostfang-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-7ebdc1d2-de77-4413-8e0f-2eccf2c68cdf.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/art/bosses.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces LEFT toward party. All attacks point LEFT. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nReference BOTTOM LEFT Frostfang Alpha large white wolf with icy blue fur and crystals on shoulders, cyan eyes. Face LEFT. Row2 four leg running gait. Row3 pounce then claw/bite. Row6 ice howl with blue crystalline burst, four leg beast anatomy. Death stumble legs buckle lie on side. ONLY this white alpha wolf.\nInput image is identity/style reference only. Output ONLY named creature animation sheet. Every cell including magic release must retain the full creature body; no effect-only empty body frames.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "sentinel-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:/Users/yyaco/.codex/generated_images/01a13109-852a-7922-a24f-b3eeb01fc1fe/exec-e6f96c12-122a-439f-86e2-b89e84e25834.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/story/floor-enemies-ui-2.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces LEFT toward party. All attacks point LEFT. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nReference BOTTOM LEFT Gravebound Sentinel closed black-gold armored knight, steel closed helmet, blue and gold tabard, long straight gold-silver sword. Face LEFT. Row3 heavy sword cleave, Row6 gold-blue grave blade heavy sweeping slash. Death kneel then armor collapse. ONLY sentinel, no hood or exposed skeleton.\nInput image is identity/style reference only. Output ONLY named creature animation sheet. Every cell including magic release must retain the full creature body; no effect-only empty body frames.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "ashen-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a13109-852a-7922-a24f-b3eeb01fc1fe\\exec-28e072bd-29e0-4e01-b74d-237b886e7fe4.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/art/bosses.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces LEFT toward party. All attacks point LEFT. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nIdentity reference BOTTOM CENTER Ashen Knight: sealed black spiked molten armor, orange glowing cracks, orange fire greatsword and ragged burning cape. Only Ashen Knight. Face LEFT. Row3 fire sword cleave, Row6 Inferno Sweep wide orange crescent strike pointing LEFT, keep fire controlled inside cell. Death kneel, collapse, ember cracks fade.\nInput is identity/style reference only. Output ONLY named enemy animation sheet. Full body present in EVERY release/impact cell, no effect-only frames.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "pale-hunter-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a13109-852a-7922-a24f-b3eeb01fc1fe\\exec-8fe49a32-3c0f-4f44-ad83-14edec275641.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/story/floor-enemies-ui-2.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces LEFT toward party. All attacks point LEFT. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nIdentity reference BOTTOM CENTER Pale Hunter: lean white/silver wolf, frosty blue crystalline spine, skeletal narrow muzzle, electric cyan eyes. Only Pale Hunter, distinctly leaner and smaller than Frostfang Alpha. Face LEFT. Row2 four-legged run. Row3 bite pounce. Row6 Glacial Howl pale frosty wave LEFT. Death tumble to side, stay fallen.\nInput is identity/style reference only. Output ONLY named enemy animation sheet. Full body present in EVERY release/impact cell, no effect-only frames.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "kings-blade-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a13109-852a-7922-a24f-b3eeb01fc1fe\\exec-78fa038e-457b-45f6-88ea-71c9b8daa2f1.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/story/floor-enemies-ui-2.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces LEFT toward party. All attacks point LEFT. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nIdentity reference BOTTOM RIGHT King's Blade: elite black hooded armored executioner, thin glowing pale eyes, long black cape, ONE curved silver sword, fine antique gold armor trim. Only King's Blade. Face LEFT. Row3 precise silver sword slash, Row6 Execution blue-white sword strike pointing LEFT, no twin dagger or purple magic. Death knees buckle, crumple on left-facing side.\nInput is identity/style reference only. Output ONLY named enemy animation sheet. Full body present in EVERY release/impact cell, no effect-only frames.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "hollow-king-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a13109-852a-7922-a24f-b3eeb01fc1fe\\exec-e32ab331-9e96-4c99-9a5d-5f7d73bd4b48.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/art/bosses.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces LEFT toward party. All attacks point LEFT. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nReference BOTTOM RIGHT Hollow King, floating black-gold skeletal crowned sorcerer, tall branching golden crown, hollow black face cyan eyes, fully covered tattered navy gold-trim robe, long hands. ONLY Hollow King. Face LEFT. Row2 drifting walk, robe trails right. Row3 gold-blue magic blast aimed left without lunge. Row6 Crown of Ruin massive controlled amber flame-crown spell LEFT. Row5 crown light fades, robe crumples, crown on ground, final fallen holds.\nInput reference identity/style only, not edit target. Output ONLY named creature animation sheet. Every cell retains whole creature including spell release. No effect-only frames.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "plunderer-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a13109-852a-7922-a24f-b3eeb01fc1fe\\exec-f427f7e5-79cd-4899-ac1f-04730bd0056e.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/art/bosses.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces LEFT toward party. All attacks point LEFT. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nReference TOP LEFT Plunderer, human male blue hooded cloak rogue, dark leather armor, TWO curved daggers, one in each hand, pale skin. ONLY Plunderer. Face LEFT. Row3 quick dagger combo directed LEFT. Row6 ambush dual-dagger strike silver-blue trails. Row5 stagger, knees buckle, fall onto left side. Preserve distinct rogue identity, not King's Blade.\nInput reference identity/style only, not edit target. Output ONLY named creature animation sheet. Every cell retains whole creature including spell release. No effect-only frames.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  },
+  {
+    "asset": "bonegnaw-motion.png",
+    "mode": "built-in image_gen",
+    "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a13109-852a-7922-a24f-b3eeb01fc1fe\\exec-cf7ded61-a93b-423a-b6f6-022262c94d28.png",
+    "reference": "C:/dev/fantasy sim/labyrinth-app/assets/story/bonegnaw-sprite.png",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel RPG animation spritesheet with TRUE transparent background. Canvas 2048x1536, EXACT 8 columns x 6 rows, equal 256x256 square cells, no gutters or borders. ONE consistent character across all 48 frames, no labels or text. Match detailed pixel chibi anatomy in reference, hand-painted sharp pixels, 3-head-tall full-body silhouette, cool blue rimlight and amber torch reflection. All frames aligned to same origin: hips centered horizontally, boots at 88% cell height, stay within cell including weapons/effects, all action poses visible, no environmental floor or shadow. Faces LEFT toward party. All attacks point LEFT. Row 1 SIX distinct subtle idle/breathing frames (chest, hair and cape relax), then repeat frames 5 and 6 in final two columns. Row 2 EIGHT walking/running frames, opposite legs stride, cape trails and bounces. Row 3 EIGHT attack frames: ready, windup, lunge, weapon overhead, powerful swing contact with small bright pixel slash, follow-through, recoil, return ready. Row 4 FOUR damage frames (flinch, recoil, stumble, recover), then repeat final recovered pose in last four cells. Row 5 EIGHT death frames: startled, knees buckle, kneel, collapse, tip sideways, fallen, still fallen, still fallen. Row 6 EIGHT special-ability frames: gather energy, windup, lunge, release, bright impact, follow-through, cape recoil, ready. Keep character identity, proportions, size, equipment and colors identical across grid; animate poses not appearance. Avoid blurry gradients, fake checkerboard, opaque backgrounds, cropped subjects, duplicated identical action rows.\nReference is Bonegnaw Scavenger monstrous oversized grey rat, hunched spiky darkgrey brown fur, long hairless tail trailing right, red eyes, large curved bone claws. ONLY this rat. Face LEFT. Row2 four-legged scrambling run. Row3 lunge bite and claw LEFT. Row6 savage gnaw combo dull red-gold strike glow, no sword. Row5 legs buckle, collapse onto side and remain fallen. Creature anatomy, not humanoid.\nInput reference identity/style only, not edit target. Output ONLY named creature animation sheet. Every cell retains whole creature including spell release. No effect-only frames.",
+    "grid": {
+      "columns": 8,
+      "rows": 6
+    },
+    "animations": [
+      "idle6",
+      "walk8",
+      "attack8",
+      "hit4",
+      "death8",
+      "special8"
+    ],
+    "status": "ready"
+  }
+]
