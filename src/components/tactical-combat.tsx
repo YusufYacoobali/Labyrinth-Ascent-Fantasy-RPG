@@ -2,23 +2,33 @@ import {
   playbackKey,
   playbackStep,
   type Playhead,
+  eventPacing,
+  arrivingEnemies,
+  playbackSnapshot,
+  actionLead,
+  defeatedGold,
 } from "@/game/combat-presentation";
 import { eventFeedback } from "@/game/combat-audio";
-import { Image } from "expo-image";
-import { MOTION_SHEETS } from "./combat-sheets";
-import { enemyVisual } from "@/game/combat-visuals";
 import {
   canAutoResolve,
-  commandPreview,
   formationOf,
   repeatCommands,
 } from "@/game/combat-commands";
+import { chooseCommand } from "@/game/combat-planning";
 import { conditionText, impeded } from "@/game/combat-status";
 import {
   battleCue,
-  tacticalStageHeight,
+  cueDuration,
+  cueContact,
+  cueResponse,
+  cueActionEnd,
   type CombatCue,
 } from "@/game/combat-animation";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import CombatIntro from "./combat-intro";
+import CombatEnemyDialog from "./combat-enemy-dialog";
+import CombatOtherActions from "./combat-other-actions";
+import CombatReinforcements from "./combat-reinforcements";
 import { skillCost } from "@/game/build-equipment";
 import React, {
   useState,
@@ -27,7 +37,13 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import { View } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 import { useGame } from "@/game/provider";
 import {
@@ -36,57 +52,73 @@ import {
   validateQueue,
   type QueuedAction,
 } from "@/game/round-combat";
-import { SKILLS } from "@/game/combat-data";
-import { skillFamily } from "@/game/essence-powers";
-import { Bar, Button, Copy, Eyebrow, Panel } from "./game-ui";
+import { SKILLS, SKILL_RANKS } from "@/game/combat-data";
+import { skillRank } from "@/game/progression";
+import { ITEMS } from "@/game/world";
+import {
+  Button,
+  Choice,
+  Copy,
+  Eyebrow,
+  Icon,
+  Panel,
+  SettingsControls,
+} from "./game-ui";
 import CombatStage from "./combat-stage";
-import { Reveal, useCombatFeedback } from "./combat-motion";
+import { useCombatFeedback } from "./combat-motion";
 import { theme as t } from "@/theme";
-export default function TacticalCombat() {
+
+export default function TacticalCombat({
+  practice,
+}: {
+  practice?: { customize: () => void; restart: () => void; exit: () => void };
+} = {}) {
   const { state, dispatch, saving } = useGame(),
     playback = state.roundPlayback;
   const source = playback?.before || state,
     combat = source.combat;
   const [playhead, setPlayhead] = useState<Playhead>({ key: "", step: 0 }),
+    [menu, setMenu] = useState<
+      "skill" | "item" | "others" | "tactics" | "enemy" | null
+    >(null),
+    [retreat, setRetreat] = useState(false),
+    [inspected, setInspected] = useState(""),
+    [allyTarget, setAllyTarget] = useState(""),
+    [notice, setNotice] = useState(""),
+    [submitting, setSubmitting] = useState(""),
+    [impactFrame, setImpactFrame] = useState(""),
+    [collectedGold, setCollectedGold] = useState<string[]>([]),
+    [sceneReady, setSceneReady] = useState(false),
+    [introDone, setIntroDone] = useState(
+      () => !combat || combat.round > 1 || !!playback,
+    ),
     [showRules, setShowRules] = useState(false),
     [selected, setSelected] = useState(
       source.party.find((c) => c.hp > 0 && !impeded(c))?.id || "",
     ),
-    [queue, setQueue] = useState<Record<string, QueuedAction>>({});
+    [planState, setPlanState] = useState<{
+      round: string;
+      actions: Record<string, QueuedAction>;
+    }>({ round: "", actions: {} });
+  const roundKey = `${combat?.id}:${combat?.round}`;
+  // Keep the arena mounted during playback, but never carry a plan into a new round.
+  const queue = planState.round === roundKey ? planState.actions : {};
+  const emptyRound = useRef("");
   const playKey = playbackKey(playback),
     cursor = playbackStep(playhead, playKey, playback?.events.length || 0);
+  const viewport = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const reduced = useReducedMotion(),
     ready = source.party.filter((c) => c.hp > 0 && !impeded(c));
-  const frame = playback?.events[Math.min(cursor, playback.events.length - 1)],
-    party = frame?.party || source.party,
-    enemies = frame?.enemies || combat?.enemies || [];
-  const actor = source.party.find((c) => c.id === selected) || ready[0],
-    q = actor ? queue[actor.id] : undefined;
-  const onReady = useCallback(() => {}, []);
+  const frame = playback?.events[Math.min(cursor, playback.events.length - 1)];
+  const actor = source.party.find((c) => c.id === selected) || ready[0];
+  const onReady = useCallback(() => setSceneReady(true), []);
+  const finishIntro = useCallback(() => setIntroDone(true), []);
   const feedback = useCombatFeedback(),
     feedbackRef = useRef(feedback);
   useEffect(() => {
     feedbackRef.current = feedback;
   }, [feedback]);
-  useEffect(() => {
-    if (frame) {
-      const kind = eventFeedback(frame);
-      if (kind) feedbackRef.current(kind);
-    }
-  }, [frame]);
-
-  useEffect(() => {
-    if (!playback) return;
-    const timer = setTimeout(
-      () => {
-        if (cursor >= playback.events.length - 1)
-          dispatch({ type: "FINISH_PLAYBACK" });
-        else setPlayhead({ key: playKey, step: cursor + 1 });
-      },
-      reduced ? 50 : state.combatSpeed === "fast" ? 160 : 450,
-    );
-    return () => clearTimeout(timer);
-  }, [playback, playKey, cursor, reduced, dispatch, state.combatSpeed]);
   const cue = useMemo(() => {
     if (
       !frame ||
@@ -153,11 +185,106 @@ export default function TacticalCombat() {
         enemyHit: false,
         enemyDied: false,
         targets: frame.target ? [frame.target] : [],
-        responseAt: 150,
-        finishAt: 950,
+        responseAt: 440,
+        finishAt: 1200,
       } as CombatCue;
     return { ...generated, enemyAttacks: false };
   }, [frame, playback, cursor, source]);
+  const nativeDuration = cue ? cueDuration(cue) : 0;
+  const goldDrops = useMemo(
+    () => defeatedGold(playback, cursor, collectedGold),
+    [playback, cursor, collectedGold],
+  );
+  const { animationMs, stepMs } = eventPacing(
+    frame,
+    nativeDuration,
+    state.combatSpeed,
+    reduced,
+    cue ? cueActionEnd(cue) : 0,
+  );
+  const impactKey = frame ? `${playKey}:${frame.id}` : "";
+  const impactDelay =
+    cue && !reduced
+      ? Math.round(
+          ((frame?.kind === "strike" ? cueResponse(cue) : cueContact(cue)) /
+            nativeDuration) *
+            animationMs,
+        )
+      : 0;
+  const impactVisible = !cue || !impactDelay || impactFrame === impactKey;
+  const snapshot = playbackSnapshot(playback, cursor, impactVisible);
+  const party = snapshot?.party || source.party;
+  const enemies = snapshot?.enemies || combat?.enemies || [];
+  const arrivals = arrivingEnemies(playback, cursor);
+  const arrivalNotice = !!frame && arrivals.length > 0;
+  const finishPlayback = useCallback(() => {
+    if (playback) {
+      const ids = playback.events.flatMap((_, step) =>
+        defeatedGold(playback, step).map((drop) => drop.enemyId),
+      );
+      if (ids.length)
+        setCollectedGold((previous) => [...new Set([...previous, ...ids])]);
+    }
+    dispatch({ type: "FINISH_PLAYBACK" });
+  }, [playback, dispatch]);
+  const advancePlayback = useCallback(() => {
+    if (!playback) return;
+    if (goldDrops.length)
+      setCollectedGold((previous) => [
+        ...new Set([...previous, ...goldDrops.map((drop) => drop.enemyId)]),
+      ]);
+    if (cursor >= playback.events.length - 1) finishPlayback();
+    else setPlayhead({ key: playKey, step: cursor + 1 });
+  }, [playback, cursor, playKey, goldDrops, finishPlayback]);
+
+  useEffect(() => {
+    if (!impactDelay || !frame) return;
+    const timer = setTimeout(() => setImpactFrame(impactKey), impactDelay);
+    return () => clearTimeout(timer);
+  }, [impactDelay, frame, impactKey]);
+  useEffect(() => {
+    if (frame && impactVisible) {
+      const kind = eventFeedback(frame);
+      if (kind) feedbackRef.current(kind);
+    }
+  }, [frame, impactVisible]);
+  useEffect(() => {
+    if (!playback || arrivalNotice) return;
+    const timer = setTimeout(advancePlayback, stepMs);
+    return () => clearTimeout(timer);
+  }, [playback, advancePlayback, stepMs, arrivalNotice]);
+  useEffect(() => {
+    if (
+      !combat ||
+      combat.complete ||
+      !introDone ||
+      !sceneReady ||
+      source.phase !== "combat" ||
+      playback ||
+      saving ||
+      ready.length ||
+      emptyRound.current === roundKey
+    )
+      return;
+    emptyRound.current = roundKey;
+    dispatch({
+      type: "ROUND",
+      battleId: combat.id,
+      round: combat.round,
+      actions: [],
+      animate: true,
+    });
+  }, [
+    combat,
+    introDone,
+    sceneReady,
+    source.phase,
+    playback,
+    saving,
+    ready.length,
+    roundKey,
+    dispatch,
+  ]);
   if (!combat)
     return (
       <Panel>
@@ -165,9 +292,9 @@ export default function TacticalCombat() {
       </Panel>
     );
   const enemyTarget =
-    enemies.find((e) => e.id === q?.target) ||
     enemies.find((e) => e.id === frame?.target) ||
     enemies.find((e) => e.id === frame?.actor) ||
+    enemies.find((e) => e.id === inspected && e.hp > 0) ||
     enemies.find((e) => e.hp > 0) ||
     enemies[0];
   const stage = {
@@ -176,414 +303,746 @@ export default function TacticalCombat() {
     enemy: enemyTarget,
     combat: { ...combat, enemies },
   };
+  const locked =
+    !introDone ||
+    !sceneReady ||
+    !!playback ||
+    saving ||
+    submitting === roundKey;
+  const canAct = !!actor && actor.hp > 0 && !impeded(actor) && !locked;
+  const actions = ready.flatMap((c) => (queue[c.id] ? [queue[c.id]] : []));
+  const intents = enemies.map((enemy) => ({
+    enemy,
+    intent: enemyIntent(source, enemy),
+  }));
+  const threatened = intents
+    .filter(({ enemy }) => enemy.hp > 0)
+    .flatMap(({ intent }) => intent.targets);
+  const friend =
+    source.party.find((c) => c.id === allyTarget && c.hp > 0) || actor;
+  const selectActor = (id: string) => {
+    if (locked) return;
+    setSelected(id);
+    setAllyTarget(id);
+    setNotice("");
+    setMenu(null);
+    setRetreat(false);
+  };
+  const selectEnemy = (id: string) => {
+    if (!locked && enemies.some((e) => e.id === id && e.hp > 0))
+      setInspected(id);
+  };
+  const inspectEnemy = (id: string) => {
+    if (locked) return;
+    setInspected(id);
+    setRetreat(false);
+    setMenu("enemy");
+  };
+  const request = {
+    type: "ROUND" as const,
+    battleId: combat.id,
+    round: combat.round,
+    actions,
+    animate: true,
+  };
+  const commit = (chosen: QueuedAction[]) => {
+    if (locked) return;
+    const issue = validateQueue(source, { ...request, actions: chosen });
+    if (issue) {
+      setNotice(issue);
+      return;
+    }
+    setSubmitting(roundKey);
+    setNotice("");
+    setMenu(null);
+    dispatch({ ...request, actions: chosen });
+  };
   const assign = (
     kind: QueuedAction["kind"],
     extra: Partial<QueuedAction> = {},
   ) => {
-    if (!actor) return;
-    setQueue((old) => ({
-      ...old,
-      [actor.id]: {
-        actor: actor.id,
-        kind,
-        target:
-          kind === "guard" || kind === "item" || kind === "taunt"
+    if (!canAct) return;
+    const action: QueuedAction = {
+      actor: actor.id,
+      kind,
+      target:
+        kind === "item"
+          ? friend?.id
+          : kind === "guard" || kind === "taunt" || kind === "focus"
             ? actor.id
-            : enemies.find((e) => e.hp > 0)?.id,
-        ...extra,
-      },
-    }));
-  };
-  const actions = ready.flatMap((c) => (queue[c.id] ? [queue[c.id]] : [])),
-    request = {
-      type: "ROUND" as const,
-      battleId: combat.id,
-      round: combat.round,
-      actions,
-      animate: true,
+            : enemyTarget?.id,
+      ...extra,
     };
-  const issue = validateQueue(source, request),
-    friendly = q?.kind === "guard" || q?.kind === "item" || q?.kind === "taunt";
-  return (
-    <View style={{ padding: 10, gap: 10, paddingBottom: 24 }}>
-      {frame?.kind === "phase" && (
-        <Panel style={{ borderColor: t.color.gold, gap: 6 }}>
-          <Copy
-            accessibilityRole="alert"
-            accessibilityLiveRegion="polite"
-            title
-          >
-            {frame.text}
-          </Copy>
-        </Panel>
-      )}
-      <Eyebrow>
-        ROUND {combat.round} · {source.momentum}/3 MOMENTUM
-      </Eyebrow>
+    const plan = chooseCommand(source, queue, action);
+    setPlanState({ round: roundKey, actions: plan.commands });
+    if (plan.issue) {
+      setNotice(plan.issue);
+      return;
+    }
+    setNotice("");
+    setMenu(null);
+    if (plan.complete) commit(plan.actions);
+    else if (plan.nextActor) {
+      setSelected(plan.nextActor);
+      setAllyTarget(plan.nextActor);
+    }
+  };
+  const activeSkills =
+    actor?.skills.flatMap((name) => {
+      const skill = SKILLS.find((entry) => entry.name === name);
+      return skill && !skill.passive ? [skill] : [];
+    }) || [];
+  const momentumLeft =
+    source.momentum -
+    actions.filter(
+      (action) => action.kind === "burst" && action.actor !== actor?.id,
+    ).length *
+      2;
+  const supplies = [
+    "potion",
+    "greater-potion",
+    "ether",
+    "antidote",
+    "bandage",
+  ].filter(
+    (id) => (id === "potion" ? source.potions : source.inventory[id] || 0) > 0,
+  );
+  const enemyStatus = enemyTarget
+    ? [
+        enemyTarget.shield
+          ? `Ward ${enemyTarget.shield} · full break shatters it`
+          : "",
+        enemyTarget.concealed
+          ? "Concealed · 35% less damage; break or expose"
+          : "",
+        enemyTarget.counter?.turns
+          ? `${enemyTarget.counter.element} counter · physical hits retaliate (${enemyTarget.counter.turns}r)`
+          : "",
+        enemyTarget.controlWard ? "Interrupt ward" : "",
+        conditionText(enemyTarget.conditions),
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
+  const status =
+    (frame ? (impactVisible ? frame.text : actionLead(frame, source)) : "") ||
+    (saving ? "Saving actions…" : planState.round === roundKey ? notice : "");
+  const readiedMove = intents.find(({ enemy }) => enemy.id === enemyTarget?.id)
+    ?.intent.label;
+  const menuTitle = retreat
+    ? "Retreat"
+    : menu === "skill"
+      ? `${actor?.name} · Skills`
+      : menu === "item"
+        ? "Shared supplies"
+        : menu === "others"
+          ? `${actor?.name || "Party"} · Others`
+          : "Battle details";
+  const allyPicker = (
+    <View style={{ gap: 5 }}>
       <Copy muted style={{ fontSize: 12 }}>
-        Initiative:{" "}
-        {initiative(source, Object.values(queue))
-          .map((c) => `${c.name} (${Math.round(c.speed)})`)
-          .join(" → ")}
+        Target ally: {friend?.name}
       </Copy>
-      <Button
-        small
-        tone="dark"
-        label={showRules ? "Hide combat rules" : "Status and formation rules"}
-        onPress={() => setShowRules((v) => !v)}
-      />
-      {showRules && (
-        <Panel style={{ gap: 6 }}>
-          <Copy>
-            Front attacks prefer the front rank; hunters seek wounded companions
-            and volleys reach everyone. Guard halves damage and prevents
-            special-hit ailments after its initiative. Taunt redirects
-            subsequent single-target attacks to its user.
-          </Copy>
-          <Copy>
-            Bleeding: 2% maximum HP per stack; burning and venom: 2.5%. Each
-            caps at three stacks for three future round ticks. Chilled: −2 speed
-            per stack for four rounds; three stacks become one skipped action
-            from frozen.
-          </Copy>
-          <Copy>
-            Weakened: −20% damage for two rounds. Fractured: −10% armor per
-            stack, up to three, for three rounds. Exposed: +15% incoming damage
-            for two rounds. Entangled: −4 speed for two rounds. Reapplying
-            refreshes duration. Antidote clears venom, chill and freeze;
-            bandages clear bleeding and entanglement; mastered healing cleanses
-            ailments. Matching mastered wards prevent their ailments.
-          </Copy>
-        </Panel>
-      )}
-      <View style={{ flexDirection: "row", gap: 6 }}>
-        {enemies.map((enemy) => (
-          <Panel
-            key={enemy.id}
-            style={{
-              flex: 1,
-              padding: 7,
-              gap: 5,
-              opacity: enemy.hp > 0 ? 1 : 0.45,
-              borderColor:
-                enemy.id === enemyTarget?.id ? t.color.gold : t.color.goldDim,
-            }}
-          >
-            <View
-              style={{
-                width: enemies.length === 3 ? 64 : 78,
-                height: enemies.length === 3 ? 64 : 78,
-                overflow: "hidden",
-              }}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 5 }}
+      >
+        {source.party
+          .filter((c) => c.hp > 0)
+          .map((c) => (
+            <Button
+              key={c.id}
+              label={c.name}
+              small
+              tone={friend?.id === c.id ? "gold" : "dark"}
+              onPress={() => setAllyTarget(c.id)}
+            />
+          ))}
+      </ScrollView>
+    </View>
+  );
+  const commandMenu =
+    (retreat || (menu && menu !== "enemy")) && !playback ? (
+      <Panel style={[StyleSheet.absoluteFill, styles.overlay]}>
+        <View style={[styles.row, { padding: 8 }]}>
+          {menu === "item" && !retreat && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Back to Others"
+              onPress={() => setMenu("others")}
+              style={styles.iconButton}
             >
-              <Image
-                source={MOTION_SHEETS[enemyVisual({ ...source, enemy }).key]}
-                accessibilityLabel={enemy.name}
-                contentFit="fill"
-                style={{
-                  width: (enemies.length === 3 ? 64 : 78) * 8,
-                  height: (enemies.length === 3 ? 64 : 78) * 6,
+              <Icon name="chevron-left" size={22} />
+            </Pressable>
+          )}
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Eyebrow>{menuTitle}</Eyebrow>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close combat panel"
+            onPress={() => {
+              setMenu(null);
+              setRetreat(false);
+            }}
+            style={styles.iconButton}
+          >
+            <Icon name="close" size={20} />
+          </Pressable>
+        </View>
+        <ScrollView
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ padding: 8, gap: 8 }}
+        >
+          {retreat ? (
+            <>
+              <Copy>
+                Fall back through a passage? The enemies can still respond as
+                your party retreats.
+              </Copy>
+              <Button
+                label="Retreat through a passage"
+                tone="red"
+                disabled={locked}
+                onPress={() => {
+                  if (!locked) {
+                    setSubmitting(roundKey);
+                    dispatch({ ...request, actions: [], flee: true });
+                  }
                 }}
               />
-            </View>
-            <Copy title style={{ fontSize: 15 }}>
-              {enemy.name}
-            </Copy>
-            <Bar value={enemy.hp} max={enemy.maxHp} />
-            <Copy style={{ fontSize: 11 }}>
-              {enemy.hp}/{enemy.maxHp} HP · {enemy.archetype}
-            </Copy>
-            {!!enemy.shield && (
-              <Copy muted style={{ fontSize: 11 }}>
-                Ward {enemy.shield} · full break shatters it.
-              </Copy>
-            )}
-            {!!enemy.concealed && (
-              <Copy muted style={{ fontSize: 11 }}>
-                Concealed: 35% less damage. Break or expose to reveal.
-              </Copy>
-            )}
-            {!!enemy.counter?.turns && (
-              <Copy muted style={{ fontSize: 11 }}>
-                {enemy.counter.element} counter: physical hits trigger
-                retaliation for {enemy.counter.turns} rounds.
-              </Copy>
-            )}
-            {!!conditionText(enemy.conditions) && (
-              <Copy muted style={{ fontSize: 11 }}>
-                {conditionText(enemy.conditions)}
-              </Copy>
-            )}
-            {enemy.hp > 0 && (
-              <Copy style={{ fontSize: 11, color: t.color.goldLight }}>
-                Intent: {enemyIntent(source, enemy).power > 1 ? "Heavy · " : ""}
-                {enemyIntent(source, enemy).label}
-                {enemyIntent(source, enemy).targets.length
-                  ? " → " +
-                    enemyIntent(source, enemy)
-                      .targets.map(
-                        (id) =>
-                          source.party.find((c) => c.id === id)?.name ||
-                          enemies.find((e) => e.id === id)?.name,
-                      )
-                      .join(", ")
-                  : ""}
-              </Copy>
-            )}
-            <Bar value={enemy.poise} max={enemy.maxPoise} />
-            <Copy muted style={{ fontSize: 10 }}>
-              Break {enemy.poise}/{enemy.maxPoise}
-              {enemy.broken
-                ? " · BROKEN"
-                : enemy.controlWard
-                  ? " · interrupt ward"
-                  : ""}
-            </Copy>
-            {!!enemy.stage && (
-              <Copy style={{ fontSize: 11 }}>Phase {enemy.stage + 1}</Copy>
-            )}
-          </Panel>
-        ))}
-      </View>
-      <View style={{ height: tacticalStageHeight(party) }}>
-        <CombatStage
-          state={stage}
-          selected={frame?.actor || selected}
-          cue={cue}
-          playbackDuration={
-            reduced ? 50 : state.combatSpeed === "fast" ? 160 : 450
-          }
-          busy={!!playback}
-          onSelect={setSelected}
-          onReady={onReady}
-          healthParty={party}
-          threatened={[]}
-        />
-      </View>
-      {playback ? (
-        <>
-          <Reveal key={frame?.id}>
-            <Panel>
-              <Copy>{frame?.text}</Copy>
-            </Panel>
-          </Reveal>
-          <Button
-            small
-            label="Skip round playback"
-            tone="dark"
-            onPress={() => dispatch({ type: "FINISH_PLAYBACK" })}
-          />
-        </>
-      ) : (
-        <>
-          <Copy muted style={{ fontSize: 12 }}>
-            Queue one action per companion. Skills, Guard, Focus and items use
-            that companion’s action.
-          </Copy>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-            {source.party.map((c) => (
               <Button
-                key={c.id}
-                small
-                style={{ flexGrow: 1, minWidth: "40%" }}
-                disabled={c.hp <= 0 || !!c.ailments.paralysis}
-                tone={selected === c.id ? "gold" : "dark"}
-                label={`${c.name} · ${formationOf(c)} · ${c.hp} HP · ${c.mp} MP${impeded(c) ? " · impeded" : queue[c.id] ? " · queued" : ""}${conditionText(c.ailments.conditions) ? " · " + conditionText(c.ailments.conditions) : ""}`}
-                onPress={() => setSelected(c.id)}
+                label="Keep fighting"
+                tone="dark"
+                onPress={() => setRetreat(false)}
               />
-            ))}
-          </View>
-          {actor && actor.hp > 0 && !impeded(actor) && (
-            <Panel style={{ gap: 8 }}>
-              <Copy title>{actor.name}’s action</Copy>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 5 }}>
-                {(["attack", "guard", "taunt", "focus", "burst"] as const).map(
-                  (kind) => (
-                    <Button
-                      small
-                      key={kind}
-                      tone={q?.kind === kind ? "gold" : "dark"}
-                      label={kind[0].toUpperCase() + kind.slice(1)}
-                      onPress={() => assign(kind)}
-                    />
-                  ),
-                )}
-              </View>
-              {actor.skills
-                .map((name) => SKILLS.find((skill) => skill.name === name)!)
-                .filter((skill) => !skill.passive)
-                .map((skill) => (
-                  <Button
+            </>
+          ) : menu === "others" ? (
+            <CombatOtherActions
+              canAct={canAct}
+              canItem={supplies.length > 0}
+              canFocus={!!actor && actor.mp < actor.maxMp}
+              canBurst={momentumLeft >= 2}
+              onItem={() => setMenu("item")}
+              onFocus={() => assign("focus")}
+              onBurst={() => assign("burst")}
+            />
+          ) : menu === "skill" ? (
+            activeSkills.length ? (
+              activeSkills.map((skill) => {
+                const cost = skillCost(actor, skill.name, skill.cost);
+                const cooldown = actor.cooldowns[skill.name] || 0;
+                return (
+                  <Choice
                     key={skill.name}
-                    small
-                    tone={q?.skill === skill.name ? "gold" : "blue"}
-                    label={`${skill.name} · ${skillCost(actor, skill.name, skill.cost)} MP${actor.cooldowns[skill.name] ? ` · ${actor.cooldowns[skill.name]} round cooldown` : ""}`}
-                    disabled={
-                      actor.mp < skillCost(actor, skill.name, skill.cost) ||
-                      !!actor.cooldowns[skill.name]
+                    label={skill.name}
+                    icon={skill.icon}
+                    tone="blue"
+                    detail={
+                      SKILL_RANKS[skill.name][skillRank(actor, skill.name) - 1]
                     }
+                    trailing={cooldown ? `Ready in ${cooldown}r` : `${cost} MP`}
+                    disabled={!canAct || actor.mp < cost || cooldown > 0}
                     onPress={() => assign("skill", { skill: skill.name })}
                   />
-                ))}
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 5 }}>
-                {[
-                  "potion",
-                  "greater-potion",
-                  "ether",
-                  "antidote",
-                  "bandage",
-                ].map((id) => {
+                );
+              })
+            ) : (
+              <Copy muted>No active skills learned yet.</Copy>
+            )
+          ) : menu === "item" ? (
+            <>
+              {allyPicker}
+              {supplies.length ? (
+                supplies.map((id) => {
+                  const item = ITEMS.find((entry) => entry.id === id)!;
                   const qty =
                     id === "potion"
                       ? source.potions
                       : source.inventory[id] || 0;
-                  return qty > 0 ? (
-                    <Button
-                      small
+                  const available =
+                    qty -
+                    actions.filter(
+                      (action) =>
+                        action.actor !== actor?.id && action.item === id,
+                    ).length;
+                  const detail =
+                    id === "ether"
+                      ? "+30 MP to the selected ally"
+                      : id === "antidote"
+                        ? "Clear venom, chill and freeze; grant ward"
+                        : id === "bandage"
+                          ? "+90 HP; clear bleeding, poison and entanglement"
+                          : `+${id === "greater-potion" ? 120 : 65} HP to the selected ally`;
+                  return (
+                    <Choice
                       key={id}
-                      tone="dark"
-                      label={`${id} ×${qty}`}
+                      label={item.name}
+                      icon={item.icon}
+                      tone={id === "antidote" ? "green" : "blue"}
+                      detail={detail}
+                      trailing={`×${available}`}
+                      disabled={!canAct || available <= 0}
                       onPress={() => assign("item", { item: id })}
                     />
-                  ) : null;
-                })}
-              </View>
-              {q &&
-                q.kind !== "focus" &&
-                q.kind !== "taunt" &&
-                skillFamily(q.skill) !== "Second Wind" && (
-                  <>
-                    <Copy muted>Target</Copy>
-                    {(friendly
-                      ? source.party.filter((c) => c.hp > 0)
-                      : enemies.filter((e) => e.hp > 0)
-                    ).map((target) => (
-                      <Button
-                        key={target.id}
-                        small
-                        label={target.name}
-                        tone={q.target === target.id ? "gold" : "dark"}
-                        onPress={() =>
-                          setQueue((old) => ({
-                            ...old,
-                            [actor.id]: { ...old[actor.id], target: target.id },
-                          }))
-                        }
-                      />
-                    ))}
-                  </>
-                )}
-              {skillFamily(q?.skill) === "Second Wind" && (
-                <Copy muted>Group healing: all standing allies.</Copy>
+                  );
+                })
+              ) : (
+                <Copy muted>No combat supplies left.</Copy>
               )}
-              {!!commandPreview(source, q) && (
-                <Copy muted>{commandPreview(source, q)}</Copy>
-              )}
-              {q?.kind === "taunt" && (
-                <Copy muted>
-                  Guard yourself and redirect single-target strikes after your
-                  initiative. Area attacks retain their announced targets.
+            </>
+          ) : (
+            <>
+              <Copy style={{ fontSize: 12 }}>
+                Turn order:{" "}
+                {initiative(source, actions)
+                  .map((c) => `${c.name} (${Math.round(c.speed)})`)
+                  .join(" → ")}
+              </Copy>
+              {!!enemyStatus && (
+                <Copy style={{ fontSize: 12, color: t.color.goldLight }}>
+                  {enemyStatus}
                 </Copy>
               )}
-            </Panel>
+              {party.map((c) => (
+                <Copy key={c.id} style={{ fontSize: 12 }}>
+                  {c.name} · {formationOf(c)} · {c.hp}/{c.maxHp} HP · {c.mp}/
+                  {c.maxMp} MP
+                  {conditionText(c.ailments.conditions)
+                    ? " · " + conditionText(c.ailments.conditions)
+                    : ""}
+                  {c.ailments.paralysis ? " · Paralyzed" : ""}
+                </Copy>
+              ))}
+              <Copy style={{ fontSize: 12, color: t.color.gold }}>
+                Floor {source.floor} · Round {combat.round} · Momentum{" "}
+                {source.momentum}/3
+              </Copy>
+              <Button
+                label="Retreat…"
+                small
+                tone="dark"
+                disabled={locked}
+                onPress={() => {
+                  setMenu(null);
+                  setRetreat(true);
+                }}
+              />
+              <SettingsControls />
+              {practice && (
+                <>
+                  <Eyebrow>Practice fight</Eyebrow>
+                  <Button
+                    label="Choose party & enemy"
+                    small
+                    tone="dark"
+                    onPress={practice.customize}
+                  />
+                  <Button
+                    label="Restart fight"
+                    small
+                    tone="dark"
+                    onPress={practice.restart}
+                  />
+                  <Button
+                    label="Leave trial"
+                    small
+                    tone="dark"
+                    onPress={practice.exit}
+                  />
+                </>
+              )}
+              <Button
+                label="Quick Attack · remaining allies"
+                small
+                tone="red"
+                disabled={locked}
+                onPress={() =>
+                  commit(
+                    ready.map(
+                      (c) =>
+                        queue[c.id] || {
+                          actor: c.id,
+                          kind: "attack",
+                          target: enemyTarget?.id,
+                        },
+                    ),
+                  )
+                }
+              />
+              <Button
+                label="Repeat last actions"
+                small
+                tone="blue"
+                disabled={locked || !combat.lastCommands?.length}
+                onPress={() => commit(repeatCommands(source))}
+              />
+              <Button
+                label={`Taunt with ${actor?.name || "companion"}`}
+                small
+                tone="dark"
+                disabled={!canAct}
+                onPress={() => assign("taunt")}
+              />
+              {allyPicker}
+              <Button
+                label={`Guard ${friend?.name || "ally"}`}
+                small
+                tone="dark"
+                disabled={!canAct}
+                onPress={() => assign("guard", { target: friend?.id })}
+              />
+              <Button
+                label={
+                  state.combatSpeed === "fast"
+                    ? "Playback: Fast"
+                    : "Playback: Normal"
+                }
+                small
+                tone="dark"
+                onPress={() =>
+                  dispatch({
+                    type: "COMBAT_SPEED",
+                    speed: state.combatSpeed === "fast" ? "normal" : "fast",
+                  })
+                }
+              />
+              <Button
+                label={
+                  showRules ? "Hide combat rules" : "Status and formation rules"
+                }
+                small
+                tone="dark"
+                onPress={() => setShowRules((value) => !value)}
+              />
+              {showRules && (
+                <View style={{ gap: 8 }}>
+                  <Copy style={{ fontSize: 12 }}>
+                    Choose an action for each standing, unimpeded companion. The
+                    last choice starts the round automatically. Tap a companion
+                    to change an earlier choice before the round starts.
+                  </Copy>
+                  <Copy style={{ fontSize: 12 }}>
+                    Front attacks prefer the front rank; hunters seek wounded
+                    allies and volleys reach everyone. Guard halves damage and
+                    prevents special-hit ailments after its initiative. Taunt
+                    redirects subsequent single-target attacks to its user.
+                  </Copy>
+                  <Copy style={{ fontSize: 12 }}>
+                    Bleeding deals 2% max HP per stack; burning and venom deal
+                    2.5%. Each caps at three stacks for three future round
+                    ticks. Chilled reduces speed by 2 per stack for four rounds;
+                    three stacks become one skipped action from frozen.
+                  </Copy>
+                  <Copy style={{ fontSize: 12 }}>
+                    Weakened: −20% damage for two rounds. Fractured: −10% armor
+                    per stack, up to three, for three rounds. Exposed: +15%
+                    incoming damage for two rounds. Entangled: −4 speed for two
+                    rounds. Reapplying refreshes duration.
+                  </Copy>
+                  <Copy style={{ fontSize: 12 }}>
+                    Antidote clears venom, chill and freeze; bandages clear
+                    bleeding and entanglement; mastered healing cleanses
+                    ailments. Matching mastered wards prevent their ailments.
+                  </Copy>
+                </View>
+              )}
+              {canAutoResolve(source) && (
+                <Button
+                  label="Auto resolve · ordinary rewards"
+                  small
+                  disabled={locked}
+                  onPress={() => dispatch({ type: "AUTO_COMBAT" })}
+                />
+              )}
+            </>
           )}
-          <Button
-            small
-            tone="dark"
-            label="Quick Attack · fill remaining commands"
-            onPress={() =>
-              setQueue((old) => ({
-                ...old,
-                ...Object.fromEntries(
-                  ready
-                    .filter((c) => !old[c.id])
-                    .map((c) => [
-                      c.id,
-                      {
-                        actor: c.id,
-                        kind: "attack" as const,
-                        target: enemies.find((e) => e.hp > 0)?.id,
-                      },
-                    ]),
-                ),
-              }))
-            }
+        </ScrollView>
+      </Panel>
+    ) : null;
+  return (
+    <View style={styles.root}>
+      <View
+        style={{ flex: 1 }}
+        accessibilityElementsHidden={!introDone || menu === "enemy"}
+        importantForAccessibility={
+          introDone && menu !== "enemy" ? "auto" : "no-hide-descendants"
+        }
+      >
+        <View testID="combat-arena" style={{ flex: 1, minHeight: 0 }}>
+          <CombatStage
+            state={stage}
+            selected={frame?.actor || actor?.id || ""}
+            selectedEnemy={enemyTarget?.id}
+            chosen={actions.map((action) => action.actor)}
+            compactHud
+            hudInset={insets.top + 56}
+            cue={cue}
+            playbackDuration={animationMs}
+            goldDrops={impactVisible ? goldDrops : []}
+            busy={locked}
+            onSelect={selectActor}
+            onSelectEnemy={selectEnemy}
+            onInspectEnemy={inspectEnemy}
+            onReady={onReady}
+            healthParty={party}
+            threatened={threatened}
           />
-          <Button
-            small
-            tone="dark"
-            label="Repeat last commands"
-            disabled={!combat.lastCommands?.length}
-            onPress={() =>
-              setQueue(
-                Object.fromEntries(
-                  repeatCommands(source).map((q) => [q.actor, q]),
-                ),
-              )
-            }
-          />
-          <Button
-            small
-            tone="dark"
-            label={
-              state.combatSpeed === "fast"
-                ? "Playback: Fast"
-                : "Playback: Normal"
-            }
-            onPress={() =>
-              dispatch({
-                type: "COMBAT_SPEED",
-                speed: state.combatSpeed === "fast" ? "normal" : "fast",
-              })
-            }
-          />
-          {canAutoResolve(source) && (
-            <Button
-              small
-              label="Auto resolve · ordinary rewards"
-              disabled={saving}
-              onPress={() => dispatch({ type: "AUTO_COMBAT" })}
+          <View
+            pointerEvents="box-none"
+            style={[styles.hud, { top: insets.top + 8 }]}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Battle details and options"
+              accessibilityState={{
+                expanded: menu === "tactics",
+                disabled: locked,
+              }}
+              disabled={locked}
+              onPress={() => {
+                setRetreat(false);
+                setMenu(menu === "tactics" ? null : "tactics");
+              }}
+              style={styles.options}
+            >
+              <Icon name="cog" size={21} />
+            </Pressable>
+          </View>
+          {!!status && !arrivalNotice && (
+            <View pointerEvents="none" style={styles.caption}>
+              <Copy
+                numberOfLines={3}
+                accessibilityRole={
+                  frame?.kind === "phase" ? "alert" : undefined
+                }
+                accessibilityLiveRegion="polite"
+                style={{
+                  fontSize: 14,
+                  lineHeight: 20,
+                  textAlign: "center",
+                  color:
+                    frame?.kind === "phase" ? t.color.goldLight : t.color.text,
+                }}
+              >
+                {status}
+              </Copy>
+            </View>
+          )}
+          {arrivalNotice && (
+            <CombatReinforcements
+              enemies={arrivals}
+              topInset={insets.top}
+              onContinue={advancePlayback}
             />
           )}
-          <Panel style={{ gap: 5 }}>
-            {ready.map((c) => (
-              <Copy key={c.id}>
-                {c.name}:{" "}
-                {queue[c.id]?.skill ||
-                  queue[c.id]?.item ||
-                  queue[c.id]?.kind ||
-                  "Choose an action"}
-                {queue[c.id]?.target
-                  ? " → " +
-                    (source.party.find((p) => p.id === queue[c.id].target)
-                      ?.name ||
-                      enemies.find((e) => e.id === queue[c.id].target)?.name ||
-                      "")
-                  : ""}
+        </View>
+        <View
+          testID="combat-console"
+          style={[
+            styles.console,
+            { paddingBottom: Math.max(8, insets.bottom) },
+          ]}
+        >
+          <View style={[styles.row, { paddingHorizontal: 2, minHeight: 16 }]}>
+            <Copy
+              numberOfLines={1}
+              style={{
+                flex: 1,
+                fontFamily: t.font.bold,
+                fontSize: 12,
+                lineHeight: 16,
+                color: t.color.goldLight,
+              }}
+            >
+              {playback
+                ? party.find((c) => c.id === frame?.actor)?.name ||
+                  enemies.find((e) => e.id === frame?.actor)?.name ||
+                  "Battle"
+                : actor?.name || "Party"}
+              {!playback && actor && (
+                <Copy muted style={{ fontSize: 10 }}>
+                  {" "}
+                  · {actor.mp} MP
+                </Copy>
+              )}
+            </Copy>
+            <View
+              style={styles.row}
+              accessibilityLabel={`${momentumLeft} momentum available out of 3`}
+            >
+              {[1, 2, 3].map((n) => (
+                <Icon
+                  key={n}
+                  name={n <= momentumLeft ? "diamond" : "diamond-outline"}
+                  size={10}
+                  color={n <= momentumLeft ? t.color.gold : t.color.line}
+                />
+              ))}
+            </View>
+            {playback && (
+              <Copy muted style={{ fontSize: 10 }}>
+                {cursor + 1}/{playback.events.length}
               </Copy>
-            ))}
-          </Panel>
-          {!!state.message && (
-            <Copy style={{ color: t.color.gold }}>{state.message}</Copy>
-          )}
-          <Copy muted style={{ fontSize: 12 }}>
-            {issue ||
-              "All actions validated. Enemy intents and initiative are shown above."}
-          </Copy>
-          <Button
-            label="Confirm round"
-            disabled={saving || !!issue}
-            onPress={() => dispatch(request)}
-          />
-          <Button
-            label="Retreat through a passage"
-            small
-            tone="dark"
-            disabled={saving}
-            onPress={() => dispatch({ ...request, actions: [], flee: true })}
-          />
-        </>
+            )}
+            {playback && !arrivalNotice ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Skip round playback"
+                onPress={finishPlayback}
+                hitSlop={10}
+              >
+                <Copy muted style={{ fontSize: 10 }}>
+                  Skip »
+                </Copy>
+              </Pressable>
+            ) : arrivalNotice ? (
+              <Copy style={{ fontSize: 10, color: t.color.gold }}>Paused</Copy>
+            ) : (
+              <Copy muted style={{ fontSize: 10 }}>
+                {actions.length}/{ready.length}
+              </Copy>
+            )}
+          </View>
+          <View style={styles.row}>
+            <Button
+              label="Attack"
+              icon="sword"
+              tone="red"
+              small
+              dense
+              disabled={!canAct}
+              style={{ flex: 1 }}
+              onPress={() => assign("attack")}
+            />
+            <Button
+              label="Skill"
+              icon="creation"
+              tone="blue"
+              small
+              dense
+              disabled={!canAct || !activeSkills.length}
+              style={{ flex: 1 }}
+              onPress={() => {
+                setRetreat(false);
+                setMenu(menu === "skill" ? null : "skill");
+              }}
+            />
+            <Button
+              label="Guard"
+              icon="shield"
+              tone="dark"
+              small
+              dense
+              disabled={!canAct}
+              style={{ flex: 1 }}
+              onPress={() => assign("guard")}
+            />
+            <Button
+              label="Others"
+              icon="dots-horizontal"
+              tone="gold"
+              small
+              dense
+              disabled={!canAct}
+              style={{ flex: 1 }}
+              onPress={() => {
+                setRetreat(false);
+                setMenu(menu === "others" ? null : "others");
+              }}
+            />
+          </View>
+        </View>
+      </View>
+      {commandMenu && (
+        <View
+          style={[
+            styles.menuLayer,
+            {
+              top:
+                menu === "others"
+                  ? undefined
+                  : Math.max(
+                      insets.top + 90,
+                      Math.min(380, viewport.height * 0.44),
+                    ),
+              height: menu === "others" ? 244 : undefined,
+              bottom: insets.bottom + 84,
+            },
+          ]}
+        >
+          {commandMenu}
+        </View>
+      )}
+      {menu === "enemy" && !playback && enemyTarget && (
+        <CombatEnemyDialog
+          state={source}
+          enemy={enemyTarget}
+          readiedMove={readiedMove}
+          statusText={enemyStatus}
+          onClose={() => setMenu(null)}
+        />
+      )}
+      {!introDone && (
+        <CombatIntro
+          state={source}
+          ready={sceneReady}
+          onComplete={finishIntro}
+        />
       )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1, minHeight: 0, backgroundColor: t.color.bg },
+  row: { flexDirection: "row", alignItems: "center", gap: 5 },
+  hud: {
+    position: "absolute",
+    right: 8,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 5,
+  },
+  options: {
+    width: 36,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(5,12,21,.7)",
+    borderRadius: 4,
+  },
+  iconButton: {
+    minHeight: 36,
+    minWidth: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  overlay: {
+    zIndex: 2,
+    padding: 0,
+    backgroundColor: t.color.bg,
+    borderColor: t.color.goldDim,
+  },
+  menuLayer: { position: "absolute", left: 8, right: 8, zIndex: 3 },
+  caption: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    bottom: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 3,
+    backgroundColor: "rgba(3,9,16,.78)",
+  },
+  console: {
+    gap: 5,
+    paddingTop: 6,
+    paddingHorizontal: 7,
+    backgroundColor: "#080f19",
+    borderTopWidth: 1,
+    borderTopColor: "#56452f",
+  },
+});

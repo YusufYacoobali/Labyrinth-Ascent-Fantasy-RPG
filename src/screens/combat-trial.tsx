@@ -1,7 +1,6 @@
-import { useState } from "react";
-import { ScrollView, View, useWindowDimensions } from "react-native";
+import { useMemo, useState } from "react";
+import { ScrollView, View } from "react-native";
 import { Host, BottomSheet, Picker } from "@expo/ui";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { CombatTrialProvider, useGame } from "@/game/provider";
 import {
@@ -12,8 +11,7 @@ import {
   type TrialConfig,
 } from "@/game/combat-trial";
 import { Button, Copy, Frame } from "@/components/game-ui";
-import { useCombatFeedback } from "@/components/combat-motion";
-import { Combat } from "./expedition";
+import TacticalCombat from "@/components/tactical-combat";
 import { theme as t } from "@/theme";
 function TrialFight({
   customize,
@@ -25,77 +23,54 @@ function TrialFight({
   exit: () => void;
 }) {
   const { state } = useGame();
-  const feedback = useCombatFeedback();
-  const { height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
+  const fighting = !!state.roundPlayback || state.phase === "combat";
+  const won = !!state.combat?.complete;
   return (
     <Frame
-      title="Combat trial"
-      subtitle="Combat animation trial"
+      title={fighting ? undefined : "Combat trial"}
       expedition
+      fullBleed={fighting}
       hideNav
       back={false}
-      scroll={height - insets.top - insets.bottom < 700}
+      scroll={!fighting}
     >
-      <View
-        style={{
-          flexDirection: "row",
-          gap: 8,
-          alignItems: "center",
-          paddingHorizontal: 10,
-          paddingVertical: 5,
-        }}
-      >
-        <Copy style={{ flex: 1, fontSize: 12 }}>Floor {state.floor}</Copy>
-        <Button
-          label="Choose party & enemy"
-          small
-          compact
-          tone="dark"
-          onPress={customize}
+      {fighting ? (
+        <TacticalCombat
+          key={state.combat?.id}
+          practice={{ customize, restart: reset, exit }}
         />
-      </View>
-      {state.phase === "combat" || state.playback ? (
-        <Combat key={state.effects.id} feedback={feedback} />
       ) : (
         <View
           style={{ flex: 1, padding: 24, gap: 18, justifyContent: "center" }}
         >
           <Copy title style={{ textAlign: "center", fontSize: 36 }}>
-            {state.enemy?.hp === 0
+            {won
               ? "Victory"
-              : state.phase === "camp"
-                ? "Retreated"
-                : "Round over"}
+              : state.phase === "defeat"
+                ? "Defeat"
+                : "Retreated"}
           </Copy>
           <Copy style={{ textAlign: "center" }}>
-            {state.enemy?.hp === 0
-              ? state.enemy.name + " defeated."
-              : state.phase === "camp"
-                ? "Your party found shelter."
-                : "Your party cannot keep fighting."}
+            {won
+              ? "Your party won the fight."
+              : state.phase === "defeat"
+                ? "Your party cannot keep fighting."
+                : "Your party withdrew from the battle."}
           </Copy>
+          {state.lootReceipt && (
+            <Copy style={{ textAlign: "center", color: t.color.gold }}>
+              Gold found: {state.lootReceipt.gross}
+            </Copy>
+          )}
           <Button label="Fight again" onPress={reset} />
+          <Button
+            label="Choose party & enemy"
+            tone="dark"
+            onPress={customize}
+          />
+          <Button label="Leave trial" tone="dark" onPress={exit} />
         </View>
       )}
-      <View style={{ flexDirection: "row", gap: 8, padding: 10 }}>
-        <Button
-          label="Restart fight"
-          small
-          compact
-          tone="dark"
-          style={{ flex: 1 }}
-          onPress={reset}
-        />
-        <Button
-          label="Leave trial"
-          small
-          compact
-          tone="dark"
-          style={{ flex: 1 }}
-          onPress={exit}
-        />
-      </View>
     </Frame>
   );
 }
@@ -105,11 +80,20 @@ export function CombatTrialScreen() {
   const [draft, setDraft] = useState<TrialConfig>(DEFAULT_TRIAL);
   const [editing, setEditing] = useState(false);
   const [round, setRound] = useState(0);
+  const initial = useMemo(
+    () => ({
+      ...trialSave(config),
+      sound: saved.sound,
+      haptics: saved.haptics,
+      combatSpeed: saved.combatSpeed,
+    }),
+    [config, saved.sound, saved.haptics, saved.combatSpeed],
+  );
   return (
     <>
       <CombatTrialProvider
         key={JSON.stringify(config) + ":" + round}
-        initial={trialSave(config)}
+        initial={initial}
       >
         <TrialFight
           customize={() => {

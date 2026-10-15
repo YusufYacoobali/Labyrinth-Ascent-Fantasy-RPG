@@ -1,36 +1,12 @@
 import { StoryLeads, StoryScene } from "@/components/story-journal";
 import TacticalCombat from "@/components/tactical-combat";
 import { EventArt } from "@/components/story-art";
-import CombatStage from "@/components/combat-stage";
-import {
-  battleCue,
-  battleEnemyAt,
-  battlePartyAt,
-  cueContact,
-  cueResponse,
-  cueDuration,
-} from "@/game/combat-animation";
 import { StoryCard } from "@/components/story-card";
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { useReducedMotion } from "react-native-reanimated";
-import {
-  View,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  useWindowDimensions,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import React, { useState } from "react";
+import { View } from "react-native";
 import { Redirect, router } from "expo-router";
 import {
   art,
-  Bar,
   Button,
   Choice,
   Copy,
@@ -40,7 +16,6 @@ import {
   Panel,
 } from "@/components/game-ui";
 import {
-  DamageNumber,
   Reveal,
   useCombatFeedback,
   useExpeditionAmbience,
@@ -49,11 +24,6 @@ import {
   daysToGate,
   floorEnvironment,
   gateOpen,
-  Skill,
-  SKILLS,
-  Action,
-  battleIntent,
-  battleForecast,
   daysRemaining,
 } from "@/game/engine";
 import {
@@ -68,24 +38,10 @@ import {
 } from "./exploration-scenes";
 import { EVENTS, FLOORS, ITEMS, ROUTES } from "@/game/world";
 import { useGame } from "@/game/provider";
-import { SKILL_RANKS } from "@/game/combat-data";
-import { skillRank } from "@/game/progression";
 import { Guard } from "./town";
 import { FieldSupplies } from "@/components/field-supplies";
 import { Arrival } from "./arrival";
 import { theme as t } from "@/theme";
-const elementColor = {
-  physical: t.color.gold,
-  fire: "#ed8e72",
-  frost: t.color.blue,
-  venom: "#91cc74",
-};
-const elementIcon = {
-  physical: "sword",
-  fire: "fire",
-  frost: "snowflake",
-  venom: "snake",
-};
 
 export function LabyrinthScreen() {
   const { state, dispatch } = useGame();
@@ -302,612 +258,6 @@ export function LabyrinthScreen() {
         </View>
       </Frame>
     </Guard>
-  );
-}
-
-export function Combat({
-  feedback,
-}: {
-  feedback: ReturnType<typeof useCombatFeedback>;
-}) {
-  const { state: committedState, dispatch, saving } = useGame();
-  const savedState = committedState.playback?.before || committedState;
-  const playback = committedState.playback;
-  const preview = playback ? committedState : null;
-  const cue = useMemo(
-    () =>
-      playback
-        ? battleCue(playback.before, committedState, playback.action)
-        : null,
-    [playback, committedState],
-  );
-  const [impactShown, setImpactShown] = useState(false);
-  const [elapsed, setElapsed] = useState(-1);
-  const [responseShown, setResponseShown] = useState(false);
-  const [sceneReady, setSceneReady] = useState(false);
-  const feedbackRef = useRef(feedback);
-  useEffect(() => {
-    feedbackRef.current = feedback;
-  }, [feedback]);
-  const onSceneReady = useCallback(() => setSceneReady(true), []);
-  const state = preview || savedState;
-  const pending = !!preview;
-  const blocked = pending || saving || !sceneReady;
-  const reduced = useReducedMotion();
-  const viewport = useWindowDimensions();
-  const safeArea = useSafeAreaInsets();
-  const usableHeight = viewport.height - safeArea.top - safeArea.bottom;
-  const compactBattle = usableHeight < 900;
-  const smallBattle = usableHeight < 760;
-  const pendingAction = playback?.action || null;
-  useEffect(() => {
-    if (!pendingAction) return;
-    const sounds =
-      (reduced ? cue?.beats?.slice(0, 1) : cue?.beats)?.map((beat) =>
-        setTimeout(
-          () =>
-            feedbackRef.current(
-              beat.kind === "skill" || beat.kind === "burst"
-                ? "skill"
-                : beat.kind === "focus"
-                  ? "guard"
-                  : beat.kind === "item"
-                    ? "item"
-                    : beat.kind === "guard"
-                      ? "guard"
-                      : "attack",
-            ),
-          reduced ? 0 : beat.contact,
-        ),
-      ) || [];
-    const steps = [
-      ...(cue?.beats?.flatMap((b) => [b.start, b.contact]) || []),
-      cue?.poisonAt,
-    ]
-      .filter((at): at is number => at !== undefined)
-      .map((at) =>
-        setTimeout(() => setElapsed(reduced ? Infinity : at), reduced ? 0 : at),
-      );
-    const contact = setTimeout(
-      () => setImpactShown(true),
-      cueContact(cue, reduced),
-    );
-    const response = setTimeout(
-      () => {
-        setResponseShown(true);
-        if (cue?.enemyAttacks) feedbackRef.current("attack");
-      },
-      cueResponse(cue, reduced),
-    );
-    const timer = setTimeout(
-      () => {
-        dispatch({ type: "FINISH_PLAYBACK" });
-      },
-      cue ? cueDuration(cue, reduced) : 280,
-    );
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(contact);
-      clearTimeout(response);
-      steps.forEach(clearTimeout);
-      sounds.forEach(clearTimeout);
-    };
-  }, [
-    dispatch,
-    pendingAction,
-    reduced,
-    preview?.enemy?.hp,
-    cue,
-    savedState.floor,
-  ]);
-  const [selected, setSelected] = useState(
-    playback?.action.actor || state.party.find((c) => c.hp > 0)?.id,
-  );
-  const [menu, setMenu] = useState<"skill" | "item" | null>(null);
-  const [retreat, setRetreat] = useState(false);
-  const e = pending
-    ? battleEnemyAt(savedState, state, cue, elapsed)
-    : state.enemy!;
-  const activeBeat = pending
-    ? cue?.beats?.find((b) => elapsed >= b.start && elapsed < b.end)
-    : undefined;
-  const displayedParty = pending
-    ? battlePartyAt(savedState, state, cue, impactShown, responseShown)
-    : state.party;
-  const commandingParty = pending ? savedState.party : state.party;
-  const actor =
-    commandingParty.find(
-      (c) => c.id === (pending ? cue?.actor : selected) && c.hp > 0,
-    ) ||
-    commandingParty.find((c) => c.hp > 0) ||
-    commandingParty[0];
-  const tacticalState = pending ? savedState : state;
-  const intent = battleIntent(tacticalState);
-  const interrupted =
-    pending && impactShown && (state.effects.stunned || e.hp <= 0);
-  const forecast = interrupted
-    ? {}
-    : battleForecast(tacticalState, pending && cue?.kind === "guard", actor.id);
-  const heavy = intent.kind === "heavy";
-  const expectedHits = Object.values(forecast);
-  const targetNames = Object.keys(forecast)
-    .map((id) => state.party.find((c) => c.id === id)?.name)
-    .join(", ");
-  const incoming =
-    expectedHits.length > 1
-      ? `${expectedHits.length === state.party.filter((c) => c.hp > 0).length ? "All allies" : targetNames} · ≈${Math.min(...expectedHits)}–${Math.max(...expectedHits)} HP`
-      : expectedHits.length
-        ? `${targetNames} · ≈${expectedHits[0]} HP`
-        : intent.kind === "charge"
-          ? "Heavy attack next turn"
-          : "No incoming attack";
-  const handleBattle = useCallback(
-    (
-      kind: "attack" | "skill" | "item" | "guard" | "focus" | "burst",
-      skill?: Skill,
-      item?: string,
-    ) => {
-      if (blocked) return;
-      const action: Action = {
-        type: "BATTLE",
-        kind,
-        actor: actor.id,
-        skill,
-        item,
-        roll: -1,
-      };
-      dispatch({ ...action, animate: true });
-      setMenu(null);
-    },
-    [blocked, actor.id, dispatch],
-  );
-  return (
-    <View
-      style={{
-        flex: 1,
-        padding: smallBattle ? 8 : 12,
-        minHeight: smallBattle ? 480 : compactBattle ? 520 : 565,
-        gap: smallBattle ? 4 : compactBattle ? 5 : 10,
-      }}
-    >
-      {!smallBattle && (
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <Eyebrow>{FLOORS[state.floor - 1].name}</Eyebrow>
-          <Copy muted style={{ fontSize: 10 }}>
-            TURN {tacticalState.turn} · {state.food} rations
-          </Copy>
-        </View>
-      )}
-      <Panel style={{ padding: smallBattle ? 8 : 10, gap: 7 }}>
-        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-          <Icon
-            name={e.boss ? "skull" : "skull-outline"}
-            size={27}
-            color={t.color.red}
-          />
-          <View style={{ flex: 1 }}>
-            <Copy
-              style={{
-                fontFamily: t.font.bold,
-                fontSize: smallBattle ? 14 : 16,
-              }}
-            >
-              {e.name}
-              {smallBattle ? " · T" + tacticalState.turn : ""}
-            </Copy>
-            <Bar value={e.hp} max={e.maxHp} color={t.color.red} />
-          </View>
-          <Copy style={{ fontSize: 11 }}>
-            {e.hp}/{e.maxHp}
-          </Copy>
-        </View>
-        <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
-          <Icon
-            name={elementIcon[e.element]}
-            color={elementColor[e.element]}
-            size={15}
-          />
-          <Copy
-            style={{
-              fontSize: 11,
-              color: heavy ? t.color.red : t.color.muted,
-              flex: 1,
-            }}
-          >
-            {e.hp <= 0
-              ? "Defeated"
-              : interrupted
-                ? "Interrupted"
-                : smallBattle
-                  ? heavy
-                    ? "HEAVY · " + incoming
-                    : intent.kind === "strike"
-                      ? incoming
-                      : intent.kind === "charge"
-                        ? "Charging · Heavy attack next"
-                        : intent.label
-                  : `${heavy ? "HEAVY · " : ""}${intent.label}`}
-          </Copy>
-          {e.poison > 0 && (
-            <Copy style={{ fontSize: 10, color: t.color.green }}>
-              Venom {e.poison}t
-            </Copy>
-          )}
-          {impactShown && state.effects.stunned && (
-            <Copy style={{ fontSize: 10, color: "#ccabef" }}>Interrupted</Copy>
-          )}
-        </View>
-        {!smallBattle && (
-          <Copy
-            style={{
-              fontSize: 12,
-              lineHeight: 17,
-              color: heavy ? t.color.red : t.color.text,
-            }}
-          >
-            {e.hp <= 0 ? "The chamber falls silent." : incoming}
-          </Copy>
-        )}
-        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-          <Copy muted style={{ fontSize: 10 }}>
-            BREAK {e.poise}/{e.maxPoise}
-          </Copy>
-          <View style={{ flex: 1 }}>
-            <Bar value={e.poise} max={e.maxPoise} color={t.color.gold} />
-          </View>
-          {e.controlWard > 0 && (
-            <Copy muted style={{ fontSize: 10 }}>
-              Interrupt ward {e.controlWard}t
-            </Copy>
-          )}
-        </View>
-      </Panel>
-      <View
-        style={{
-          flex: 1,
-          minHeight: smallBattle ? 240 : compactBattle ? 280 : 340,
-          alignItems: "center",
-          justifyContent: "center",
-          position: "relative",
-        }}
-      >
-        <CombatStage
-          state={state}
-          selected={actor.id}
-          cue={cue}
-          busy={blocked}
-          onSelect={setSelected}
-          onReady={onSceneReady}
-          healthParty={displayedParty}
-          threatened={Object.keys(forecast)}
-        />
-        {pending && preview?.enemy?.hp === 0 && (
-          <Reveal
-            delay={reduced ? 0 : (cue?.deathAt ?? cueContact(cue)) + 1160}
-            style={{ position: "absolute", top: 0, left: 0, right: 0 }}
-          >
-            <Copy
-              title
-              style={{
-                textAlign: "center",
-                color: t.color.goldLight,
-                fontSize: 27,
-              }}
-            >
-              Victory
-            </Copy>
-          </Reveal>
-        )}
-        {pending &&
-          cue?.beats
-            ?.filter((b) => b.damage > 0)
-            .map((beat) => (
-              <DamageNumber
-                key={`hit-${state.effects.id}-${beat.actor}`}
-                amount={beat.damage}
-                critical={state.effects.critical && beat.actor === cue.actor}
-                id={state.effects.id}
-                delay={reduced ? 0 : beat.contact}
-                anchor={0.77}
-              />
-            ))}
-        {pending && state.effects.poisonDamage > 0 && (
-          <DamageNumber
-            key={`venom-${state.effects.id}`}
-            amount={state.effects.poisonDamage}
-            poison
-            id={state.effects.id}
-            delay={reduced ? 0 : (cue?.poisonAt ?? cueContact(cue))}
-            anchor={0.77}
-          />
-        )}
-        {state.effects.id > 0 && (
-          <View style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}>
-            <Copy
-              style={{
-                fontSize: 12,
-                lineHeight: 17,
-                textAlign: "center",
-                color: state.effects.broken ? t.color.gold : t.color.text,
-                backgroundColor: "rgba(5,13,23,.8)",
-                paddingVertical: 5,
-                paddingHorizontal: 8,
-              }}
-            >
-              {pending
-                ? e.hp <= 0
-                  ? `${e.name} is defeated.`
-                  : activeBeat
-                    ? `${activeBeat.name} ${activeBeat.kind === "skill" ? `uses ${pendingAction?.type === "BATTLE" ? pendingAction.skill : "a skill"}.` : activeBeat.kind === "attack" || activeBeat.kind === "burst" ? "attacks." : activeBeat.kind === "focus" ? "focuses." : activeBeat.kind === "guard" ? "guards." : "uses an item."}`
-                    : responseShown
-                      ? state.log[0]
-                      : ""
-                : state.log[0]}
-            </Copy>
-          </View>
-        )}
-
-        {(menu || retreat) && (
-          <View style={[StyleSheet.absoluteFill, { zIndex: 4 }]}>
-            <Reveal style={{ flex: 1 }}>
-              <Panel
-                style={{
-                  flex: 1,
-                  padding: 8,
-                  gap: smallBattle ? 6 : 8,
-                  backgroundColor: t.color.bg,
-                  borderColor: t.color.goldDim,
-                }}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Eyebrow>
-                    {retreat
-                      ? "RETREAT"
-                      : menu === "skill"
-                        ? actor.name + " · Skills"
-                        : "ITEM · ONE PARTY TURN"}
-                  </Eyebrow>
-                  {!retreat && (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Close combat panel"
-                      onPress={() => setMenu(null)}
-                      hitSlop={8}
-                      style={{ padding: 5 }}
-                    >
-                      <Icon name="close" size={20} />
-                    </Pressable>
-                  )}
-                </View>
-                {retreat ? (
-                  <View
-                    style={{
-                      flex: 1,
-                      gap: smallBattle ? 6 : 8,
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Copy style={{ fontSize: 13, lineHeight: 17 }}>
-                      Fall back to shelter? Standing allies lose{" "}
-                      {8 + state.floor} HP covering the retreat. The enemy still
-                      guards this crossing.
-                    </Copy>
-                    <View style={{ flexDirection: "row", gap: 8 }}>
-                      <Button
-                        small
-                        label="Keep fighting"
-                        tone="dark"
-                        style={{ flex: 1 }}
-                        onPress={() => setRetreat(false)}
-                      />
-                      <Button
-                        small
-                        label="Find shelter"
-                        style={{ flex: 1 }}
-                        onPress={() => {
-                          dispatch({ type: "SEEK_SHELTER" });
-                        }}
-                      />
-                    </View>
-                  </View>
-                ) : (
-                  <ScrollView
-                    key={menu + "-" + actor.id}
-                    nestedScrollEnabled
-                    style={{ flex: 1 }}
-                    contentContainerStyle={{ gap: 7, paddingBottom: 4 }}
-                    indicatorStyle="white"
-                    keyboardShouldPersistTaps="handled"
-                  >
-                    {menu === "skill"
-                      ? actor.skills
-                          .filter(
-                            (name) =>
-                              !SKILLS.find((skill) => skill.name === name)
-                                ?.passive,
-                          )
-                          .map((name) => {
-                            const skill = SKILLS.find((s) => s.name === name)!;
-                            return (
-                              <Choice
-                                key={name}
-                                label={name}
-                                detail={
-                                  SKILL_RANKS[name][skillRank(actor, name) - 1]
-                                }
-                                icon={skill.icon}
-                                tone="blue"
-                                trailing={
-                                  actor.cooldowns[name]
-                                    ? "Ready in " + actor.cooldowns[name] + "t"
-                                    : skill.cost +
-                                      " MP\n" +
-                                      (skill.cooldown || 0) +
-                                      "t wait"
-                                }
-                                disabled={
-                                  blocked ||
-                                  actor.mp < skill.cost ||
-                                  actor.ailments.paralysis > 0 ||
-                                  (actor.cooldowns[name] || 0) > 0
-                                }
-                                onPress={() => handleBattle("skill", name)}
-                              />
-                            );
-                          })
-                      : [
-                          "potion",
-                          "greater-potion",
-                          "antidote",
-                          "ether",
-                          "bandage",
-                        ].map((id) => {
-                          const item = ITEMS.find((i) => i.id === id)!;
-                          const n =
-                            id === "potion"
-                              ? state.potions
-                              : state.inventory[id] || 0;
-                          const detail =
-                            id === "bandage"
-                              ? "+90 HP to " + actor.name + " · cleanse poison"
-                              : id === "potion"
-                                ? "+65 HP to each ally"
-                                : id === "greater-potion"
-                                  ? "+120 HP to each ally"
-                                  : id === "ether"
-                                    ? "+30 MP to each ally"
-                                    : "Clear ailments · Ward for 2 turns";
-                          return (
-                            <Choice
-                              key={id}
-                              label={item.name}
-                              detail={detail}
-                              icon={item.icon}
-                              tone={id === "antidote" ? "green" : "blue"}
-                              trailing={"×" + n}
-                              disabled={blocked || n < 1}
-                              onPress={() =>
-                                handleBattle("item", undefined, id)
-                              }
-                            />
-                          );
-                        })}
-                  </ScrollView>
-                )}
-              </Panel>
-            </Reveal>
-          </View>
-        )}
-      </View>
-      <Copy style={{ fontSize: 11, lineHeight: 15, color: t.color.gold }}>
-        {actor.name} · Momentum {state.momentum}/3
-      </Copy>
-      <View style={{ flexDirection: "row", gap: 5 }}>
-        <Button
-          label="Guard"
-          icon="shield"
-          tone="dark"
-          small
-          disabled={blocked || actor.ailments.paralysis > 0}
-          style={{ flex: 1 }}
-          onPress={() => handleBattle("guard")}
-        />
-        <Button
-          label="Focus"
-          icon="eye"
-          tone="blue"
-          small
-          disabled={
-            blocked || actor.ailments.paralysis > 0 || actor.mp === actor.maxMp
-          }
-          style={{ flex: 1 }}
-          onPress={() => handleBattle("focus")}
-        />
-        <Button
-          label="Burst · 2"
-          icon="sword-cross"
-          small
-          disabled={blocked || state.momentum < 2}
-          style={{ flex: 1 }}
-          onPress={() => handleBattle("burst")}
-        />
-      </View>
-      {!smallBattle && (
-        <Copy
-          muted
-          style={{
-            fontSize: smallBattle ? 10 : 11,
-            lineHeight: smallBattle ? 13 : 15,
-          }}
-        >
-          {smallBattle
-            ? "Guard ½ damage · Focus +20 MP · Burst +35% / 50 break"
-            : compactBattle
-              ? "Guard: ½ damage, +4 MP · Focus: +20 MP · Burst: +35% damage, 50 break."
-              : "Guard: half damage, protect with " +
-                actor.name +
-                ". Focus: +20 MP, allies strike at 55%. Burst: +35% damage, 50 break."}
-        </Copy>
-      )}
-      <View style={{ flexDirection: "row", gap: 5 }}>
-        <Button
-          label="Attack"
-          disabled={blocked}
-          small
-          icon="sword"
-          tone="red"
-          style={{ flex: 1 }}
-          onPress={() => handleBattle("attack")}
-        />
-        <Button
-          label="Skill"
-          disabled={blocked}
-          small
-          icon="creation"
-          tone="blue"
-          style={{ flex: 1 }}
-          onPress={() => {
-            setMenu(menu === "skill" ? null : "skill");
-            setRetreat(false);
-          }}
-        />
-        <Button
-          label="Item"
-          disabled={blocked}
-          small
-          icon="bottle-tonic"
-          style={{ flex: 1 }}
-          onPress={() => {
-            setMenu(menu === "item" ? null : "item");
-            setRetreat(false);
-          }}
-        />
-        <Button
-          label="Flee"
-          disabled={blocked}
-          small
-          icon="run-fast"
-          tone="dark"
-          style={{ flex: 1 }}
-          onPress={() => {
-            setMenu(null);
-            setRetreat(true);
-          }}
-        />
-      </View>
-    </View>
   );
 }
 
@@ -1188,6 +538,7 @@ export function ExpeditionScreen() {
   const feedback = useCombatFeedback();
   if (!ready) return null;
   if (state.phase === "town") return <Redirect href="/labyrinth" />;
+  const battleFocus = !!state.roundPlayback || state.phase === "combat";
   const event = EVENTS[FLOORS[state.floor - 1]?.event || "camp"];
   const background =
     state.phase === "event"
@@ -1221,7 +572,8 @@ export function ExpeditionScreen() {
             : background
         }
         active="Labyrinth"
-        title={title}
+        title={battleFocus ? undefined : title}
+        fullBleed={battleFocus}
         subtitle={
           daysRemaining(state) === 0
             ? "Return gate open · thirty-day window complete"
@@ -1230,6 +582,7 @@ export function ExpeditionScreen() {
         back={false}
         expedition
         hideNav
+        scroll={!battleFocus}
       >
         {!["combat", "loot", "story", "arrival"].includes(state.phase) && (
           <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>
@@ -1244,9 +597,7 @@ export function ExpeditionScreen() {
         {state.phase === "story" ? (
           <StoryScene />
         ) : state.roundPlayback ? (
-          <TacticalCombat key={`${state.combat?.id}:${state.combat?.round}`} />
-        ) : state.playback ? (
-          <Combat key={state.effects.id} feedback={feedback} />
+          <TacticalCombat key={state.combat?.id} />
         ) : state.phase === "nag" ? (
           <NagScene />
         ) : state.phase === "mission" ? (
@@ -1259,14 +610,8 @@ export function ExpeditionScreen() {
           <CampScene />
         ) : state.phase === "arrival" ? (
           <Arrival key={state.floor} />
-        ) : state.phase === "combat" || state.playback ? (
-          state.trial ? (
-            <Combat key={state.effects.id} feedback={feedback} />
-          ) : (
-            <TacticalCombat
-              key={`${state.combat?.id}:${state.combat?.round}`}
-            />
-          )
+        ) : state.phase === "combat" ? (
+          <TacticalCombat key={state.combat?.id} />
         ) : state.phase === "event" ? (
           <FloorEvent feedback={feedback} />
         ) : state.phase === "loot" ? (

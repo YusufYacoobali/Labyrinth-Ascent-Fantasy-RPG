@@ -5,9 +5,26 @@ const {
   e,
   visuals: v,
   trial,
+  battle,
   w,
 } = require("./engine-loader.cjs");
 let count = 0;
+// Exercise the shared damage/cue math directly; UI and practice use ROUND only.
+function resolveAction(before, action) {
+  return battle.resolveBattle(
+    before,
+    action,
+    (state, party, enemy, effects, logs, potions, inventory) => ({
+      ...state,
+      party,
+      enemy,
+      effects,
+      potions,
+      inventory,
+      phase: "loot",
+    }),
+  );
+}
 const test = (name, fn) => {
   fn();
   count++;
@@ -72,7 +89,7 @@ test("Animation cue uses actual resolver damage, targets and selected actor", ()
   s = e.reducer(s, { type: "APPROACH", choice: "sneak", roll: 0.99 });
   s = e.reducer(s, { type: "ENGAGE" });
   const action = { type: "BATTLE", kind: "attack", actor: "hero", roll: 0.5 };
-  const next = e.reducer(s, action),
+  const next = resolveAction(s, action),
     c = a.battleCue(s, next, action);
   assert.equal(c.actor, "hero");
   assert.equal(
@@ -160,11 +177,24 @@ test("Ranged and healing actors stay in formation and enemy spells or slams do n
     assert.equal(a.cueContact({ ...cue, actorStyle }), 700);
     assert.equal(a.cueContact({ ...cue, actorStyle }, true), 0);
   }
-  for (const enemyStyle of ["magic", "slam"])
+  for (const enemyStyle of ["arrow", "magic", "slam"])
     for (let t = 1110; t < 1740; t += 20)
       assert.equal(
         a.combatPose(t, t, { ...cue, enemyStyle }, "enemy", true, false)
           .advance,
+        0,
+      );
+  for (const enemyStyle of ["arrow", "magic", "slam"])
+    for (let t = 0; t < 1200; t += 20)
+      assert.equal(
+        a.combatPose(
+          t,
+          t,
+          { ...cue, beats: [], enemyStyle, responseAt: 440, finishAt: 1200 },
+          "enemy",
+          true,
+          false,
+        ).advance,
         0,
       );
 });
@@ -222,7 +252,7 @@ test("Overhead HP waits for healing contact and enemy response, including a real
     skill: "Second Wind",
     roll: 0.8,
   };
-  const after = e.reducer(before, action),
+  const after = resolveAction(before, action),
     c = a.battleCue(before, after, action);
   const prepare = a.battlePartyAt(before, after, c, false, false);
   const healing = a.battlePartyAt(before, after, c, true, false);
@@ -248,10 +278,7 @@ test("Trial selection supports the entire roster with unique member IDs and fres
       assert.equal(new Set(s.party.map((c) => c.id)).size, party.length);
       assert.ok(s.party.every((c) => c.hp === c.maxHp && c.mp === c.maxMp));
       assert.equal(s.walkthrough.active, false);
-      assert.equal(
-        s.enemy.maxHp,
-        e.enemyFor(s.floor, null, party.length).maxHp,
-      );
+      assert.equal(s.enemy.maxHp, s.combat.enemies[0].maxHp);
     }
   }
 });
@@ -279,7 +306,7 @@ function sequenceTurn(kind = "attack", skill, options = {}) {
     actor: before.party[3].id,
     roll: 0.8,
   };
-  const after = e.reducer(before, action);
+  const after = resolveAction(before, action);
   return { before, after, cue: a.battleCue(before, after, action) };
 }
 test("Selected member leads a strictly serial exchange and the enemy waits for every return", () => {
@@ -326,7 +353,7 @@ test("Killing blow cancels remaining visual attacks, then completes the death be
     actor: before.party[3].id,
     roll: 0.8,
   };
-  const after = e.reducer(before, action),
+  const after = resolveAction(before, action),
     cue = a.battleCue(before, after, action);
   assert.equal(cue.beats.length, 1);
   assert.equal(cue.enemyAttacks, false);
@@ -359,7 +386,7 @@ test("Focus, guard and items do not invent attacks; dead and paralysed allies st
     actor: before.party[1].id,
     roll: 0.8,
   };
-  const after = e.reducer(before, action),
+  const after = resolveAction(before, action),
     cue = a.battleCue(before, after, action);
   assert.equal(cue.beats.length, 2);
   assert.ok(
@@ -383,7 +410,7 @@ test("Healing precedes support strikes and poison ticks after the final strike",
     actor: before.party[2].id,
     roll: 0.8,
   };
-  const after = e.reducer(before, action),
+  const after = resolveAction(before, action),
     cue = a.battleCue(before, after, action);
   assert.equal(cue.beats[0].style, "heal");
   assert.equal(cue.beats[0].damage, 0);
@@ -416,7 +443,7 @@ test("Every roster and enemy pairing supports bounded, serial ranged/melee timel
         actor: before.party.at(-1).id,
         roll: 0.8,
       };
-      const after = e.reducer(before, action),
+      const after = resolveAction(before, action),
         cue = a.battleCue(before, after, action);
       assert.equal(
         cue.beats.reduce((n, b) => n + b.damage, 0),

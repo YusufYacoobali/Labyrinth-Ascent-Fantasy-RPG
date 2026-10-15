@@ -72,7 +72,6 @@ import {
   type Walkthrough,
 } from "./walkthrough";
 import { tire, maybeComplain, exertForAction } from "./exhaustion";
-import { resolveBattle } from "./battle";
 import {
   Element,
   EVENTS,
@@ -1278,11 +1277,6 @@ export function reducer(s: Game, a: Action): Game {
     };
   }
   next = advanceWalkthrough(s, next, a);
-  if (a.type === "BATTLE" && a.animate && next.effects.id !== s.effects.id)
-    next = {
-      ...next,
-      playback: { before: { ...s, playback: null }, action: a },
-    };
   return next;
 }
 function resolveGameAction(s: Game, a: Action): Game {
@@ -2440,8 +2434,6 @@ function reduceGame(s: Game, a: Action): Game {
       log: [s.arrivalOutcome, ...s.log].slice(0, 8),
     };
   if (a.type === "ROUND") return resolveRound(s, a);
-  if (a.type === "BATTLE" && s.phase === "combat" && s.enemy && s.trial)
-    return resolveBattle(s, a, battleWon);
   if (a.type === "EVENT" && s.phase === "event")
     return resolveEvent(s, a.choice, a.roll);
   if (a.type === "CONTINUE" && s.phase === "victory") {

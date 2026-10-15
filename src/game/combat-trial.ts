@@ -9,6 +9,8 @@ import {
   type Race,
 } from "./engine";
 import { FLOORS } from "./world";
+import { beginCombat } from "./round-combat";
+import { generateFloor, mapKey } from "./floor-map";
 
 export const TRIAL_CHARACTERS = [
   {
@@ -120,14 +122,26 @@ export function trialSave(config: TrialConfig): Game {
     enemy.name = "Bonegnaw Scavenger";
     enemy.sprite = 20;
   }
-  return {
+  const side = ["plunderer", "bonegnaw"].includes(config.enemy);
+  const map = generateFloor(target.floor, s.journey.seed);
+  return beginCombat({
     ...s,
     trial: true,
     floor: target.floor,
     party,
     enemy,
     phase: "combat",
-    sideBattle: config.enemy === "plunderer",
+    combat: null,
+    playback: null,
+    roundPlayback: null,
+    sideBattle: side,
+    journey: {
+      ...s.journey,
+      room: side ? "entrance" : map.portal,
+      defender: !side,
+      maps: { ...s.journey.maps, [mapKey(target.floor)]: map },
+    },
+    expedition: { ...s.expedition, battles: {} },
     walkthrough: { active: false, minimized: false, done: [] },
-  };
+  });
 }

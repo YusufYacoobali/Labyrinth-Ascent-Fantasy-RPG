@@ -27,6 +27,9 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  battle: load("src/game/battle.ts"),
+  bestiary: load("src/game/bestiary.ts"),
+  planning: load("src/game/combat-planning.ts"),
   storyIllustrations: load("src/game/story-illustrations.ts"),
   environments: load("src/game/visual-environments.ts"),
   presentation: load("src/game/combat-presentation.ts"),

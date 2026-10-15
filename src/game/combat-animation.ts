@@ -80,6 +80,60 @@ export function enemyFormation(width: number, height: number, count: number) {
   );
   return points.map(([x, y]) => ({ x: width * x, y: height * y, size }));
 }
+
+/** A shared combat space keeps the two sides close, even on tall phones. */
+export function focusedBattleFormation(
+  width: number,
+  height: number,
+  party: Character[],
+  enemyCount: number,
+  topInset = 0,
+) {
+  const available = Math.max(180, height - topInset - 12);
+  const center = topInset + available * 0.57;
+  const column = (count: number, size: number, offset = 0) => {
+    const step = size * 0.96 + 40;
+    const span = Math.max(0, count - 1) * step;
+    const first = Math.max(
+      topInset + size * 0.96 + 34,
+      Math.min(height - 12 - span, center + size * 0.48 - span / 2 + offset),
+    );
+    return Array.from({ length: count }, (_, i) => first + i * step);
+  };
+  const fronts = party.filter((c) => formationOf(c) === "front");
+  const backs = party.filter((c) => formationOf(c) === "back");
+  const largestRank = Math.max(1, fronts.length, backs.length);
+  const partySize = Math.min(
+    146,
+    width * 0.35,
+    (available - 34 - (largestRank - 1) * 40) / largestRank,
+  );
+  const frontY = column(fronts.length, partySize, backs.length ? 32 : 0);
+  const backY = column(backs.length, partySize, fronts.length ? -52 : 0);
+  const enemySize = Math.min(
+    enemyCount <= 1 ? 190 : enemyCount === 2 ? 180 : 150,
+    width * (enemyCount <= 2 ? 0.43 : 0.36),
+    (available - 34 - Math.max(0, enemyCount - 1) * 40) /
+      Math.max(1, enemyCount),
+  );
+  const enemyY = column(enemyCount, enemySize);
+  return {
+    party: party.map((c) => {
+      const front = formationOf(c) === "front";
+      const rank = front ? fronts : backs;
+      return {
+        x: front ? width * 0.39 : Math.max(partySize / 2 + 6, width * 0.17),
+        y: (front ? frontY : backY)[rank.findIndex((p) => p.id === c.id)],
+        size: partySize * 0.8,
+      };
+    }),
+    enemies: enemyY.map((y, i) => ({
+      x: Math.min(width - enemySize / 2 - 6, width * (i % 2 ? 0.8 : 0.77)),
+      y,
+      size: enemySize * 0.8,
+    })),
+  };
+}
 export function battleCue(
   before: Game,
   after: Game,
@@ -246,6 +300,20 @@ export function cueDuration(cue: CombatCue, reduced = false) {
         : COMBAT_TIMING.turn;
 }
 
+/** End of visible action, excluding the unused response slot in party-only cues. */
+export function cueActionEnd(cue: CombatCue) {
+  const beatsEnd = Math.max(0, ...(cue.beats || []).map((beat) => beat.end));
+  return Math.min(
+    cueDuration(cue),
+    Math.max(
+      beatsEnd,
+      cue.enemyAttacks ? cueResponse(cue) + 400 : 0,
+      cue.enemyDied ? (cue.deathAt ?? cueContact(cue)) + 1450 : 0,
+      ["guard", "focus", "item"].includes(cue.kind) ? 850 : 0,
+    ) || cueDuration(cue),
+  );
+}
+
 /** Each HP change is revealed only when its own strike (or poison tick) lands. */
 export function battleEnemyAt(
   before: Game,
@@ -306,7 +374,9 @@ function sequencedPose(
         row: cue.heavy ? 5 : 2,
         frame: frame(response - 330, 730),
         advance:
-          cue.enemyStyle === "magic" || cue.enemyStyle === "slam"
+          cue.enemyStyle === "magic" ||
+          cue.enemyStyle === "arrow" ||
+          cue.enemyStyle === "slam"
             ? 0
             : Math.sin(((elapsed - response + 330) / 730) * Math.PI),
       };
@@ -432,7 +502,9 @@ export function combatPose(
         row: cue.heavy ? 5 : 2,
         frame: frame(1110, 630),
         advance:
-          cue.enemyStyle === "magic" || cue.enemyStyle === "slam"
+          cue.enemyStyle === "magic" ||
+          cue.enemyStyle === "arrow" ||
+          cue.enemyStyle === "slam"
             ? 0
             : Math.sin(((elapsed - 1110) / 630) * Math.PI),
       };

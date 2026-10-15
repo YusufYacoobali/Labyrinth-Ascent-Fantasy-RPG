@@ -1,4 +1,4 @@
-import { arenaFloor } from "@/game/visual-environments";
+import { arenaFloor, battleBackdropBounds } from "@/game/visual-environments";
 import { STATUS_COLORS, visibleStatus } from "@/game/combat-presentation";
 import React, { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -33,7 +33,7 @@ import Animated, {
 import { Copy, Icon } from "./game-ui";
 import { theme as t } from "@/theme";
 import type { CombatEnemy } from "@/game/round-combat";
-import type { Character } from "@/game/engine";
+import type { Character, Enemy } from "@/game/engine";
 import { FLOORS } from "@/game/world";
 import {
   combatPose,
@@ -42,12 +42,14 @@ import {
   cueDuration,
   partyFormation,
   enemyFormation,
+  focusedBattleFormation,
   healthPanel,
   type CombatCue,
 } from "@/game/combat-animation";
 import type { CombatStageProps } from "./combat-stage-types";
 import { battleAtlases } from "./battle-backdrop";
 import { MOTION_SHEETS } from "./combat-sheets";
+import CombatGoldPickup from "./combat-gold-pickup";
 import {
   characterVisual,
   enemyVisual,
@@ -166,8 +168,13 @@ function Figure({
           strokeWidth={3}
         />
       )}
-      {selected && !enemy && !fallen && (
-        <Oval rect={shadow} color="#7bd1ff" style="stroke" strokeWidth={1.5} />
+      {selected && !fallen && (
+        <Oval
+          rect={shadow}
+          color={enemy ? t.color.gold : "#7bd1ff"}
+          style="stroke"
+          strokeWidth={1.5}
+        />
       )}
       <Group transform={mirror}>
         <Atlas
@@ -185,6 +192,8 @@ function CharacterHealth({
   character: c,
   point,
   selected,
+  chosen,
+  compact,
   threatened,
   busy,
   cue,
@@ -196,6 +205,8 @@ function CharacterHealth({
   character: Character;
   point: { x: number; y: number; size: number };
   selected: boolean;
+  chosen: boolean;
+  compact: boolean;
   threatened: boolean;
   busy: boolean;
   cue: CombatCue | null;
@@ -214,6 +225,7 @@ function CharacterHealth({
     };
   }, [cue, c.id, reduced, point, destination]);
   const panel = healthPanel(point);
+  if (compact) panel.y = point.y - point.size * 0.96 - 28;
   return (
     <Animated.View
       style={[
@@ -230,11 +242,11 @@ function CharacterHealth({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Select ${c.name} on battlefield`}
-        accessibilityHint={`HP ${c.hp} of ${c.maxHp}, MP ${c.mp} of ${c.maxMp}`}
+        accessibilityHint={`HP ${c.hp} of ${c.maxHp}, MP ${c.mp} of ${c.maxMp}${chosen ? ". Action chosen; select to change it." : ""}`}
         accessibilityState={{ selected, disabled: busy || c.hp <= 0 }}
         disabled={busy || c.hp <= 0}
         onPress={() => onSelect(c.id)}
-        style={{ minHeight: point.size + 52 }}
+        style={{ minHeight: point.size + (compact ? 28 : 52) }}
       >
         <View
           style={{
@@ -246,10 +258,14 @@ function CharacterHealth({
               ? t.color.blue
               : threatened
                 ? t.color.red
-                : "#5a626b",
+                : compact
+                  ? "rgba(110,135,150,.3)"
+                  : "#5a626b",
             backgroundColor: selected
               ? "rgba(9,32,52,.94)"
-              : "rgba(5,14,23,.91)",
+              : compact
+                ? "rgba(5,14,23,.6)"
+                : "rgba(5,14,23,.91)",
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
@@ -265,8 +281,18 @@ function CharacterHealth({
             >
               {c.name}
             </Copy>
+            {compact && selected && (
+              <Copy
+                style={{ fontSize: 9, lineHeight: 12, color: t.color.green }}
+              >
+                {c.hp}
+              </Copy>
+            )}
             {threatened && (
               <Icon name="sword-cross" size={10} color={t.color.red} />
+            )}
+            {chosen && (
+              <Icon name="check-circle" size={10} color={t.color.green} />
             )}
             {c.ailments.paralysis > 0 ? (
               <Icon name="lightning-bolt" size={10} color="#ccabef" />
@@ -276,9 +302,11 @@ function CharacterHealth({
               <Icon name="shield-check" size={10} color={t.color.green} />
             ) : null}
           </View>
-          <Copy style={{ fontSize: 10, lineHeight: 12, color: "#a9eac8" }}>
-            HP {c.hp}/{c.maxHp}
-          </Copy>
+          {!compact && (
+            <Copy style={{ fontSize: 10, lineHeight: 12, color: "#a9eac8" }}>
+              HP {c.hp}/{c.maxHp}
+            </Copy>
+          )}
           <View
             style={{ height: 3, backgroundColor: "#273640", borderRadius: 1 }}
           >
@@ -286,16 +314,24 @@ function CharacterHealth({
               style={{
                 height: 3,
                 borderRadius: 1,
-                backgroundColor: t.color.green,
+                backgroundColor:
+                  c.hp <= c.maxHp * 0.3 ? t.color.red : t.color.green,
                 width: `${Math.max(0, Math.min(100, (c.hp / c.maxHp) * 100))}%`,
               }}
             />
           </View>
-          <Copy style={{ fontSize: 10, lineHeight: 12, color: "#b1d8ff" }}>
-            MP {c.mp}/{c.maxMp}
-          </Copy>
+          {!compact && (
+            <Copy style={{ fontSize: 10, lineHeight: 12, color: "#b1d8ff" }}>
+              MP {c.mp}/{c.maxMp}
+            </Copy>
+          )}
           <View
-            style={{ height: 3, backgroundColor: "#273640", borderRadius: 1 }}
+            style={{
+              height: 3,
+              marginTop: compact ? 2 : 0,
+              backgroundColor: "#273640",
+              borderRadius: 1,
+            }}
           >
             <View
               style={{
@@ -307,6 +343,113 @@ function CharacterHealth({
             />
           </View>
         </View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+function EnemyHealth({
+  enemy,
+  point,
+  selected,
+  busy,
+  cue,
+  time,
+  reduced,
+  destination,
+  onInspect,
+}: {
+  enemy: Enemy & { id: string };
+  point: { x: number; y: number; size: number };
+  selected: boolean;
+  busy: boolean;
+  cue: CombatCue | null;
+  time: SharedValue<number>;
+  reduced: boolean;
+  destination: { x: number; y: number };
+  onInspect: (id: string) => void;
+}) {
+  const motion = useAnimatedStyle(() => {
+    const pose = combatPose(time.get(), 0, cue, enemy.id, true, reduced);
+    return {
+      transform: [
+        { translateX: pose.advance * (destination.x - point.x) + pose.recoil },
+        { translateY: pose.advance * (destination.y - point.y) },
+      ],
+    };
+  }, [cue, enemy.id, reduced, point, destination]);
+  const width = Math.min(132, point.size + 8);
+  return (
+    <Animated.View
+      style={[
+        {
+          position: "absolute",
+          left: point.x - width / 2,
+          top: point.y - point.size * 0.96 - 34,
+          width,
+        },
+        motion,
+      ]}
+    >
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Inspect ${enemy.name}`}
+        accessibilityHint={`Select target and view discoveries. HP ${enemy.hp} of ${enemy.maxHp}; break ${enemy.poise} of ${enemy.maxPoise}.`}
+        accessibilityState={{ selected, disabled: busy }}
+        disabled={busy}
+        hitSlop={4}
+        onPress={() => onInspect(enemy.id)}
+        style={{
+          minHeight: 32,
+          paddingHorizontal: 5,
+          paddingVertical: 3,
+          gap: 3,
+          borderRadius: 4,
+          borderWidth: 1,
+          borderColor: selected ? t.color.gold : "rgba(110,135,150,.4)",
+          backgroundColor: selected
+            ? "rgba(39,29,14,.92)"
+            : "rgba(5,14,23,.75)",
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+          <Copy
+            numberOfLines={1}
+            style={{
+              flex: 1,
+              fontSize: 10,
+              lineHeight: 12,
+              fontFamily: t.font.bold,
+            }}
+          >
+            {enemy.name}
+          </Copy>
+          {selected && (
+            <Copy style={{ fontSize: 9, lineHeight: 12 }}>{enemy.hp}</Copy>
+          )}
+          <Icon
+            name={enemy.broken ? "shield-off-outline" : "information-outline"}
+            size={10}
+            color={t.color.gold}
+          />
+        </View>
+        {[
+          { value: enemy.hp, max: enemy.maxHp, color: t.color.red },
+          { value: enemy.poise, max: enemy.maxPoise, color: t.color.gold },
+        ].map(({ value, max, color }, i) => (
+          <View
+            key={i}
+            style={{ height: i ? 2 : 3, backgroundColor: "#273640" }}
+          >
+            <View
+              style={{
+                height: i ? 2 : 3,
+                backgroundColor: color,
+                width: `${Math.max(0, Math.min(100, (value / Math.max(1, max)) * 100))}%`,
+              }}
+            />
+          </View>
+        ))}
       </Pressable>
     </Animated.View>
   );
@@ -469,11 +612,18 @@ function EnvironmentLight({
 
 export default function CombatStage({
   playbackDuration,
+  goldDrops = [],
   state,
   selected,
+  selectedEnemy,
+  chosen = [],
+  compactHud = false,
+  hudInset = 0,
   cue,
   busy,
   onSelect,
+  onSelectEnemy,
+  onInspectEnemy,
   onReady,
   healthParty,
   threatened,
@@ -494,11 +644,30 @@ export default function CombatStage({
   const floorIndex = arenaFloor(state.floor, state.route) - 1;
   const background = useImage(battleAtlases[Math.floor(floorIndex / 4)]);
   const cell = floorIndex % 4;
-  const positions = partyFormation(width, height, state.party);
+  const backdrop = battleBackdropBounds(width, height, cell);
+  const fieldHeight = Math.max(120, height - hudInset);
+  const focused = focusedBattleFormation(
+    width,
+    height,
+    state.party,
+    state.combat?.enemies.length || 1,
+    hudInset,
+  );
+  const positions = compactHud
+    ? focused.party
+    : partyFormation(width, fieldHeight, state.party).map((point) => ({
+        ...point,
+        y: point.y + hudInset,
+      }));
   const allEnemies =
     state.combat?.enemies ||
     (state.enemy ? [{ ...state.enemy, id: "enemy" }] : []);
-  const enemyPositions = enemyFormation(width, height, allEnemies.length);
+  const enemyPositions = compactHud
+    ? focused.enemies
+    : enemyFormation(width, fieldHeight, allEnemies.length).map((point) => ({
+        ...point,
+        y: point.y + hudInset,
+      }));
   const activeEnemyId = (state.enemy as CombatEnemy | null)?.id || "enemy";
   const activePoint =
     enemyPositions[
@@ -577,7 +746,7 @@ export default function CombatStage({
       id: enemy.id,
       ...enemyPositions[i],
       enemy: true,
-      selected: false,
+      selected: enemy.id === selectedEnemy,
       fallen: enemy.hp <= 0,
     });
   });
@@ -607,8 +776,8 @@ export default function CombatStage({
         flex: 1,
         width: "100%",
         overflow: "hidden",
-        borderRadius: 5,
-        borderWidth: 1,
+        borderRadius: compactHud ? 0 : 5,
+        borderWidth: compactHud ? 0 : 1,
         borderColor: "#876b42",
         backgroundColor: "#08111d",
       }}
@@ -616,17 +785,7 @@ export default function CombatStage({
       <Canvas style={StyleSheet.absoluteFill}>
         <Group transform={camera}>
           <Group clip={{ x: 0, y: 0, width, height }}>
-            <SkiaImage
-              image={background}
-              x={-(cell % 2) * width}
-              y={
-                -Math.floor(cell / 2) * width * 1.5 -
-                Math.max(0, width * 1.5 - height) * 0.7
-              }
-              width={width * 2}
-              height={width * 3}
-              fit="fill"
-            />
+            <SkiaImage image={background} {...backdrop} fit="fill" />
           </Group>
           <Fill color="rgba(4,12,20,.12)" />
           <EnvironmentLight
@@ -723,7 +882,8 @@ export default function CombatStage({
               const point =
                 positions[state.party.findIndex((c) => c.id === id)];
               if (!point) return null;
-              return cue.enemyStyle === "magic" ? (
+              return cue.enemyStyle === "magic" ||
+                cue.enemyStyle === "arrow" ? (
                 <Projectile
                   key={"enemy-shot-" + id}
                   time={time}
@@ -734,6 +894,7 @@ export default function CombatStage({
                   to={{ x: point.x, y: point.y - point.size * 0.5 }}
                   color={cue.enemyColor || "#ef9689"}
                   end={cueResponse(cue)}
+                  arrow={cue.enemyStyle === "arrow"}
                   reduced={reduced}
                 />
               ) : cue.enemyStyle === "slam" ? (
@@ -792,12 +953,55 @@ export default function CombatStage({
           </Fill>
         </Group>
       </Canvas>
+      {goldDrops.length > 0 && (
+        <CombatGoldPickup
+          key={goldDrops[0].id}
+          drops={goldDrops.flatMap((drop) => {
+            const point =
+              enemyPositions[
+                allEnemies.findIndex((foe) => foe.id === drop.enemyId)
+              ];
+            return point ? [{ ...drop, x: point.x, y: point.y - 10 }] : [];
+          })}
+          destination={{ x: 30, y: Math.max(26, hudInset - 24) }}
+          fast={state.combatSpeed === "fast"}
+          reduced={reduced}
+        />
+      )}
+      {onSelectEnemy &&
+        allEnemies.map((enemy, i) => {
+          const point = enemyPositions[i];
+          if (!point || enemy.hp <= 0) return null;
+          return (
+            <Pressable
+              key={enemy.id}
+              accessibilityRole="button"
+              accessibilityLabel={`Target ${enemy.name} on battlefield`}
+              accessibilityHint={`${enemy.hp} of ${enemy.maxHp} HP`}
+              accessibilityState={{
+                selected: enemy.id === selectedEnemy,
+                disabled: busy,
+              }}
+              disabled={busy}
+              onPress={() => onSelectEnemy(enemy.id)}
+              style={{
+                position: "absolute",
+                left: Math.max(0, point.x - point.size / 2),
+                top: Math.max(0, point.y - point.size),
+                width: point.size,
+                height: Math.max(44, point.size),
+              }}
+            />
+          );
+        })}
       {healthParty.map((c, i) => (
         <CharacterHealth
           key={c.id}
           character={c}
           point={positions[i]}
           selected={selected === c.id}
+          chosen={chosen.includes(c.id)}
+          compact={compactHud}
           threatened={threatened.includes(c.id)}
           busy={busy}
           cue={cue}
@@ -807,6 +1011,28 @@ export default function CombatStage({
           onSelect={onSelect}
         />
       ))}
+      {compactHud &&
+        onInspectEnemy &&
+        allEnemies.map(
+          (enemy, i) =>
+            enemy.hp > 0 && (
+              <EnemyHealth
+                key={enemy.id}
+                enemy={enemy}
+                point={enemyPositions[i]}
+                selected={enemy.id === selectedEnemy}
+                busy={busy}
+                cue={enemy.id === activeEnemyId ? cue : null}
+                time={time}
+                reduced={reduced}
+                destination={{
+                  x: (targetPoint?.x || width * 0.27) + enemySize * 0.5,
+                  y: targetPoint?.y || height * 0.81,
+                }}
+                onInspect={onInspectEnemy}
+              />
+            ),
+        )}
     </View>
   );
 }

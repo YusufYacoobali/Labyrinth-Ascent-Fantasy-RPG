@@ -1,8 +1,8 @@
 // Translate old one-command unit fixtures into an explicit, single-foe round.
-// Campaign UI never dispatches BATTLE; animation trials keep their disposable resolver.
+// Production and practice both dispatch ROUND; old unit fixtures use this adapter.
 const { e, rounds: r } = require("./engine-loader.cjs");
 function act(s, a) {
-  if (a.type !== "BATTLE" || s.trial) return e.reducer(s, a);
+  if (a.type !== "BATTLE") return e.reducer(s, a);
   if (s.phase !== "combat") return e.reducer(s, a);
   const legacy = s.enemy;
   if (!s.combat) s = r.beginCombat(s);

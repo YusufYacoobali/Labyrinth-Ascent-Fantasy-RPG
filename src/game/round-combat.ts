@@ -537,7 +537,12 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
         kind,
       )
     )
-      next = observeMove(next, foe.species, intents[actor]?.label || text);
+      next = observeMove(
+        next,
+        foe.species,
+        intents[actor]?.label || text,
+        kind === "strike" ? foe.element : undefined,
+      );
     return events.push({
       action,
       id: `${combat.id}:${combat.round}:${events.length}`,

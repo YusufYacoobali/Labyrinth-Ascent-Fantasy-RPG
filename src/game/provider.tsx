@@ -82,7 +82,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     pendingCommit.current = next;
     // Ordinary navigation stays immediate. Combat waits for its durable result before playback.
     const waitForCommit =
-      (action.type === "BATTLE" || action.type === "ROUND") && action.animate;
+      action.type === "ROUND" && action.animate;
     if (!waitForCommit) setState(next);
     working.current = true;
     setSaving(true);

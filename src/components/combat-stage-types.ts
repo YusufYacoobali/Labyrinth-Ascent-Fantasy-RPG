@@ -1,12 +1,20 @@
 import type { CombatCue } from "@/game/combat-animation";
 import type { Character, Game } from "@/game/engine";
+import type { CombatGoldDrop } from "@/game/combat-presentation";
 export type CombatStageProps = {
   state: Game;
   playbackDuration?: number;
+  goldDrops?: CombatGoldDrop[];
   selected: string;
+  selectedEnemy?: string;
+  chosen?: string[];
+  compactHud?: boolean;
+  hudInset?: number;
   cue: CombatCue | null;
   busy: boolean;
   onSelect: (id: string) => void;
+  onSelectEnemy?: (id: string) => void;
+  onInspectEnemy?: (id: string) => void;
   onReady: () => void;
   healthParty: Character[];
   threatened: string[];

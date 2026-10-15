@@ -233,6 +233,7 @@ export function Button({
   disabled = false,
   small = false,
   compact = false,
+  dense = false,
   style,
 }: {
   label: string;
@@ -242,6 +243,7 @@ export function Button({
   disabled?: boolean;
   small?: boolean;
   compact?: boolean;
+  dense?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const [pressed, setPressed] = useState(false);
@@ -277,6 +279,8 @@ export function Button({
             {
               minHeight: compact ? 30 : 46,
               paddingVertical: compact ? 3 : small ? 8 : 12,
+              paddingHorizontal: dense ? 6 : 13,
+              gap: dense ? 4 : 9,
             },
           ]}
         >
@@ -1028,7 +1032,7 @@ export function Frame({
             children
           )}
         </View>
-        {showNotice && (
+        {showNotice && !(fullBleed && expedition) && (
           <Pressable
             accessibilityLabel="Dismiss notification"
             accessibilityRole="button"
