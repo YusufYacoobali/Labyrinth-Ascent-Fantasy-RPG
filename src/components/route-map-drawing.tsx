@@ -22,15 +22,24 @@ export interface MapCanvasProps {
   map: FloorMap;
   room: string;
   facing: Heading;
+  height?: number;
+  selected?: string | null;
+  trail?: string[];
+  information?: Record<string, "danger" | "treasure" | "company" | "mystery">;
+  biome?: string;
   onSelect: (id: string) => void;
 }
-const STEP = 40,
-  HEIGHT = 260;
+const STEP = 40;
 export default function MapCanvas({
   map,
   room,
   facing,
   onSelect,
+  height = 260,
+  selected,
+  trail = [],
+  information = {},
+  biome = "stone",
 }: MapCanvasProps) {
   const [width, setWidth] = useState(300);
   const panX = useSharedValue(0),
@@ -41,13 +50,13 @@ export default function MapCanvas({
     startScale = useSharedValue(1);
   const here = map.nodes[room] || map.nodes.entrance;
   const cx = width / 2 - here.x * STEP,
-    cy = HEIGHT / 2 - here.y * STEP;
+    cy = height / 2 - here.y * STEP;
   const transform = useDerivedValue(() => [
     { translateX: panX.get() + width / 2 },
-    { translateY: panY.get() + HEIGHT / 2 },
+    { translateY: panY.get() + height / 2 },
     { scale: scale.get() },
     { translateX: cx - width / 2 },
-    { translateY: cy - HEIGHT / 2 },
+    { translateY: cy - height / 2 },
   ]);
   const fog = visibleRooms(map),
     rooms = Object.values(map.nodes).filter((n) => fog.visible.has(n.id));
@@ -95,7 +104,7 @@ export default function MapCanvas({
         scheduleOnRN(
           select,
           (e.x - width / 2 - panX.get()) / scale.get() - cx + width / 2,
-          (e.y - HEIGHT / 2 - panY.get()) / scale.get() - cy + HEIGHT / 2,
+          (e.y - height / 2 - panY.get()) / scale.get() - cy + height / 2,
         );
     });
   const gesture = Gesture.Simultaneous(pan, pinch, tap);
@@ -105,9 +114,18 @@ export default function MapCanvas({
         <View
           onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
           style={{
-            height: HEIGHT,
+            height: height,
             overflow: "hidden",
-            backgroundColor: "#091421",
+            backgroundColor:
+              biome === "roots"
+                ? "#0b1c18"
+                : biome === "forge"
+                  ? "#24140f"
+                  : biome === "crypt"
+                    ? "#191324"
+                    : biome === "frost"
+                      ? "#0c1c2b"
+                      : "#091421",
             borderRadius: 8,
           }}
           accessible={false}
@@ -120,9 +138,13 @@ export default function MapCanvas({
                   p1={vec(map.nodes[a].x * STEP, map.nodes[a].y * STEP)}
                   p2={vec(map.nodes[b].x * STEP, map.nodes[b].y * STEP)}
                   color={
-                    fog.named.has(a) && fog.named.has(b) ? "#56768e" : "#29394a"
+                    trail.includes([a, b].sort().join(":"))
+                      ? "#e5bc6a"
+                      : fog.named.has(a) && fog.named.has(b)
+                        ? "#56768e"
+                        : "#29394a"
                   }
-                  strokeWidth={2}
+                  strokeWidth={trail.includes([a, b].sort().join(":")) ? 4 : 2}
                 />
               ))}
               {rooms.map((n) => (
@@ -141,15 +163,60 @@ export default function MapCanvas({
                             : "#33475b"
                     }
                   />
-                  {fog.named.has(n.id) &&
-                    (n.kind === "camp" || n.kind === "portal") && (
-                      <Circle
-                        cx={n.x * STEP}
-                        cy={n.y * STEP}
-                        r={4}
-                        color={n.kind === "camp" ? "#8fddaa" : "#b59bff"}
-                      />
-                    )}
+                  {selected === n.id && (
+                    <Circle
+                      cx={n.x * STEP}
+                      cy={n.y * STEP}
+                      r={14}
+                      color="#ffffff"
+                      style="stroke"
+                      strokeWidth={2}
+                    />
+                  )}
+                  {fog.named.has(n.id) && n.kind === "portal" && (
+                    <Path
+                      path={`M ${n.x * STEP - 5} ${n.y * STEP + 5} l 0 -7 q 5 -8 10 0 l 0 7 z`}
+                      color="#b59bff"
+                    />
+                  )}
+                  {fog.named.has(n.id) && n.kind === "camp" && (
+                    <Path
+                      path={`M ${n.x * STEP} ${n.y * STEP - 6} l -6 11 l 12 0 z`}
+                      color="#8fddaa"
+                    />
+                  )}
+                  {fog.named.has(n.id) && n.kind === "landmark" && (
+                    <Path
+                      path={`M ${n.x * STEP} ${n.y * STEP - 6} l -5 6 l 5 6 l 5 -6 z`}
+                      color="#fff1bd"
+                    />
+                  )}
+                  {information[n.id] === "danger" && (
+                    <Path
+                      path={`M ${n.x * STEP} ${n.y * STEP - 6} l -5 10 l 10 0 z`}
+                      color="#ee7968"
+                    />
+                  )}
+                  {information[n.id] === "treasure" && (
+                    <Path
+                      path={`M ${n.x * STEP - 5} ${n.y * STEP - 3} l 10 0 l 0 7 l -10 0 z`}
+                      color="#f8d88b"
+                    />
+                  )}
+                  {information[n.id] === "company" && (
+                    <Circle
+                      cx={n.x * STEP}
+                      cy={n.y * STEP}
+                      r={4}
+                      color="#efc1ef"
+                    />
+                  )}
+                  {information[n.id] === "mystery" && (
+                    <Path
+                      path={`M ${n.x * STEP} ${n.y * STEP - 6} l -4 6 l 4 6 l 4 -6 z`}
+                      color="#a5b2c8"
+                    />
+                  )}
                 </Group>
               ))}
               <Group

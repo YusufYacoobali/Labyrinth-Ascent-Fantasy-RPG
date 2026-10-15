@@ -51,6 +51,9 @@ export interface Spoils {
   inventory: Record<string, number>;
 }
 export interface Expedition {
+  director?: import("./encounter-director").ExpeditionDirector;
+  trail?: Record<string, string[]>;
+  roomVisits?: Record<string, string[]>;
   number: number;
   unsecured: Spoils;
   provisionalSkills: Record<string, Skill[]>;
@@ -113,6 +116,11 @@ export function trackSpoils(before: Game, after: Game, action?: Action): Game {
       action?.type === "GENERIC_CHOICE") &&
     after.gold < before.gold &&
     old.gold === 0;
+  const securedBarter =
+    action?.type === "BRANCH_CHOICE" &&
+    action.choice === "trade" &&
+    after.food > before.food &&
+    (old.inventory["beast-core"] || 0) === 0;
   const inventory = { ...old.inventory };
   for (const id of new Set([
     ...Object.keys(before.inventory),
@@ -121,7 +129,7 @@ export function trackSpoils(before: Game, after: Game, action?: Action): Game {
     inventory[id] = Math.max(
       0,
       (old.inventory[id] || 0) +
-        (securedPurchase
+        (securedPurchase || securedBarter
           ? Math.min(
               0,
               (after.inventory[id] || 0) - (before.inventory[id] || 0),
@@ -133,7 +141,7 @@ export function trackSpoils(before: Game, after: Game, action?: Action): Game {
     unsecured[key] = Math.max(
       0,
       old[key] +
-        (securedPurchase
+        (securedPurchase || securedBarter
           ? Math.min(0, after[key] - before[key])
           : after[key] - before[key]),
     );

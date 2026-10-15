@@ -93,9 +93,22 @@ The 200-seed benchmark completes 187 campaigns within its twelve-expedition cap,
 
 The pacing medians pass, but combat is longer and the completion tail is worse than Milestone 2. Milestone 6 equipment/build preparation and the final balance pass must revisit those costs; these aggregate results are not a claim that all party compositions are equally effective or that human playtesting is complete.
 
+## Milestone 4 — exploration
+
+New expeditions precompute all floor/route occupant plans from the campaign seed, month, party preparation, story history, standing and time budget. Weighted quiet chambers, local patrols, charged ambushes, elite formations, caches, hazards, springs and travellers replace the uniform pool. Generic identities and variants are reserved at entry with previous-month cooldowns and no duplicate reservations; exhausted or consecutive-family content becomes quiet traversal. First arrival locks pre-rolled late-month alternatives. Existing expeditions retain their occupants until the next entry.
+
+Elian Voss, Tamsin Reed and Sable Dusk occupy one saved location each month and remember meetings. Tamsin offers a finite core-for-rations trade; fully secured inputs preserve security, while any unsecured contribution keeps the acquired bundle at risk. Rare cache equipment uses the ordinary durable resolution and unsecured ledger. Optional mapped battles now use regional species; the previous Bonegnaw substitution had hidden those ecosystems outside portal fights.
+
+Deterministic keyed and survey-operated shortcuts preserve coordinates and open reciprocal connections permanently. Opening costs a watch and never moves the party. Known-route travel traverses only visited connected rooms, charges each real watch, restores facing/history/trail and stops for encounters, stories, sanctuary decisions, hunger and the gate boundary. Looking at a room never moves or turns the party.
+
+The existing Skia map now has a full-screen Router screen, environment backgrounds, portal/sanctuary/landmark and discovered-occupant symbols, selected-room highlighting and actual travelled passages. Current-month visits gate occupant symbols, preventing last month's knowledge from revealing new inhabitants. Text lists, explicit adjacent travel, zoom/recenter and room-inspection sheets remain available. Dead-end encounters are actionable, and descriptions respect their real exits after a shortcut opens.
+
+Verification: 221 grouped checks pass, including ten director groups, 1,000 additional shortcut graphs, durable rare loot/trades, monthly reservations, NPC memory and known-route costs/stops. Typecheck, lint and Android/iOS/web exports pass. UI, device checks and human playtesting remain deferred by explicit user instruction.
+
+The 200-seed benchmark completes 178 campaigns within twelve expeditions, with zero state stalls. First-expedition median Floor 4; completed-campaign median seven expeditions; mean battle length 6.73 rounds; fallen-character events 3,197; unfed checks 0; median mastery 215; loot Continue actions 5,380; binding actions 2,291; story choices 6,704; generic appearances 3,411; repetition violations 0; treatment cost 477,300 gold and 7,530 injured-character recovery days. Twenty-two campaigns remain unfinished at the cap. The completion tail and recovery costs need the Milestone 6 preparation/balance pass. Report: `verification/master-m4-campaign.json`.
+
 ## Remaining sequence
 
-4. Exploration director, map presentation, shortcuts, persistent NPC placement and known-route travel.
 5. Conditional stories, rivals, authored reconciliation and tangible faction opportunities.
 6. Build/equipment synergy, crafting progression, extraction reports and modest optional goals.
 7. Production art, audio, accessibility, performance and platform verification.

@@ -1,4 +1,5 @@
 import { resolveEnemySupport } from "./enemy-support";
+import { directedEncounter } from "./encounter-director";
 import { ECOSYSTEMS, ECOSYSTEM_GROUPS } from "./ecosystem-moves";
 import { observeMonsters, observeMove } from "./bestiary";
 import { ECOLOGY } from "./ecology";
@@ -212,6 +213,12 @@ export function beginCombat(
         ? ecosystem.portal || ecosystem.regular
         : ecosystem.regular.slice(0, s.floor === 2 ? Math.max(2, count) : count)
       : null);
+  const directed =
+    !s.journey.defender && s.journey.branch?.kind === "beast"
+      ? directedEncounter(s)
+      : undefined;
+  if (directed?.variant === "elite" && groupIds?.length === 2)
+    groupIds.push(groupIds[1]);
   const enemies = Array.from(
     { length: groupIds?.length || count },
     (_, index): CombatEnemy => {
@@ -284,7 +291,7 @@ export function beginCombat(
         paralysis: 0,
         broken: 0,
         controlWard: 0,
-        charged: false,
+        charged: directed?.variant === "ambush" || false,
       };
     },
   );

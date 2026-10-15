@@ -1,5 +1,7 @@
 import { GenericEncounterScene } from "@/components/generic-encounter";
 import { ShelterBinding } from "@/components/skill-library";
+import { directedEncounter } from "@/game/encounter-director";
+import { npcAt, npcDescription, WORLD_NPCS } from "@/game/world-npcs";
 import React from "react";
 import { View } from "react-native";
 import {
@@ -303,6 +305,8 @@ export function BranchScene() {
   const b = state.journey.branch;
   if (!b) return null;
   const scene = branchScenes[b.kind];
+  const npc = npcAt(state),
+    plan = directedEncounter(state);
   const resolved = state.journey.resolvedBranches.includes(b.id);
   if (b.kind === "company" && state.expedition.generic[encounterKey(state)])
     return <GenericEncounterScene />;
@@ -326,23 +330,22 @@ export function BranchScene() {
       )}
       <StoryCard
         title={
-          currentRoom(state).kind === "dead-end"
-            ? "The passage ends"
-            : resolved
-              ? "Your old marks"
-              : scene.title
+          npc
+            ? WORLD_NPCS[npc].name
+            : currentRoom(state).kind === "dead-end"
+              ? scene.title + " · Dead end"
+              : resolved
+                ? "Your old marks"
+                : scene.title
         }
         body={
-          currentRoom(state).kind === "dead-end"
-            ? "Stone closes off this chamber. Its single passage is the way you entered."
-            : resolved
-              ? "This room has already been searched this expedition. Your saved connections remain on the map."
-              : scene.body
+          resolved
+            ? "This room has already been searched this expedition. Your saved connections remain on the map."
+            : `${currentRoom(state).kind === "dead-end" && Object.keys(currentRoom(state).exits).length === 1 ? "This chamber has one real exit, back through the passage you entered. " : ""}${npc ? npcDescription(state, npc) : plan && b.kind === "beast" ? "The local predators have claimed this passage. Their tracks reveal an optional fight; leaving preserves the room for later." : scene.body}${plan ? " " + plan.approach : ""}`
         }
       >
         <TeamCondition />
         {!resolved &&
-          currentRoom(state).kind !== "dead-end" &&
           scene.choices.map((c) => (
             <Choice
               key={c.id}
@@ -359,6 +362,17 @@ export function BranchScene() {
               }
             />
           ))}
+        {!resolved && npc === "tamsin" && (
+          <Choice
+            label="Trade two monster cores for three rations"
+            detail="One trade this expedition; field-found cores produce unsecured rations"
+            icon="sack"
+            disabled={(state.inventory["beast-core"] || 0) < 2}
+            onPress={() =>
+              dispatch({ type: "BRANCH_CHOICE", choice: "trade", roll: 1 })
+            }
+          />
+        )}
         <RouteMap />
         <Directions />
         <FieldSurvival />

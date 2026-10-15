@@ -9,7 +9,7 @@ export default function MapCanvas(props: MapCanvasProps) {
       componentProps={props}
       opts={{ locateFile: () => "/canvaskit.wasm" }}
       fallback={
-        <View style={{ height: 260 }}>
+        <View style={{ height: props.height || 260 }}>
           <ActivityIndicator />
         </View>
       }

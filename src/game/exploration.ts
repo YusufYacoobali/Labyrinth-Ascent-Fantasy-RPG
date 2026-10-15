@@ -1,4 +1,7 @@
 import { factionSupplyBonus } from "./relationships";
+import { directedEncounter, lockEncounter } from "./encounter-director";
+import { openShortcut, shortcutReason } from "./shortcuts";
+import { npcAt, WORLD_NPCS } from "./world-npcs";
 import { narrateRoom } from "./room-narration";
 import { assignGeneric } from "./generic-stories";
 import { principalResolved, principalAftermath } from "./stories";
@@ -141,13 +144,39 @@ export function moveRoom(s: Game, id: string): Game {
     : undefined;
   return {
     ...s,
+    expedition: {
+      ...s.expedition,
+      trail: {
+        ...s.expedition.trail,
+        [key]: heading
+          ? [
+              ...new Set([
+                ...(s.expedition.trail?.[key] || []),
+                [previous, id].sort().join(":"),
+              ]),
+            ]
+          : s.expedition.trail?.[key] || [],
+      },
+      roomVisits: {
+        ...s.expedition.roomVisits,
+        [key]: [...new Set([...(s.expedition.roomVisits?.[key] || []), id])],
+      },
+    },
     journey: {
       ...s.journey,
       room: id,
       history: nextHistory,
       step: room.depth,
       facing: heading || s.journey.facing,
-      maps: { ...s.journey.maps, [key]: reveal(map, id) },
+      maps: {
+        ...s.journey.maps,
+        [key]: {
+          ...reveal(map, id),
+          shortcuts: map.shortcuts?.map((d) =>
+            [d.from, d.to].includes(id) ? { ...d, discovered: true } : d,
+          ),
+        },
+      },
       occupants: {
         ...s.journey.occupants,
         [key]:
@@ -177,7 +206,7 @@ export function enterMappedRoom(
   id: string,
   direction: Direction = "straight",
 ): Game {
-  const next = moveRoom(s, id),
+  const next = moveRoom(lockEncounter(s, id), id),
     room = currentRoom(next),
     key = currentMapKey(next);
   if (room.kind === "camp") {
@@ -258,7 +287,7 @@ export function enterMappedRoom(
       branch: { id: encounterKey(next, id), kind, direction },
     },
   };
-  return kind === "company"
+  return kind === "company" && !npcAt(encounter)
     ? assignGeneric(encounter, encounterKey(next, id))
     : encounter;
 }
@@ -386,6 +415,36 @@ export function resolveExploration(
   enemyFor: (floor: number, partySize: number) => Enemy,
 ): Game | null {
   if (
+    a.type === "UNLOCK_SHORTCUT" &&
+    ["exploration", "camp", "victory"].includes(s.phase)
+  ) {
+    const map = floorMap(s),
+      door = map.shortcuts?.find((d) => d.id === a.id);
+    if (!door) return s;
+    const reason = shortcutReason(s, map, door);
+    if (reason) return say(s, reason);
+    return say(
+      {
+        ...s,
+        inventory:
+          door.requirement === "key"
+            ? {
+                ...s.inventory,
+                "labyrinth-key": s.inventory["labyrinth-key"] - 1,
+              }
+            : s.inventory,
+        journey: {
+          ...s.journey,
+          maps: {
+            ...s.journey.maps,
+            [currentMapKey(s)]: openShortcut(map, door.id),
+          },
+        },
+      },
+      "The stone latch opens onto a permanent shortcut. Opening it takes one watch; movement remains an explicit choice.",
+    );
+  }
+  if (
     a.type === "MISSION" &&
     s.phase === "mission" &&
     MISSIONS.some((m) => m.id === a.id)
@@ -446,6 +505,12 @@ export function resolveExploration(
           gold: s.gold + gold,
           inventory: {
             ...s.inventory,
+            ...(directedEncounter(s)?.rewardItem && safe
+              ? {
+                  [directedEncounter(s)!.rewardItem!]:
+                    (s.inventory[directedEncounter(s)!.rewardItem!] || 0) + 1,
+                }
+              : {}),
             "relic-fragment":
               (s.inventory["relic-fragment"] || 0) + (safe ? 1 : 0),
           },
@@ -476,9 +541,29 @@ export function resolveExploration(
       if (a.choice === "help" && s.food < 1)
         return say(s, "You need a ration to share with this team.");
       const floor = Math.min(12, s.floor + 1);
+      const named = npcAt(s);
       return say(
         {
           ...next,
+          npcs: named
+            ? {
+                ...s.npcs,
+                [named]: {
+                  visits: (s.npcs?.[named]?.visits || 0) + 1,
+                  helped:
+                    (s.npcs?.[named]?.helped || 0) +
+                    (a.choice === "help" ? 1 : 0),
+                  lastExpedition: s.expedition.number,
+                  trust:
+                    (s.npcs?.[named]?.trust || 0) +
+                    (a.choice === "help" ? 2 : 1),
+                  decisions: [
+                    ...(s.npcs?.[named]?.decisions || []),
+                    a.choice,
+                  ].slice(-12),
+                },
+              }
+            : s.npcs,
           food: s.food - (a.choice === "help" ? 1 : 0),
           knownFloors: [...new Set([...s.knownFloors, floor])],
           journey: { ...chartRumour(next, s.floor), met: s.journey.met + 1 },
@@ -487,7 +572,33 @@ export function resolveExploration(
             stag: s.faction.stag + (a.choice === "help" ? 1 : 0),
           },
         },
-        `A tired survey team trades their first two route marks and news of ${FLOORS[floor - 1].name}.${a.choice === "help" ? " Your ration may get them through the night." : " They promise to remember your faces."}`,
+        `${named ? WORLD_NPCS[named].name : "A tired survey team"} trades two real route marks and news of ${FLOORS[floor - 1].name}.${a.choice === "help" ? " Your ration may get them through the night." : " They promise to remember your faces."}`,
+      );
+    }
+    if (b.kind === "company" && a.choice === "trade" && npcAt(s) === "tamsin") {
+      if ((s.inventory["beast-core"] || 0) < 2)
+        return say(s, "Tamsin's trade requires two monster cores.");
+      const old = s.npcs?.tamsin;
+      return say(
+        {
+          ...next,
+          food: s.food + 3,
+          inventory: {
+            ...s.inventory,
+            "beast-core": s.inventory["beast-core"] - 2,
+          },
+          npcs: {
+            ...s.npcs,
+            tamsin: {
+              visits: (old?.visits || 0) + 1,
+              helped: old?.helped || 0,
+              lastExpedition: s.expedition.number,
+              trust: (old?.trust || 0) + 1,
+              decisions: [...(old?.decisions || []), "trade"].slice(-12),
+            },
+          },
+        },
+        "Tamsin trades three party rations for two monster cores. Rations bought with field-found cores remain at risk until extraction.",
       );
     }
     if (b.kind === "spring" && ["gather", "drink"].includes(a.choice)) {
@@ -531,15 +642,18 @@ export function resolveExploration(
           enemy: {
             ...enemy,
             species:
-              s.floor >= 5 && s.floor <= 7 && s.route
+              s.expedition.director || (s.floor >= 5 && s.floor <= 7 && s.route)
                 ? enemy.species
                 : "bonegnaw",
             name:
-              s.floor >= 5 && s.floor <= 7 && s.route
+              s.expedition.director || (s.floor >= 5 && s.floor <= 7 && s.route)
                 ? enemy.name
                 : "Bonegnaw Scavenger",
             boss: false,
-            sprite: s.floor >= 5 && s.floor <= 7 && s.route ? enemy.sprite : 20,
+            sprite:
+              s.expedition.director || (s.floor >= 5 && s.floor <= 7 && s.route)
+                ? enemy.sprite
+                : 20,
             hp,
             maxHp: hp,
           },

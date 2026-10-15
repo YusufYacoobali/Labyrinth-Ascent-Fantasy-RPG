@@ -27,7 +27,19 @@ function explore() {
 function branch(kind) {
   let s = explore();
   const map = x.floorMap(s);
-  const id = Object.entries(maps.populateFloor(map, s.expedition.number)).find(
+  // Isolate legacy encounter reward rules from the new weighted director.
+  s = {
+    ...s,
+    expedition: { ...s.expedition, director: undefined },
+    journey: {
+      ...s.journey,
+      occupants: {
+        ...s.journey.occupants,
+        [x.currentMapKey(s)]: maps.populateFloor(map, s.expedition.number),
+      },
+    },
+  };
+  const id = Object.entries(s.journey.occupants[x.currentMapKey(s)]).find(
     ([, k]) => k === kind,
   )?.[0];
   assert.ok(id, kind);

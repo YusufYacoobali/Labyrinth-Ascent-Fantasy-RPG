@@ -23,6 +23,7 @@ export interface Room {
   exits: Partial<Record<Heading, string>>;
 }
 export interface FloorMap {
+  shortcuts?: import("./shortcuts").Shortcut[];
   version: 2;
   seed: number;
   floor: number;

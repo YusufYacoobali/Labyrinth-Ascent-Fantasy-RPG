@@ -53,7 +53,7 @@ export function narrateRoom(input: {
   const atmosphere =
     pool[seedFor(`${input.seed}:${input.floor}:${input.id}`) % pool.length];
   const detail =
-    input.kind === "dead-end"
+    input.kind === "dead-end" && input.exits === 1
       ? "Fresh wall marks stop where the chamber closes."
       : input.kind === "landmark"
         ? "The distinctive stonework gives your chart a reliable reference."

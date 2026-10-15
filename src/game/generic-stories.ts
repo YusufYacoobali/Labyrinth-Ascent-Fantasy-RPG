@@ -1,6 +1,7 @@
 import type { Action, Game } from "./engine";
 import { GENERIC_ENCOUNTERS } from "./generic-encounters";
 import { nextRandom } from "./monsters";
+import { directedEncounter } from "./encounter-director";
 import { encounterKey } from "./exploration";
 
 export interface GenericRecord {
@@ -21,6 +22,48 @@ export function assignGeneric(s: Game, room: string): Game {
           journey: { ...s.journey, branch: null },
         }
       : s;
+  const planned = directedEncounter(s)?.generic;
+  if (s.expedition.director) {
+    const encounter = GENERIC_ENCOUNTERS.find((c) => c.id === planned?.id);
+    if (
+      !encounter ||
+      encounter.family === s.stories.genericFamily ||
+      (s.stories.genericHistory[encounter.id] ?? -2) >= s.expedition.number - 1
+    )
+      return {
+        ...s,
+        phase: "exploration",
+        journey: {
+          ...s.journey,
+          branch: null,
+          resolvedBranches: [...new Set([...s.journey.resolvedBranches, room])],
+        },
+        message: "The travellers have moved on; only their old camp remains.",
+      };
+    return {
+      ...s,
+      stories: {
+        ...s.stories,
+        genericBag: s.stories.genericBag.filter((id) => id !== encounter.id),
+        genericFamily: encounter.family,
+        genericHistory: {
+          ...s.stories.genericHistory,
+          [encounter.id]: s.expedition.number,
+        },
+      },
+      expedition: {
+        ...s.expedition,
+        generic: {
+          ...s.expedition.generic,
+          [room]: {
+            id: encounter.id,
+            variant: planned!.variant,
+            resolved: false,
+          },
+        },
+      },
+    };
+  }
   const eligible = GENERIC_ENCOUNTERS.filter(
     (c) =>
       s.floor >= c.minFloor &&

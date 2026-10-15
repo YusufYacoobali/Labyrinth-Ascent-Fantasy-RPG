@@ -27,6 +27,10 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  director: load("src/game/encounter-director.ts"),
+  shortcuts: load("src/game/shortcuts.ts"),
+  travel: load("src/game/known-travel.ts"),
+  npcs: load("src/game/world-npcs.ts"),
   ecology: load("src/game/ecology.ts"),
   ecosystems: load("src/game/ecosystem-moves.ts"),
   support: load("src/game/enemy-support.ts"),

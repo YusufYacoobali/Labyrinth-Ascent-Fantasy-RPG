@@ -1,5 +1,8 @@
 import { trainingLimit, trainingXp, temperingOffer } from "./town-progression";
 import { canAutoResolve } from "./combat-commands";
+import { establishExpedition } from "./encounter-director";
+import { knownPath } from "./known-travel";
+import type { NpcMemory, WorldNpcId } from "./world-npcs";
 import { recordDefeats, type Bestiary } from "./bestiary";
 import type { Conditions } from "./combat-status";
 import { deserializeSave } from "./skill-ids";
@@ -27,7 +30,14 @@ import {
   setInjuries,
   healthyMaxHp,
 } from "./survival";
-import { generateFloor, seedFor, mapKey, populateFloor } from "./floor-map";
+import {
+  HEADINGS,
+  relativeDirection,
+  generateFloor,
+  seedFor,
+  mapKey,
+  populateFloor,
+} from "./floor-map";
 import {
   MONSTERS,
   essenceId,
@@ -203,6 +213,7 @@ export interface BattleEffect {
   broken: boolean;
 }
 export interface Game {
+  npcs?: Partial<Record<WorldNpcId, NpcMemory>>;
   bestiary?: Bestiary;
   combatSpeed?: "normal" | "fast";
   version: 2;
@@ -793,6 +804,8 @@ export function questProgress(s: Game, id: QuestId): number {
   return Math.min(QUESTS.find((q) => q.id === id)!.target, s.bestFloor);
 }
 export type Action =
+  | { type: "QUICK_TRAVEL"; room: string }
+  | { type: "UNLOCK_SHORTCUT"; id: string }
   | { type: "SET_FORMATION"; id: string; formation: "front" | "back" }
   | { type: "COMBAT_SPEED"; speed: "normal" | "fast" }
   | { type: "AUTO_COMBAT" }
@@ -1018,6 +1031,36 @@ export function reducer(s: Game, a: Action): Game {
   if (a.type === "FINISH_PLAYBACK")
     return { ...s, playback: null, roundPlayback: null };
   if (s.playback || s.roundPlayback) return s;
+  if (a.type === "QUICK_TRAVEL") {
+    if (
+      !["exploration", "victory", "camp"].includes(s.phase) ||
+      s.journey.wildCamp
+    )
+      return note(s, "Finish this encounter before following a known route.");
+    const path = knownPath(s, a.room);
+    if (path.length < 2)
+      return note(
+        s,
+        path.length
+          ? "You are already there."
+          : "Explore every passage of this route before using quick travel.",
+      );
+    let next: Game = { ...s, phase: "exploration" };
+    for (const destination of path.slice(1)) {
+      const map = next.journey.maps[currentMapKey(next)],
+        heading = HEADINGS.find(
+          (h) => map.nodes[next.journey.room].exits[h] === destination,
+        );
+      if (!heading) break;
+      next = reducer(next, {
+        type: "MOVE",
+        direction: relativeDirection(next.journey.facing, heading),
+      });
+      if (next.phase !== "exploration" || next.playback || next.roundPlayback)
+        break;
+    }
+    return next;
+  }
   if (a.type === "COMBAT_SPEED") return { ...s, combatSpeed: a.speed };
   if (a.type === "SET_FORMATION") {
     if (
@@ -1201,6 +1244,8 @@ function resolveGameAction(s: Game, a: Action): Game {
       "The labyrinth is open. Confirm skipping this opening before spending a day in town.",
     );
   let next = reduceGame(s, a);
+  if (a.type === "ENTER" && s.phase === "town" && next.phase === "mission")
+    next = establishExpedition(next);
   if (
     !next.trial &&
     ((next.phase === "arrival" &&
@@ -1269,6 +1314,7 @@ function resolveGameAction(s: Game, a: Action): Game {
     next.journey.watches === s.journey.watches
   ) {
     const timed =
+      (a.type === "UNLOCK_SHORTCUT" && next.journey.maps !== s.journey.maps) ||
       ((a.type === "MOVE" ||
         a.type === "MOVE_BACK" ||
         a.type === "LEAVE_CAMP") &&
