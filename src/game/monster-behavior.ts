@@ -6,6 +6,8 @@ import { selectMove } from "./enemy-moves";
 import type { StatusId } from "./combat-status";
 
 export interface EnemyIntent {
+  count?: number;
+  drain?: number;
   move?: string;
   cooldown?: number;
   status?: StatusId;
@@ -46,6 +48,134 @@ const behavior = (
   phases,
 });
 export const SPECIES_BEHAVIOR: Record<string, SpeciesBehavior> = {
+  "skeleton-mender": behavior(
+    "support",
+    "physical",
+    12,
+    "Bone touch",
+    "Ossuary pulse",
+    "Mend the skeleton ranks",
+  ),
+  "skeleton-pikeman": behavior(
+    "bruiser",
+    "physical",
+    11,
+    "Pike thrust",
+    "Bone pike charge",
+    "Lock pikes",
+  ),
+  "runic-fragment": behavior(
+    "defender",
+    "physical",
+    16,
+    "Shard strike",
+    "Rune fracture",
+    "Raise a shard ward",
+  ),
+  spiderling: behavior(
+    "skirmisher",
+    "venom",
+    18,
+    "Venom needle",
+    "Wounded prey bite",
+    "Withdraw into webs",
+  ),
+  "web-spinner": behavior(
+    "caster",
+    "venom",
+    13,
+    "Silken bite",
+    "Entangling web",
+    "Retreat into silk",
+  ),
+  "echo-mirage": behavior(
+    "skirmisher",
+    "physical",
+    20,
+    "Echo cut",
+    "Duplicated touch",
+    "Fade into reflection",
+  ),
+  "wolf-pack": behavior(
+    "skirmisher",
+    "frost",
+    24,
+    "Pack bite",
+    "Coordinated pounce",
+    "Circle the weakest",
+  ),
+  "grave-acolyte": behavior(
+    "support",
+    "physical",
+    12,
+    "Burial touch",
+    "Grave hymn",
+    "Renew the burial ward",
+  ),
+  "ash-squire": behavior(
+    "defender",
+    "fire",
+    15,
+    "Cinder blade",
+    "Cinder riposte",
+    "Protect the furnace",
+  ),
+  "ice-wisp": behavior(
+    "caster",
+    "frost",
+    19,
+    "Rime lance",
+    "Freeze buildup",
+    "Gather the cold",
+  ),
+  "royal-guard": behavior(
+    "defender",
+    "physical",
+    21,
+    "Royal thrust",
+    "Oathbound bash",
+    "Protect the royal line",
+  ),
+  "hollow-knight": behavior(
+    "bruiser",
+    "fire",
+    18,
+    "Hollow cleave",
+    "Crownfire strike",
+    "Wind up a royal swing",
+  ),
+  "root-sprout": behavior(
+    "support",
+    "venom",
+    14,
+    "Root lash",
+    "Toxic sap",
+    "Regrow living roots",
+  ),
+  "frost-wisp": behavior(
+    "caster",
+    "frost",
+    20,
+    "Whiteout shard",
+    "Frozen chorus",
+    "Gather the blizzard",
+  ),
+  "furnace-spark": behavior(
+    "caster",
+    "fire",
+    17,
+    "Furnace spark",
+    "Explosive flare",
+    "Bank the furnace",
+  ),
+  "crypt-bearer": behavior(
+    "support",
+    "physical",
+    15,
+    "Oath siphon",
+    "Silence tithe",
+    "Renew the oathward",
+  ),
   "goblin-shieldbearer": behavior(
     "defender",
     "physical",
@@ -88,7 +218,7 @@ export const SPECIES_BEHAVIOR: Record<string, SpeciesBehavior> = {
     ["Stone hammer", "Shattering sweep"],
   ),
   broodmother: behavior(
-    "caster",
+    "summoner",
     "venom",
     11,
     "Venom bite",
@@ -138,7 +268,7 @@ export const SPECIES_BEHAVIOR: Record<string, SpeciesBehavior> = {
     ["Ashen cleave", "Furnace storm"],
   ),
   "pale-hunter": behavior(
-    "skirmisher",
+    "assassin",
     "frost",
     25,
     "Pale cut",
@@ -154,7 +284,7 @@ export const SPECIES_BEHAVIOR: Record<string, SpeciesBehavior> = {
     "Royal salute",
   ),
   "hollow-king": behavior(
-    "caster",
+    "summoner",
     "fire",
     20,
     "Hollow decree",

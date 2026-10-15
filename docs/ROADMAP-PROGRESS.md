@@ -75,9 +75,26 @@ Verification: 196 grouped checks, typecheck, lint and Android/iOS/web exports pa
 
 The 200-seed benchmark completes all 200 campaigns within twelve expeditions, with zero stalls. First-expedition median Floor 3; completed-campaign median five expeditions; mean battle length 4.75 rounds; fallen-character events 1,442; unfed checks 0; median mastery 165.5; loot Continue actions 4,560; binding actions 1,740; story choices 6,873; generic appearances 7,167; repetition violations 0; treatment cost 149,300 gold and 3,444 injured-character recovery days. Report: `verification/master-m2-campaign.json`. These aggregate simulations remain balance regression evidence, not a substitute for player feedback.
 
+## Milestone 3 — floor and route ecosystems
+
+Implemented after the combat framework checkpoint. The registry now has 44 stable species identities with floor/biome eligibility, elemental defenses and weaknesses, loot, XP and essence powers. Twenty new ranked powers extend the existing skill families with distinct status, barrier, healing or MP effects; the four route guardians have separate signature powers. Existing learned skills remain valid. Eight regular/elite route powers still share legacy families and are scheduled for the Milestone 6 build refinement.
+
+Authored compositions and move sets now cover skeleton counter lines and menders; runic wards, fragments and charged slams; spiderling waves, webs, consumption and venom storms; route-influenced Echo Revenants and mirages; frost packs whose damage falls as packmates die; burial wards and acolytes; Ashen retaliation and fire storms; the Pale Hunter's concealment and freezing pressure; royal execution marks and guards; and Hollow King phases, finite knight waves and Last Eclipse. The four Floor 6 guardians respectively use regeneration/roots, coordinated frost, furnace counters and heat, or MP pressure and finite resurrection.
+
+Broodmother phases occur at 75%, 50% and 25%. Its first wave contains two spiderlings, and killing them denies its later consumption heal. Consumed units grant no loot. Phases cannot regress when a boss heals. Late-phase Broodmother and Hollow King wards are announced before planning; full break removes the ward, allowing players to counter the prepared final attack. Devastating named slams/storms require an announced charge rather than appearing immediately after a threshold changes.
+
+All reinforcements have saved unique identities and wait until the next round. At most three enemies stand at once. Resurrection retains the casualty's original ID, spends its finite use and never creates an extra reward. Defeated eligible identities are de-duplicated into one victory receipt; every eligible monster independently retains its 30% essence chance. The bestiary records actual sightings, moves and defeats, and reveals defenses and reward information after defeating a species. Historical discoveries remain accessible in existing campaigns.
+
+New species currently reuse existing motion sheets through separate identity/art mappings. Distinct production artwork and actual device/UI verification remain outstanding; the user's UI deferral remains in force.
+
+Verification: 211 grouped checks, typecheck, lint and Android/iOS/web exports pass. Fifteen ecosystem groups cover all species/eligibility, every floor and route composition, support healing, charged runic attacks, Broodmother thresholds and denied consumption, unique route guardians, resurrection/reload, counters/concealment, execution/final phases, every new power's real MP/effects/mastery/save identity, bestiary idempotency, breakable wards, pack cooperation, meaningful healing barriers and matching defensive mastery on retaliation.
+
+The 200-seed benchmark completes 187 campaigns within its twelve-expedition cap, with zero state stalls. First-expedition median Floor 4; completed-campaign median six expeditions; mean battle length 6.65 rounds; fallen-character events 2,691; unfed checks 0; median mastery 211; loot Continue actions 5,116; binding actions 2,337; story choices 6,830; generic appearances 8,044; repetition violations 0; treatment cost 399,000 gold and 6,411 injured-character recovery days. Thirteen campaigns remain unfinished at the cap. The simulation now recognizes learned power families, prioritizes visible support units, respects heavy telegraphs and uses visible initiative/interrupt windows against counter stances. It grants no resources and uses no hidden navigation. Report: `verification/master-m3-campaign.json`.
+
+The pacing medians pass, but combat is longer and the completion tail is worse than Milestone 2. Milestone 6 equipment/build preparation and the final balance pass must revisit those costs; these aggregate results are not a claim that all party compositions are equally effective or that human playtesting is complete.
+
 ## Remaining sequence
 
-3. Remaining floor and route ecosystems.
 4. Exploration director, map presentation, shortcuts, persistent NPC placement and known-route travel.
 5. Conditional stories, rivals, authored reconciliation and tangible faction opportunities.
 6. Build/equipment synergy, crafting progression, extraction reports and modest optional goals.

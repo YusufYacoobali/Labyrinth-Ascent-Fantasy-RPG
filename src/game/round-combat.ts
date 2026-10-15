@@ -1,4 +1,8 @@
 import { resolveEnemySupport } from "./enemy-support";
+import { ECOSYSTEMS, ECOSYSTEM_GROUPS } from "./ecosystem-moves";
+import { observeMonsters, observeMove } from "./bestiary";
+import { ECOLOGY } from "./ecology";
+import { healingUseful, skillFamily } from "./essence-powers";
 import { bondedProtector } from "./relationships";
 import { goblinGroup } from "./goblin-ecosystem";
 import {
@@ -30,7 +34,13 @@ import {
 } from "./exploration";
 import { BALANCE as B } from "./balance";
 export type Archetype =
-  "skirmisher" | "bruiser" | "defender" | "caster" | "support";
+  | "skirmisher"
+  | "bruiser"
+  | "defender"
+  | "caster"
+  | "support"
+  | "assassin"
+  | "summoner";
 export interface CombatEnemy extends Enemy {
   id: string;
   behaviorId?: string;
@@ -39,6 +49,8 @@ export interface CombatEnemy extends Enemy {
   archetype: Archetype;
   stage: number;
   waves?: number;
+  usedMoves?: Record<string, number>;
+  enteredRound?: number;
 }
 export interface CombatState {
   rules?: 2;
@@ -90,10 +102,17 @@ export const effectiveSpeed = (c: Character) =>
   Math.max(
     1,
     c.speed * fatigueMultiplier(c) -
-      stacks(c.ailments.conditions, "chilled") * 2,
+      stacks(c.ailments.conditions, "chilled") * 2 -
+      stacks(c.ailments.conditions, "entangled") * 4,
   );
 export const enemySpeed = (e: CombatEnemy) =>
-  Math.max(1, e.speed - (e.slowed || 0) - stacks(e.conditions, "chilled") * 2);
+  Math.max(
+    1,
+    e.speed -
+      (e.slowed || 0) -
+      stacks(e.conditions, "chilled") * 2 -
+      stacks(e.conditions, "entangled") * 4,
+  );
 export function initiative(s: Game, actions: QueuedAction[] = []) {
   return [
     ...s.party
@@ -181,30 +200,48 @@ export function beginCombat(
     s.floor === 1 && monsterFor(s.enemy, s.floor).id === "goblin"
       ? goblinGroup(draw.roll, s.journey.defender)
       : null;
+  const native =
+    s.floor === 5 && s.journey.defender && !s.sideBattle
+      ? "revenant"
+      : monsterFor(s.enemy, s.floor).id;
+  const ecosystem = ECOSYSTEM_GROUPS[native];
+  const groupIds =
+    goblins ||
+    (ecosystem
+      ? s.journey.defender
+        ? ecosystem.portal || ecosystem.regular
+        : ecosystem.regular.slice(0, s.floor === 2 ? Math.max(2, count) : count)
+      : null);
   const enemies = Array.from(
-    { length: goblins?.length || count },
+    { length: groupIds?.length || count },
     (_, index): CombatEnemy => {
       const original = s.enemy!,
         primary = monsterFor(original, s.floor);
       const group = MIXED_GROUPS[primary.id] || [primary.id];
-      const species = goblins
-        ? MONSTERS.find((m) => m.id === goblins[index])!
+      const species = groupIds
+        ? MONSTERS.find((m) => m.id === groupIds[index])!
         : original.boss || index === 0
           ? primary
           : MONSTERS.find((m) => m.id === group[index % group.length]) ||
             primary;
       const profile = SPECIES_BEHAVIOR[species.id];
       const base =
-        index === 0 && !goblins
+        index === 0 && !goblins && species.id === primary.id
           ? original
           : {
               ...original,
               species: species.id,
               name: species.name,
-              element: profile?.element || original.element,
+              element:
+                species.id === "revenant" && s.route
+                  ? original.element
+                  : profile?.element || original.element,
             };
+      const boss =
+        (index === 0 && original.boss && species.id === native) ||
+        (s.journey.defender && species.id === "broodmother");
       const hp = Math.round(
-        (base.boss
+        (boss
           ? B.bossHp[0] + s.floor * B.bossHp[1]
           : B.normalHp[0] + s.floor * B.normalHp[1]) *
           (1 + B.partyHpScale * (s.party.length - 1)) *
@@ -216,23 +253,33 @@ export function beginCombat(
         name: base.name,
         behaviorId: species.id,
         hp: Math.round(
-          hp * (goblins && species.id !== "goblin" ? B.goblins.minionHp : 1),
+          hp *
+            (goblins && species.id !== "goblin"
+              ? B.goblins.minionHp
+              : ECOLOGY[species.id]?.hp || 1),
         ),
         maxHp: Math.round(
-          hp * (goblins && species.id !== "goblin" ? B.goblins.minionHp : 1),
+          hp *
+            (goblins && species.id !== "goblin"
+              ? B.goblins.minionHp
+              : ECOLOGY[species.id]?.hp || 1),
         ),
         atk: Math.round(
-          base.boss
-            ? B.bossAttack[0] + s.floor * B.bossAttack[1]
+          boss
+            ? (B.bossAttack[0] + s.floor * B.bossAttack[1]) *
+                (ECOLOGY[species.id]?.attack || 1)
             : (B.enemyAttack[0] + s.floor * B.enemyAttack[1]) *
                 (goblins && species.id !== "goblin"
                   ? B.goblins.minionAttack
-                  : 1),
+                  : ECOLOGY[species.id]?.attack || 1),
         ),
         level: s.floor,
         speed: profile?.speed || 10,
         archetype: profile?.role || "skirmisher",
         stage: 0,
+        boss,
+        resistances: ECOLOGY[species.id]?.resistances,
+        weaknesses: ECOLOGY[species.id]?.weaknesses,
         poison: 0,
         paralysis: 0,
         broken: 0,
@@ -257,6 +304,7 @@ export function beginCombat(
   return {
     ...s,
     combat,
+    bestiary: observeMonsters(s.bestiary, enemies),
     enemy: enemies[0],
     rng: { ...s.rng, encounters: draw.seed },
     turn: 1,
@@ -421,7 +469,7 @@ export function validateQueue(s: Game, a: RoundRequest): string {
       return "Taunt guards its own actor.";
     if (
       ["attack", "burst"].includes(q.kind) ||
-      (q.kind === "skill" && q.skill !== "Second Wind")
+      (q.kind === "skill" && skillFamily(q.skill) !== "Second Wind")
     )
       if (!combat.enemies.some((e) => e.id === q.target && e.hp > 0))
         return "Select a living enemy.";
@@ -471,8 +519,16 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
     text: string,
     kind: string,
     action?: QueuedAction,
-  ) =>
-    events.push({
+  ) => {
+    const foe = next.combat?.enemies.find((e) => e.id === actor);
+    if (
+      foe &&
+      !["interrupt", "cancel", "phase", "round", "status", "recover"].includes(
+        kind,
+      )
+    )
+      next = observeMove(next, foe.species, intents[actor]?.label || text);
+    return events.push({
       action,
       id: `${combat.id}:${combat.round}:${events.length}`,
       actor,
@@ -483,6 +539,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
       enemies: next.combat!.enemies.map((e) => ({ ...e })),
       effects: { ...next.effects },
     });
+  };
   const intents = Object.fromEntries(
     combat.enemies
       .filter((e) => e.hp > 0)
@@ -516,6 +573,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
     if (entry.enemy) {
       const enemy = next.combat!.enemies.find((e) => e.id === entry.id)!;
       if (!enemy || enemy.hp <= 0) continue;
+      if (enemy.enteredRound === combat.round) continue;
       if (
         enemy.broken ||
         enemy.paralysis ||
@@ -545,7 +603,12 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
         };
       const support = resolveEnemySupport(next, enemy.id, intent);
       if (support) {
+        const prior = new Set(next.combat!.enemies.map((e) => e.id));
         next = support.state;
+        next.bestiary = observeMonsters(
+          next.bestiary,
+          next.combat!.enemies.filter((e) => !prior.has(e.id)),
+        );
         emit(enemy.id, support.target, support.text, support.kind);
         continue;
       }
@@ -633,6 +696,8 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
             intent.status,
             combat.round,
           );
+        if (intent.drain && !guards.has(id))
+          target.mp = Math.max(0, target.mp - intent.drain);
         const ward: Skill =
           enemy.element === "fire"
             ? "Ember Ward"
@@ -719,6 +784,11 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
       }
       enemy.charged = false;
       enemy.weakened = 0;
+      if (intent.move)
+        enemy.usedMoves = {
+          ...enemy.usedMoves,
+          [intent.move]: (enemy.usedMoves?.[intent.move] || 0) + 1,
+        };
       continue;
     }
     const actor = next.party.find((c) => c.id === entry.id)!;
@@ -846,17 +916,8 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
     if (!foe) continue;
     if (
       q.kind === "skill" &&
-      q.skill === "Second Wind" &&
-      !next.party.some(
-        (c) =>
-          c.hp > 0 &&
-          (c.hp < c.maxHp ||
-            c.ailments.poison > 0 ||
-            (skillRank(actor, "Second Wind") >= 2 &&
-              Object.keys(c.ailments.conditions || {}).length > 0) ||
-            (skillRank(actor, "Second Wind") === 3 &&
-              (c.ailments.barrier || 0) < c.maxHp * 0.1)),
-      )
+      skillFamily(q.skill) === "Second Wind" &&
+      !healingUseful(next.party, actor, q.skill!)
     ) {
       emit(
         actor.id,
@@ -888,13 +949,14 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
             e.id === cover.protector && e.hp > 0 && !e.broken && !e.paralysis,
         );
     if (cover && protector && next.effects.damage > 0) {
+      const hpDamage = next.effects.damage - (next.effects.absorbed || 0);
       const prevented = Math.min(
-        next.effects.damage,
-        Math.round(next.effects.damage * cover.fraction),
+        hpDamage,
+        Math.round(hpDamage * cover.fraction),
       );
       next.enemy = {
         ...next.enemy!,
-        hp: Math.max(0, foe.hp - (next.effects.damage - prevented)),
+        hp: Math.max(0, foe.hp - (hpDamage - prevented)),
       };
       next.effects = {
         ...next.effects,
@@ -917,10 +979,107 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
     emit(
       actor.id,
       foe.id,
-      `${actor.name}: ${q.kind === "skill" ? q.skill : q.kind} → ${foe.name}, ${next.effects.damage} damage.`,
+      `${actor.name}: ${q.kind === "skill" ? q.skill : q.kind} → ${foe.name}, ${next.effects.damage} damage${next.effects.absorbed ? ` (${next.effects.absorbed} absorbed by its ward)` : ""}.`,
       q.kind,
       q,
     );
+    const reacting = next.combat.enemies.find((e) => e.id === foe.id);
+    const attackElement =
+      q.kind === "skill"
+        ? SKILLS.find((k) => k.name === q.skill)?.element ||
+          (q.skill === "Venom Fang"
+            ? "venom"
+            : q.skill === "Crown Pulse"
+              ? "fire"
+              : "physical")
+        : "physical";
+    if (
+      reacting &&
+      reacting.hp > 0 &&
+      reacting.counter?.turns &&
+      !reacting.broken &&
+      !reacting.paralysis &&
+      next.effects.damage > 0 &&
+      attackElement === "physical"
+    ) {
+      const victim = next.party.find((c) => c.id === actor.id)!;
+      const beforeCounter = next,
+        protection = bondedProtector(next, victim.id, supportUsed);
+      if (protection) supportUsed.add(protection.id);
+      const ward: Skill =
+        reacting.counter.element === "fire"
+          ? "Ember Ward"
+          : reacting.counter.element === "frost"
+            ? "Winter Veil"
+            : reacting.counter.element === "venom"
+              ? "Toxic Adaptation"
+              : "Grave Guard";
+      const raw = Math.round(
+        reacting.atk *
+          reacting.counter.power *
+          (1 - resist(victim, reacting.counter.element) / 100) *
+          (protection ? 1 - B.bondedProtection : 1) *
+          (guards.has(victim.id) ? 0.5 : 1),
+      );
+      const barrier = victim.ailments.barrier || 0,
+        hit = Math.max(0, raw - barrier);
+      next = {
+        ...next,
+        party: next.party.map((c) =>
+          c.id === victim.id
+            ? {
+                ...c,
+                hp:
+                  c.hp > hit
+                    ? Math.min(
+                        c.maxHp,
+                        c.hp -
+                          hit +
+                          (c.skills.includes(ward) && skillRank(c, ward) >= 2
+                            ? 5
+                            : 0),
+                      )
+                    : 0,
+                mp:
+                  c.hp > hit &&
+                  c.skills.includes(ward) &&
+                  skillRank(c, ward) === 3
+                    ? Math.min(c.maxMp, c.mp + 3)
+                    : c.mp,
+                ailments: {
+                  ...c.ailments,
+                  barrier: Math.max(0, barrier - raw),
+                },
+              }
+            : c,
+        ),
+        effects: {
+          ...next.effects,
+          damage: 0,
+          enemyDamage: hit,
+          strikes: {},
+          targets: { [victim.id]: hit },
+          protection:
+            barrier > 0 && victim.ailments.candleOwner
+              ? { [victim.ailments.candleOwner]: Math.min(barrier, raw) }
+              : {},
+        },
+      };
+      next = earnMastery(
+        next,
+        {
+          ...beforeCounter,
+          enemy: { ...reacting, element: reacting.counter.element },
+        },
+        reacting.id,
+      );
+      emit(
+        reacting.id,
+        victim.id,
+        `${reacting.name} retaliates: ${hit} ${reacting.counter.element} damage to ${victim.name}.`,
+        "strike",
+      );
+    }
   }
   // Status durations and cooldowns advance exactly once after the complete initiative queue.
   const beforeTicks =
@@ -967,7 +1126,12 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
   next.combat!.enemies = next.combat!.enemies.map((e) => {
     const original = combat.enemies.find((o) => o.id === e.id) || e;
     let hp = e.hp;
-    const tick = tickConditions(e.conditions, combat.round, e.maxHp);
+    const tick = tickConditions(
+      e.conditions,
+      combat.round,
+      e.maxHp,
+      (element) => e.resistances?.[element] || 0,
+    );
     hp = Math.max(0, hp - tick.damage);
     if (hp > 0 && e.poison)
       hp = Math.max(
@@ -978,6 +1142,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
               0.06 *
               (e.boss ? 0.5 : 1) *
               (e.poisonPower || 1) *
+              (1 - (e.resistances?.venom || 0) / 100) *
               (next.party.some(
                 (c) =>
                   c.hp > 0 && c.traitRevealed && c.trait === "Venom Savant",
@@ -986,22 +1151,34 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
                 : 1),
           ),
       );
-    const stage = e.boss
-      ? s.floor === 12
-        ? hp / e.maxHp <= 0.33
-          ? 2
-          : hp / e.maxHp <= 0.66
+    const computedStage = ECOSYSTEMS[e.behaviorId || ""]?.thresholds
+      ? ECOSYSTEMS[e.behaviorId!]!.thresholds!.filter(
+          (threshold) => hp / e.maxHp <= threshold,
+        ).length
+      : e.boss
+        ? s.floor === 12
+          ? hp / e.maxHp <= 0.33
+            ? 2
+            : hp / e.maxHp <= 0.66
+              ? 1
+              : 0
+          : hp / e.maxHp <= 0.5
             ? 1
             : 0
-        : hp / e.maxHp <= 0.5
-          ? 1
-          : 0
-      : 0;
+        : 0;
+    const stage = Math.max(e.stage, computedStage);
+    const phaseShield =
+      stage > e.stage
+        ? Math.round(
+            e.maxHp *
+              (ECOSYSTEMS[e.behaviorId || ""]?.phaseWards?.[stage] || 0),
+          )
+        : 0;
     if (stage > e.stage && hp > 0)
       emit(
         e.id,
         "",
-        `${e.name} changes phase. New intents will be announced before the next round.`,
+        `${e.name} changes phase.${phaseShield ? ` A breakable ward absorbs ${phaseShield} damage; a full break removes it.` : ""} New intents will be announced before the next round.`,
         "phase",
       );
     const broken = Math.max(0, e.broken - 1);
@@ -1009,7 +1186,13 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
       ...e,
       hp,
       stage,
+      shield: Math.max(e.shield || 0, phaseShield),
       conditions: tick.conditions,
+      concealed: e.broken ? 0 : Math.max(0, (e.concealed || 0) - 1),
+      counter:
+        e.counter && e.counter.turns > 1
+          ? { ...e.counter, turns: e.counter.turns - 1 }
+          : undefined,
       moveCooldowns: Object.fromEntries(
         Object.entries(e.moveCooldowns || {}).map(([id, n]) => [
           id,

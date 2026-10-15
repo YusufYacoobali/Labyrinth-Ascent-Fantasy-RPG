@@ -27,6 +27,10 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  ecology: load("src/game/ecology.ts"),
+  ecosystems: load("src/game/ecosystem-moves.ts"),
+  support: load("src/game/enemy-support.ts"),
+  powers: load("src/game/essence-powers.ts"),
   status: load("src/game/combat-status.ts"),
   commands: load("src/game/combat-commands.ts"),
   moves: load("src/game/enemy-moves.ts"),

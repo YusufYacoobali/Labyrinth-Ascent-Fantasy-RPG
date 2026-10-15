@@ -1,4 +1,6 @@
 import { SKILL_IDS, type SkillId } from "./skill-ids";
+import { ESSENCE_POWERS } from "./essence-powers";
+import type { StatusId } from "./combat-status";
 import type { Character, Skill } from "./engine";
 import { ITEMS, type Element } from "./world";
 import { skillRank } from "./progression";
@@ -11,6 +13,11 @@ export const SKILLS: {
   passive?: boolean;
   cooldown?: number;
   color: string;
+  family?: Skill;
+  element?: Element;
+  status?: StatusId;
+  barrier?: number;
+  mpGain?: number;
 }[] = [
   {
     id: SKILL_IDS["Candle Ward"],
@@ -166,6 +173,15 @@ export const SKILLS: {
 ];
 export const skillId = (skill: Skill) =>
   skill.toLowerCase().replaceAll(" ", "-");
+SKILLS.push(
+  ...ESSENCE_POWERS.map((power) => ({
+    ...power,
+    id: SKILL_IDS[power.name],
+    icon: "creation",
+    description: power.detail,
+    color: "#9fcde0",
+  })),
+);
 export const SKILL_RANKS = Object.fromEntries(
   SKILLS.map((s) => [
     s.name,
@@ -220,6 +236,11 @@ export const SKILL_RANKS = Object.fromEntries(
     ],
   ]),
 ) as Record<Skill, [string, string, string]>;
+for (const p of ESSENCE_POWERS)
+  for (const rank of [2, 3] as const) {
+    SKILL_RANKS[p.name][rank - 1] =
+      `${SKILL_RANKS[p.family][rank - 1]} ${p.status ? `Also applies ${p.status}. ` : ""}${p.barrier ? `Signature barrier: ${Math.round(p.barrier * (1 + (rank - 1) * 0.1))} HP. ` : ""}${p.mpGain ? `Returns ${p.mpGain} MP on hit.` : ""}`;
+  }
 export function resist(c: Character, element: Element): number {
   let n = c.refinements?.[element] ? 10 : 0;
   for (const id of c.equipment) {

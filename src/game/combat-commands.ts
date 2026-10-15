@@ -4,6 +4,7 @@ import { SKILLS } from "./combat-data";
 import { impeded } from "./combat-status";
 import { fatigueMultiplier } from "./exhaustion";
 import { resolveBattle } from "./battle";
+import { ECOSYSTEMS } from "./ecosystem-moves";
 export const formationOf = (c: Character) =>
   c.formation || (/mage|ranger|archer|warden/i.test(c.job) ? "back" : "front");
 export function repeatCommands(s: Game): QueuedAction[] {
@@ -33,6 +34,17 @@ export function repeatCommands(s: Game): QueuedAction[] {
 }
 export function canAutoResolve(s: Game) {
   const enemies = s.combat?.enemies.filter((e) => e.hp > 0) || [];
+  if (
+    enemies.some(
+      (e) =>
+        ECOSYSTEMS[e.behaviorId || ""]?.triggers?.some((t) =>
+          ["space", "corpse", "minion"].includes(t.requires || ""),
+        ) ||
+        e.counter?.turns ||
+        e.concealed,
+    )
+  )
+    return false;
   if (
     s.phase !== "combat" ||
     !s.combat ||

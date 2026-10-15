@@ -1,3 +1,4 @@
+import { Bestiary } from "@/components/bestiary";
 import { StoryChronicle } from "@/components/story-journal";
 import React, { useState } from "react";
 import { View, Pressable, TextInput } from "react-native";
@@ -219,46 +220,7 @@ export function JournalScreen() {
             </>
           ) : tab === "Bestiary" ? (
             <>
-              {FLOORS.filter(
-                (floor) => floor.id <= Math.max(1, state.bestFloor + 1),
-              ).map((floor) => (
-                <Surface
-                  key={floor.id}
-                  style={{
-                    padding: 11,
-                    flexDirection: "row",
-                    gap: 13,
-                    alignItems: "center",
-                  }}
-                >
-                  <Atlas
-                    sprite
-                    index={floor.sprite}
-                    size={62}
-                    enemyFloor={floor.id}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Copy title style={{ fontSize: 19 }}>
-                      {floor.id <= state.bestFloor
-                        ? floor.enemy
-                        : "Unknown creature"}
-                    </Copy>
-                    <Copy muted style={{ fontSize: 12 }}>
-                      {floor.id <= state.bestFloor
-                        ? "Floor " + floor.id + " · " + floor.element
-                        : "Defeat it on Floor " + floor.id}
-                    </Copy>
-                    {floor.id <= state.bestFloor && (
-                      <Copy style={{ fontSize: 12, color: t.color.gold }}>
-                        {floor.intent}
-                      </Copy>
-                    )}
-                  </View>
-                  {floor.id > state.bestFloor && (
-                    <Icon name="lock-outline" size={19} />
-                  )}
-                </Surface>
-              ))}
+              <Bestiary />
             </>
           ) : (
             <>

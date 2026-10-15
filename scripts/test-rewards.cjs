@@ -85,7 +85,7 @@ function extract(s) {
   );
 }
 test("Registry covers fourteen unique species and powers with real item and visual identities", () => {
-  assert.equal(m.MONSTERS.length, 28);
+  assert.equal(m.MONSTERS.length, 44);
   for (const key of ["id", "skill", "visual"])
     assert.equal(new Set(m.MONSTERS.slice(0, 14).map((x) => x[key])).size, 14);
   for (const spec of m.MONSTERS) {

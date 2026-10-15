@@ -1,5 +1,6 @@
 import type { Game } from "./engine";
 import { BALANCE as B } from "./balance";
+import { impeded } from "./combat-status";
 export const pairBond = (s: Game, a: string, b: string) =>
   s.stories.pairs[[a, b].sort().join(":")] || 0;
 export function bondedProtector(s: Game, target: string, used: Set<string>) {
@@ -7,7 +8,7 @@ export function bondedProtector(s: Game, target: string, used: Set<string>) {
     (c) =>
       c.id !== target &&
       c.hp > 0 &&
-      !c.ailments.paralysis &&
+      !impeded(c) &&
       !used.has(c.id) &&
       pairBond(s, c.id, target) >= 2,
   );

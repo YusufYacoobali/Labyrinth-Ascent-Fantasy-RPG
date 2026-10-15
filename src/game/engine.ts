@@ -1,5 +1,6 @@
 import { trainingLimit, trainingXp, temperingOffer } from "./town-progression";
 import { canAutoResolve } from "./combat-commands";
+import { recordDefeats, type Bestiary } from "./bestiary";
 import type { Conditions } from "./combat-status";
 import { deserializeSave } from "./skill-ids";
 import { BALANCE as B } from "./balance";
@@ -104,23 +105,7 @@ export type Phase =
   | "camp"
   | "extraction"
   | "nag";
-export type Skill =
-  | "Arcane Bolt"
-  | "Shield Bash"
-  | "Second Wind"
-  | "Inspiring Presence"
-  | "Venom Fang"
-  | "Nerve Lock"
-  | "Twin Strike"
-  | "Candle Ward"
-  | "Sling Shot"
-  | "Ember Ward"
-  | "Winter Veil"
-  | "Toxic Adaptation"
-  | "Grave Guard"
-  | "Sunder"
-  | "Crown Pulse"
-  | "Scavenge";
+export type Skill = import("./skill-ids").SkillName;
 export interface Ailments {
   conditions?: Conditions;
   poison: number;
@@ -162,6 +147,12 @@ export interface Character {
   cooldowns: Partial<Record<Skill, number>>;
 }
 export interface Enemy {
+  shield?: number;
+  resistances?: Partial<Record<Element, number>>;
+  weaknesses?: Element[];
+  concealed?: number;
+  counter?: { element: Element; power: number; turns: number };
+  rewardEligible?: boolean;
   conditions?: Conditions;
   moveCooldowns?: Record<string, number>;
   level?: number;
@@ -196,6 +187,7 @@ export interface Rapport {
   reply: string;
 }
 export interface BattleEffect {
+  absorbed?: number;
   protection?: Record<string, number>;
   id: number;
   damage: number;
@@ -211,6 +203,7 @@ export interface BattleEffect {
   broken: boolean;
 }
 export interface Game {
+  bestiary?: Bestiary;
   combatSpeed?: "normal" | "fast";
   version: 2;
   rulesVersion: 4;
@@ -912,7 +905,7 @@ function battleWon(
     ? [
         ...new Map(
           [...(s.combat.defeated || []), ...s.combat.enemies]
-            .filter((foe) => foe.hp <= 0)
+            .filter((foe) => foe.hp <= 0 && foe.rewardEligible !== false)
             .map((foe) => [foe.id, foe]),
         ).values(),
       ]
@@ -948,6 +941,7 @@ function battleWon(
     {
       ...s,
       party: nextParty,
+      bestiary: recordDefeats(s.bestiary, defeated),
       gold: s.gold + gold,
       kills: s.kills + defeated.length,
       runKills: s.runKills + defeated.length,

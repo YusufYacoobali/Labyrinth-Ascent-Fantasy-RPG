@@ -20,6 +20,7 @@ import {
   type QueuedAction,
 } from "@/game/round-combat";
 import { SKILLS } from "@/game/combat-data";
+import { skillFamily } from "@/game/essence-powers";
 import { Bar, Button, Copy, Eyebrow, Panel } from "./game-ui";
 import CombatStage from "./combat-stage";
 import { Reveal } from "./combat-motion";
@@ -68,6 +69,11 @@ export default function TacticalCombat() {
         "recover",
         "summon",
         "status",
+        "counter",
+        "veil",
+        "mark",
+        "consume",
+        "revive",
       ].includes(frame.kind)
     )
       return null;
@@ -193,9 +199,10 @@ export default function TacticalCombat() {
           <Copy>
             Weakened: −20% damage for two rounds. Fractured: −10% armor per
             stack, up to three, for three rounds. Exposed: +15% incoming damage
-            for two rounds. Reapplying refreshes duration. Antidote clears
-            venom, chill and freeze; bandages clear bleeding; mastered healing
-            cleanses ailments. Matching mastered wards prevent their ailments.
+            for two rounds. Entangled: −4 speed for two rounds. Reapplying
+            refreshes duration. Antidote clears venom, chill and freeze;
+            bandages clear bleeding and entanglement; mastered healing cleanses
+            ailments. Matching mastered wards prevent their ailments.
           </Copy>
         </Panel>
       )}
@@ -235,6 +242,22 @@ export default function TacticalCombat() {
             <Copy style={{ fontSize: 11 }}>
               {enemy.hp}/{enemy.maxHp} HP · {enemy.archetype}
             </Copy>
+            {!!enemy.shield && (
+              <Copy muted style={{ fontSize: 11 }}>
+                Ward {enemy.shield} · full break shatters it.
+              </Copy>
+            )}
+            {!!enemy.concealed && (
+              <Copy muted style={{ fontSize: 11 }}>
+                Concealed: 35% less damage. Break or expose to reveal.
+              </Copy>
+            )}
+            {!!enemy.counter?.turns && (
+              <Copy muted style={{ fontSize: 11 }}>
+                {enemy.counter.element} counter: physical hits trigger
+                retaliation for {enemy.counter.turns} rounds.
+              </Copy>
+            )}
             {!!conditionText(enemy.conditions) && (
               <Copy muted style={{ fontSize: 11 }}>
                 {conditionText(enemy.conditions)}
@@ -376,7 +399,7 @@ export default function TacticalCombat() {
               {q &&
                 q.kind !== "focus" &&
                 q.kind !== "taunt" &&
-                q.skill !== "Second Wind" && (
+                skillFamily(q.skill) !== "Second Wind" && (
                   <>
                     <Copy muted>Target</Copy>
                     {(friendly
@@ -398,7 +421,7 @@ export default function TacticalCombat() {
                     ))}
                   </>
                 )}
-              {q?.skill === "Second Wind" && (
+              {skillFamily(q?.skill) === "Second Wind" && (
                 <Copy muted>Group healing: all standing allies.</Copy>
               )}
               {!!commandPreview(source, q) && (

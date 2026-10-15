@@ -2,6 +2,7 @@ import type { Character } from "./engine";
 import { skillRank } from "./progression";
 import type { Element } from "./world";
 export const STATUS_RULES = {
+  entangled: { max: 1, turns: 2, dot: 0, element: "venom", cleanse: "bandage" },
   bleeding: {
     max: 3,
     turns: 3,

@@ -11,6 +11,7 @@ const {
   monsters: m,
   townProgression: tp,
   status,
+  powers,
 } = require("./engine-loader.cjs");
 const events = {
   1: "leave",
@@ -41,7 +42,11 @@ function combatQueue(s) {
     actions = [];
   for (const c of ready) {
     const target = [...foes].sort(
-        (a, b) => a.hp - b.hp || a.id.localeCompare(b.id),
+        (a, b) =>
+          Number(b.archetype === "support") -
+            Number(a.archetype === "support") ||
+          a.hp - b.hp ||
+          a.id.localeCompare(b.id),
       )[0],
       low = [...living]
         .filter((c) => !plannedHeals.has(c.id))
@@ -51,13 +56,14 @@ function combatQueue(s) {
       .filter(
         (s) => s && !s.passive && c.mp >= s.cost && !(c.cooldowns[s.name] > 0),
       );
-    const can = (name) => skills.some((s) => s.name === name);
+    const can = (name) =>
+      skills.find((s) => powers.skillFamily(s.name) === name);
     let q = { actor: c.id, kind: "attack", target: target.id };
     if (
       can("Second Wind") &&
       living.filter((c) => c.hp < c.maxHp * 0.7).length >= 2
     ) {
-      q = { ...q, kind: "skill", skill: "Second Wind" };
+      q = { ...q, kind: "skill", skill: can("Second Wind").name };
       for (const ally of living) plannedHeals.add(ally.id);
     } else if (low && low.hp < low.maxHp * 0.45 && (greater || potions)) {
       const item = greater ? "greater-potion" : "potion";
@@ -81,8 +87,7 @@ function combatQueue(s) {
           intent.kind === "strike" &&
           intent.power > 1 &&
           intent.targets.includes(c.id),
-      ) &&
-      c.hp < c.maxHp * 0.85
+      )
     )
       q = { actor: c.id, kind: "guard", target: c.id };
     else if (
@@ -97,7 +102,7 @@ function combatQueue(s) {
       momentum -= 2;
       q = { ...q, kind: "burst" };
     } else if (can("Venom Fang") && !target.poison && target.hp > c.atk * 3)
-      q = { ...q, kind: "skill", skill: "Venom Fang" };
+      q = { ...q, kind: "skill", skill: can("Venom Fang").name };
     else {
       const skill = skills.find((s) =>
         [
@@ -108,13 +113,42 @@ function combatQueue(s) {
           "Shield Bash",
           "Nerve Lock",
           "Scavenge",
-        ].includes(s.name),
+          "Sling Shot",
+        ].includes(powers.skillFamily(s.name)),
       );
       if (skill) q = { ...q, kind: "skill", skill: skill.name };
       else if (c.mp < 14 && ether) {
         ether--;
         q = { actor: c.id, kind: "item", item: "ether", target: c.id };
       }
+    }
+    if (
+      (target.counter?.turns ||
+        (intents[foes.indexOf(target)]?.kind === "counter" &&
+          r.effectiveSpeed(c) <= r.enemySpeed(target))) &&
+      ["attack", "burst", "skill"].includes(q.kind) &&
+      powers.skillFamily(q.skill) !== "Second Wind" &&
+      !(
+        target.controlWard === 0 &&
+        ((q.kind === "burst" && target.poise <= 50) ||
+          ["Shield Bash", "Nerve Lock"].includes(powers.skillFamily(q.skill)))
+      )
+    ) {
+      if (q.kind === "burst") momentum += 2;
+      const elemental = skills.find(
+        (k) =>
+          (k.element && k.element !== "physical") ||
+          powers.skillFamily(k.name) === "Venom Fang" ||
+          powers.skillFamily(k.name) === "Crown Pulse",
+      );
+      q = elemental
+        ? {
+            actor: c.id,
+            kind: "skill",
+            skill: elemental.name,
+            target: target.id,
+          }
+        : { actor: c.id, kind: "focus" };
     }
     actions.push(q);
   }

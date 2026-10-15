@@ -1,4 +1,5 @@
 import type { CombatState } from "./round-combat";
+import { healingUseful, skillFamily } from "./essence-powers";
 import type { GenericRecord } from "./generic-stories";
 import { MONSTERS, essenceId } from "./monsters";
 import type { Action, Character, Game, Skill, LootReceipt } from "./engine";
@@ -196,19 +197,9 @@ export function earnMastery(
       };
       if (c.id === actorId && skill) {
         const useful =
-          skill === "Second Wind"
-            ? before.party.some(
-                (p) =>
-                  p.hp > 0 &&
-                  (p.hp < p.maxHp ||
-                    (skillRank(old, skill) >= 2 &&
-                      Object.keys(p.ailments.conditions || {}).length > 0) ||
-                    (p.ailments.poison > 0 &&
-                      (p.id === actorId || skillRank(old, skill) >= 2)) ||
-                    (skillRank(old, skill) === 3 &&
-                      (p.ailments.barrier || 0) < Math.round(p.maxHp * 0.1))),
-              )
-            : skill === "Scavenge"
+          skillFamily(skill) === "Second Wind"
+            ? healingUseful(before.party, old, skill)
+            : skillFamily(skill) === "Scavenge"
               ? s.effects.damage > 0 || c.hp > old.hp
               : s.effects.damage > 0 || s.effects.stunned;
         if (useful) add(skill, 3);

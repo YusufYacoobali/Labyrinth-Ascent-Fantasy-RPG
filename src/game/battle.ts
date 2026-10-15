@@ -1,5 +1,5 @@
 import { fatigueMultiplier } from "./exhaustion";
-import { cleanse, stacks } from "./combat-status";
+import { applyCondition, cleanse, stacks } from "./combat-status";
 import { SKILLS, resist } from "./combat-data";
 import { earnMastery, potency, skillRank } from "./progression";
 import type { Action, BattleEffect, Character, Enemy, Game } from "./engine";
@@ -140,6 +140,7 @@ export function resolveBattle(
     a.skill ||
     actor.skills.find((k) => !SKILLS.find((x) => x.name === k)?.passive);
   const spec = SKILLS.find((x) => x.name === skill);
+  const family = spec?.family || skill;
   const rank = skill ? skillRank(actor, skill) : 1;
   const power = skill ? potency(actor, skill) : 1;
   const reject = (message: string) => ({ ...s, message });
@@ -185,6 +186,7 @@ export function resolveBattle(
     inventory = { ...s.inventory },
     momentum = s.momentum;
   let damage = 0,
+    absorbed = 0,
     poisonDamage = 0,
     critical = false,
     broken = false,
@@ -259,23 +261,23 @@ export function resolveBattle(
         return { ...c, mp: Math.min(c.maxMp, c.mp + 20) };
       const cast = a.kind === "skill" && c.id === actor.id;
       let mult = cast
-        ? skill === "Twin Strike"
+        ? family === "Twin Strike"
           ? 2
-          : skill === "Shield Bash"
+          : family === "Shield Bash"
             ? 1.4
-            : skill === "Nerve Lock"
+            : family === "Nerve Lock"
               ? 1.1
-              : skill === "Arcane Bolt"
+              : family === "Arcane Bolt"
                 ? 1.65
-                : skill === "Second Wind"
+                : family === "Second Wind"
                   ? 0
-                  : skill === "Sunder"
+                  : family === "Sunder"
                     ? 1.45
-                    : skill === "Crown Pulse"
+                    : family === "Crown Pulse"
                       ? 1.35
-                      : skill === "Sling Shot"
+                      : family === "Sling Shot"
                         ? 1.1
-                        : skill === "Scavenge"
+                        : family === "Scavenge"
                           ? 0.85
                           : 1
         : a.kind === "burst"
@@ -304,18 +306,37 @@ export function resolveBattle(
         critical = true;
       }
       const armor =
-        enemy.broken > 0 || (cast && skill === "Arcane Bolt")
+        enemy.broken > 0 || (cast && family === "Arcane Bolt")
           ? 0
           : enemy.guard *
             (1 - stacks(enemy.conditions, "fractured") * 0.1) *
-            (cast && skill === "Sling Shot" ? 0.5 : 1) *
+            (cast && family === "Sling Shot" ? 0.5 : 1) *
             (c.traitRevealed && c.trait === "Moon Sight" ? 0.5 : 1);
+      const element = cast
+        ? spec?.element ||
+          (family === "Venom Fang"
+            ? "venom"
+            : family === "Crown Pulse"
+              ? "fire"
+              : "physical")
+        : "physical";
+      const elementPower =
+        (1 - (enemy.resistances?.[element] || 0) / 100) *
+        (enemy.weaknesses?.includes(element) ? 1.2 : 1);
       const hit =
         mult > 0
           ? Math.max(
               2,
               Math.round(
-                c.atk * fatigueMultiplier(c) * mult * inspire * opening - armor,
+                (c.atk * fatigueMultiplier(c) * mult * inspire * opening -
+                  armor) *
+                  elementPower *
+                  (enemy.concealed &&
+                  !enemy.broken &&
+                  !enemy.vulnerable &&
+                  !stacks(enemy.conditions, "exposed")
+                    ? 0.65
+                    : 1),
               ),
             )
           : 0;
@@ -329,22 +350,43 @@ export function resolveBattle(
         };
       if (!cast) return c;
       logs.push(`${c.name} uses ${skill}.`);
-      if (skill === "Venom Fang") {
+      if (
+        spec?.status &&
+        !(enemy.controlWard && ["chilled", "entangled"].includes(spec.status))
+      )
+        enemy.conditions = applyCondition(
+          enemy.conditions,
+          spec.status,
+          s.combat?.round || s.turn,
+        );
+      if (spec?.barrier && family !== "Second Wind")
+        c = {
+          ...c,
+          ailments: {
+            ...c.ailments,
+            barrier: Math.max(
+              c.ailments.barrier || 0,
+              Math.round(spec.barrier * power),
+            ),
+            candleOwner: undefined,
+          },
+        };
+      if (family === "Venom Fang") {
         enemy.poison = 3;
         enemy.poisonPower = power;
       }
-      if ((skill === "Shield Bash" || skill === "Nerve Lock") && rank >= 2)
+      if ((family === "Shield Bash" || family === "Nerve Lock") && rank >= 2)
         enemy.weakened = rank === 3 ? 0.2 : 0.1;
       if (
         singleActor &&
-        (skill === "Shield Bash" || skill === "Nerve Lock") &&
+        (family === "Shield Bash" || family === "Nerve Lock") &&
         rank >= 2
       ) {
         enemy.slowed = rank;
         enemy.slowTurns = 3;
       }
-      if (skill === "Sunder") enemy.weakened = 0.1 + (rank - 1) * 0.05;
-      if (skill === "Sling Shot") enemy.weakened = 0.1 + (rank - 1) * 0.05;
+      if (family === "Sunder") enemy.weakened = 0.1 + (rank - 1) * 0.05;
+      if (family === "Sling Shot") enemy.weakened = 0.1 + (rank - 1) * 0.05;
       if (
         rank === 3 &&
         ![
@@ -353,26 +395,28 @@ export function resolveBattle(
           "Scavenge",
           "Shield Bash",
           "Nerve Lock",
-        ].includes(skill!)
+        ].includes(family!)
       )
         enemy.vulnerable = 3;
       const interrupt =
         enemy.controlWard === 0 &&
-        ((skill === "Nerve Lock" && (enemy.boss ? roll < 0.5 : true)) ||
-          (skill === "Shield Bash" && roll < (enemy.boss ? 0.3 : 0.55)) ||
-          (skill === "Twin Strike" && roll < (enemy.boss ? 0.1 : 0.25)));
+        ((family === "Nerve Lock" && (enemy.boss ? roll < 0.5 : true)) ||
+          (family === "Shield Bash" && roll < (enemy.boss ? 0.3 : 0.55)) ||
+          (family === "Twin Strike" && roll < (enemy.boss ? 0.1 : 0.25)));
       if (interrupt) enemy.paralysis = 1;
       return {
         ...c,
-        mp: c.mp - spec!.cost,
+        mp: spec?.mpGain
+          ? Math.min(c.maxMp, c.mp - spec.cost + spec.mpGain)
+          : c.mp - spec!.cost,
         cooldowns: { ...c.cooldowns, [skill!]: spec!.cooldown || 0 },
         ailments:
-          skill === "Second Wind" ? { poison: 0, paralysis: 0 } : c.ailments,
+          family === "Second Wind" ? { poison: 0, paralysis: 0 } : c.ailments,
       };
     });
     if (
       a.kind === "skill" &&
-      (skill === "Second Wind" || skill === "Crown Pulse")
+      (family === "Second Wind" || family === "Crown Pulse")
     )
       party = party.map((c) =>
         c.hp > 0
@@ -382,7 +426,7 @@ export function resolveBattle(
                 c.maxHp,
                 c.hp +
                   Math.round(
-                    c.maxHp * (skill === "Second Wind" ? 0.22 : 0.1) * power,
+                    c.maxHp * (family === "Second Wind" ? 0.22 : 0.1) * power,
                   ),
               ),
               ailments: {
@@ -399,7 +443,7 @@ export function resolveBattle(
             }
           : c,
       );
-    if (a.kind === "skill" && skill === "Scavenge")
+    if (a.kind === "skill" && family === "Scavenge")
       party = party.map((c) =>
         c.id !== actor.id
           ? c
@@ -419,6 +463,22 @@ export function resolveBattle(
               },
             },
       );
+    if (a.kind === "skill" && family === "Second Wind" && spec?.barrier)
+      party = party.map((c) =>
+        c.hp > 0
+          ? {
+              ...c,
+              ailments: {
+                ...c.ailments,
+                barrier: Math.max(
+                  c.ailments.barrier || 0,
+                  Math.round(spec.barrier! * power),
+                ),
+                candleOwner: undefined,
+              },
+            }
+          : c,
+      );
     poiseDamage =
       a.kind === "burst"
         ? 50
@@ -426,30 +486,30 @@ export function resolveBattle(
           ? 10
           : a.kind === "focus"
             ? 4
-            : skill === "Shield Bash"
+            : family === "Shield Bash"
               ? 38
-              : skill === "Nerve Lock"
+              : family === "Nerve Lock"
                 ? 45
-                : skill === "Arcane Bolt"
+                : family === "Arcane Bolt"
                   ? 18
-                  : skill === "Twin Strike"
+                  : family === "Twin Strike"
                     ? 22
-                    : skill === "Venom Fang"
+                    : family === "Venom Fang"
                       ? 12
-                      : skill === "Sunder"
+                      : family === "Sunder"
                         ? 35
-                        : skill === "Crown Pulse"
+                        : family === "Crown Pulse"
                           ? 15
-                          : skill === "Sling Shot"
+                          : family === "Sling Shot"
                             ? 16
-                            : skill === "Scavenge"
+                            : family === "Scavenge"
                               ? 8
                               : 0;
     if (
       a.kind === "skill" &&
-      !["Second Wind", "Crown Pulse", "Scavenge"].includes(skill!)
+      !["Second Wind", "Crown Pulse", "Scavenge"].includes(family!)
     )
-      poiseDamage += ["Shield Bash", "Nerve Lock"].includes(skill!)
+      poiseDamage += ["Shield Bash", "Nerve Lock"].includes(family!)
         ? rank === 3
           ? 10
           : 0
@@ -462,12 +522,15 @@ export function resolveBattle(
       enemy.poise = Math.max(0, enemy.poise - poiseDamage);
       if (enemy.poise === 0) {
         enemy.broken = 2;
+        enemy.shield = 0;
         enemy.charged = false;
         broken = true;
         logs.push("BREAK · Attack interrupted. +30% damage until it recovers.");
       }
     }
-    enemy.hp = Math.max(0, enemy.hp - damage);
+    absorbed = Math.min(enemy.shield || 0, damage);
+    enemy.shield = Math.max(0, (enemy.shield || 0) - absorbed);
+    enemy.hp = Math.max(0, enemy.hp - (damage - absorbed));
     if (damage > 0)
       logs.push(
         `Party deals ${damage}${critical ? " · CRITICAL" : ""} damage.`,
@@ -475,6 +538,7 @@ export function resolveBattle(
   }
   if (singleActor) {
     const effects: BattleEffect = {
+      absorbed,
       id: s.effects.id + 1,
       damage,
       enemyDamage: 0,

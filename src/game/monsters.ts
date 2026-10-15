@@ -1,4 +1,5 @@
 import type { Enemy, Skill } from "./engine";
+import { ECOLOGY } from "./ecology";
 
 export interface MonsterSpec {
   id: string;
@@ -245,6 +246,84 @@ for (const [route, regular, elite, guardian, visual, skill, material] of [
   );
 }
 export const essenceId = (species: string) => `essence-${species}`;
+for (const [id, name, visual, skill, material] of [
+  [
+    "skeleton-mender",
+    "Ossuary Mender",
+    "revenant",
+    "Ossuary Mend",
+    "relic-fragment",
+  ],
+  [
+    "skeleton-pikeman",
+    "Skeleton Pikeman",
+    "roadkeeper",
+    "Pike Thrust",
+    "relic-fragment",
+  ],
+  ["runic-fragment", "Runic Fragment", "guardian", "Shard Ward", "ancient-ore"],
+  [
+    "spiderling",
+    "Venom Spiderling",
+    "broodmother",
+    "Venom Needle",
+    "night-herb",
+  ],
+  ["web-spinner", "Web Spinner", "bonegnaw", "Silken Snare", "night-herb"],
+  ["echo-mirage", "Echo Mirage", "revenant", "Echo Cut", "relic-fragment"],
+  ["wolf-pack", "Frostfang Hunter", "frostfang", "Pack Pounce", "frost-shard"],
+  [
+    "grave-acolyte",
+    "Grave Acolyte",
+    "revenant",
+    "Burial Hymn",
+    "relic-fragment",
+  ],
+  ["ash-squire", "Ashen Squire", "ashen", "Cinder Riposte", "ancient-ore"],
+  ["ice-wisp", "Vault Ice Wisp", "blight", "Rime Lance", "frost-shard"],
+  ["royal-guard", "Royal Guard", "sentinel", "Royal Bulwark", "relic-fragment"],
+  [
+    "hollow-knight",
+    "Hollow Knight",
+    "kings-blade",
+    "Hollow Cleave",
+    "relic-fragment",
+  ],
+  [
+    "root-sprout",
+    "Living Root Sprout",
+    "broodmother",
+    "Root Renewal",
+    "night-herb",
+  ],
+  ["frost-wisp", "Frostwell Spirit", "blight", "Whiteout Shard", "frost-shard"],
+  ["furnace-spark", "Furnace Spark", "ashen", "Furnace Spark", "ancient-ore"],
+  [
+    "crypt-bearer",
+    "Crypt Oathbearer",
+    "sentinel",
+    "Oath Siphon",
+    "relic-fragment",
+  ],
+] as const)
+  MONSTERS.push({
+    id,
+    name,
+    visual,
+    skill,
+    gold: 20 + ECOLOGY[id].floors[0] * 8,
+    xp: 12 + ECOLOGY[id].floors[0] * 3,
+    material,
+    quantity: 1,
+    essenceValue: 35 + ECOLOGY[id].floors[0] * 4,
+  });
+for (const [id, skill] of [
+  ["roots-guardian", "Heartroot Covenant"],
+  ["frost-guardian", "Winter Reckoning"],
+  ["forge-guardian", "Crucible Mantle"],
+  ["crypt-guardian", "Oath Return"],
+] as const)
+  MONSTERS.find((m) => m.id === id)!.skill = skill;
 export const monsterFor = (enemy: Enemy, floor: number): MonsterSpec =>
   MONSTERS.find((m) => m.id === enemy.species) ||
   MONSTERS.find(

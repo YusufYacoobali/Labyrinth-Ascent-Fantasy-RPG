@@ -228,13 +228,14 @@ test("Guard counters special ailments and damaging statuses survive saving witho
 test("Boss phases select different move patterns, targets and effects rather than only damage multipliers", () => {
   const s = enemy(arena(3), { boss: true, behaviorId: "guardian", stage: 0 });
   const p = behavior.SPECIES_BEHAVIOR.guardian;
+  s.combat.round = 4;
+  s.enemy.charged = true;
   const before = moves.selectMove(s, s.enemy, p);
   s.enemy.stage = 1;
   const after = moves.selectMove(s, s.enemy, p);
-  assert.notEqual(before.kind, after.kind);
-  s.combat.round = 2;
+  assert.notEqual(before.move, after.move);
   assert.equal(moves.selectMove(s, s.enemy, p).targets.length, 2);
-  s.enemy.moveCooldowns = { "phase-special": 2 };
+  s.enemy.moveCooldowns = { slam: 2 };
   assert.equal(moves.selectMove(s, s.enemy, p).move, "basic");
 });
 test("Repeat commands retarget fallen enemies and replace unavailable skills while preserving atomic item validation", () => {
