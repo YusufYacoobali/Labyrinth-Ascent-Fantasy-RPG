@@ -1,4 +1,4 @@
-import { SPECIES_ART } from "./species-art";
+import { SPECIES_PROFILES } from "./species-art";
 import { MONSTERS } from "./monsters";
 import type { Character, Game } from "./engine";
 
@@ -28,7 +28,37 @@ export type MotionKey =
   | "kings-blade"
   | "hollow-king"
   | "plunderer"
-  | "bonegnaw";
+  | "bonegnaw"
+  | "goblin-shieldbearer"
+  | "goblin-slinger"
+  | "skeleton-mender"
+  | "skeleton-pikeman"
+  | "runic-fragment"
+  | "spiderling"
+  | "web-spinner"
+  | "echo-mirage"
+  | "wolf-pack"
+  | "grave-acolyte"
+  | "ash-squire"
+  | "ice-wisp"
+  | "royal-guard"
+  | "hollow-knight"
+  | "root-sprout"
+  | "frost-wisp"
+  | "furnace-spark"
+  | "crypt-bearer"
+  | "roots-roamer"
+  | "roots-elite"
+  | "roots-guardian"
+  | "frost-roamer"
+  | "frost-elite"
+  | "frost-guardian"
+  | "forge-roamer"
+  | "forge-elite"
+  | "forge-guardian"
+  | "crypt-roamer"
+  | "crypt-elite"
+  | "crypt-guardian";
 export type CombatVisual = {
   key: MotionKey;
   style: MotionStyle;
@@ -99,13 +129,13 @@ export function enemyVisual(
     MONSTERS.find((m) => m.id === state.enemy?.species)?.visual ||
     state.enemy?.species;
   const art = state.enemy?.species
-    ? SPECIES_ART[state.enemy.species]
+    ? SPECIES_PROFILES[state.enemy.species]
     : undefined;
   if (art)
     return {
       key: identity as MotionKey,
-      style: art.profile.style,
-      color: art.profile.accent,
+      style: art.style,
+      color: art.accent,
     };
   const species = FLOOR_VISUALS.find((v) => v.key === identity);
   if (species) return species;

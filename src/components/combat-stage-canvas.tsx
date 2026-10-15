@@ -1,11 +1,9 @@
 import { arenaFloor } from "@/game/visual-environments";
 import { STATUS_COLORS, visibleStatus } from "@/game/combat-presentation";
-import { SPECIES_ART } from "@/game/species-art";
 import React, { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import {
   Atlas,
-  Path,
   Canvas,
   Circle,
   Fill,
@@ -60,7 +58,6 @@ import {
 
 function Figure({
   motionKey,
-  species,
   status,
   id,
   x,
@@ -77,7 +74,6 @@ function Figure({
   onLoaded,
 }: {
   motionKey: MotionKey;
-  species?: string;
   status?: string;
   id: string;
   x: number;
@@ -93,13 +89,12 @@ function Figure({
   destination: { x: number; y: number };
   onLoaded: (id: string) => void;
 }) {
-  const art = species ? SPECIES_ART[species] : undefined;
-  const image = useImage(art ? null : MOTION_SHEETS[motionKey]);
+  const image = useImage(MOTION_SHEETS[motionKey]);
   useEffect(() => {
-    if (image || art) onLoaded(id);
-  }, [image, art, id, onLoaded]);
-  const cw = art?.width || (image?.width() || 8) / 8;
-  const ch = art?.height || (image?.height() || 6) / 6;
+    if (image) onLoaded(id);
+  }, [image, id, onLoaded]);
+  const cw = (image?.width() || 8) / 8;
+  const ch = (image?.height() || 6) / 6;
   const scale = size / Math.max(cw, ch);
   const pose = useDerivedValue(() => {
     if (fallen && !(enemy && cue?.enemyDied) && !cue?.fallen.includes(id))
@@ -128,26 +123,6 @@ function Figure({
       x - (cw * scale) / 2 + p.advance * travel + p.recoil,
       y - ch * scale * 0.96 + p.advance * (destination.y - y),
     );
-  });
-  const pixelTransform = useDerivedValue(() => {
-    const p = pose.get(),
-      bob = reduced ? 0 : p.row === 0 ? Math.sin(clock.get() / 240) * 1.2 : 0;
-    return [
-      {
-        translateX:
-          x - (cw * scale) / 2 + p.advance * (destination.x - x) + p.recoil,
-      },
-      {
-        translateY:
-          y - ch * scale * 0.96 + p.advance * (destination.y - y) + bob,
-      },
-      { scaleX: scale },
-      {
-        scaleY:
-          scale *
-          (p.row === 4 && !reduced ? Math.max(0.25, 1 - p.frame * 0.09) : 1),
-      },
-    ];
   });
   const opacity = useDerivedValue(() => pose.get().opacity);
   // This source sheet faces right. Mirror only its pixels around the moving
@@ -194,22 +169,14 @@ function Figure({
       {selected && !enemy && !fallen && (
         <Oval rect={shadow} color="#7bd1ff" style="stroke" strokeWidth={1.5} />
       )}
-      {art ? (
-        <Group transform={pixelTransform}>
-          {art.paths.map(({ color, path }) => (
-            <Path key={color} color={color} path={path} />
-          ))}
-        </Group>
-      ) : (
-        <Group transform={mirror}>
-          <Atlas
-            image={image}
-            sprites={sprites}
-            transforms={transforms}
-            sampling={{ filter: FilterMode.Nearest, mipmap: MipmapMode.None }}
-          />
-        </Group>
-      )}
+      <Group transform={mirror}>
+        <Atlas
+          image={image}
+          sprites={sprites}
+          transforms={transforms}
+          sampling={{ filter: FilterMode.Nearest, mipmap: MipmapMode.None }}
+        />
+      </Group>
     </Group>
   );
 }

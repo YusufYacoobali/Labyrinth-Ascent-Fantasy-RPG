@@ -4,7 +4,6 @@ import {
   type Playhead,
 } from "@/game/combat-presentation";
 import { eventFeedback } from "@/game/combat-audio";
-import { SPECIES_ART } from "@/game/species-art";
 import { Image } from "expo-image";
 import { MOTION_SHEETS } from "./combat-sheets";
 import { enemyVisual } from "@/game/combat-visuals";
@@ -278,20 +277,12 @@ export default function TacticalCombat() {
               }}
             >
               <Image
-                source={
-                  SPECIES_ART[enemy.species || ""]
-                    ? { uri: SPECIES_ART[enemy.species!].uri }
-                    : MOTION_SHEETS[enemyVisual({ ...source, enemy }).key]
-                }
-                accessibilityLabel={enemy.name + " silhouette"}
+                source={MOTION_SHEETS[enemyVisual({ ...source, enemy }).key]}
+                accessibilityLabel={enemy.name}
                 contentFit="fill"
                 style={{
-                  width:
-                    (enemies.length === 3 ? 64 : 78) *
-                    (SPECIES_ART[enemy.species || ""] ? 1 : 8),
-                  height:
-                    (enemies.length === 3 ? 64 : 78) *
-                    (SPECIES_ART[enemy.species || ""] ? 1 : 6),
+                  width: (enemies.length === 3 ? 64 : 78) * 8,
+                  height: (enemies.length === 3 ? 64 : 78) * 6,
                 }}
               />
             </View>

@@ -1,4 +1,3 @@
-import { SPECIES_ART } from "@/game/species-art";
 import { ITEMS } from "@/game/world";
 import { View } from "react-native";
 import { Image } from "expo-image";
@@ -42,18 +41,10 @@ export function Bestiary() {
             >
               <View style={{ width: 56, height: 56, overflow: "hidden" }}>
                 <Image
-                  source={
-                    SPECIES_ART[m.id]
-                      ? { uri: SPECIES_ART[m.id].uri }
-                      : MOTION_SHEETS[m.visual as MotionKey]
-                  }
-                  accessibilityLabel={m.name + " silhouette"}
+                  source={MOTION_SHEETS[m.visual as MotionKey]}
+                  accessibilityLabel={m.name}
                   contentFit="fill"
-                  style={
-                    SPECIES_ART[m.id]
-                      ? { width: 56, height: 56 }
-                      : { width: 56 * 8, height: 56 * 6 }
-                  }
+                  style={{ width: 56 * 8, height: 56 * 6 }}
                 />
               </View>
               <View style={{ flex: 1 }}>

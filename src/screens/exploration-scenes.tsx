@@ -24,6 +24,7 @@ import {
   type Direction,
 } from "@/game/exploration";
 import { StoryCard } from "@/components/story-card";
+import { NpcPortrait } from "@/components/npc-portrait";
 import {
   currentRoom,
   backRoom,
@@ -338,6 +339,7 @@ export function BranchScene() {
                 ? "Your old marks"
                 : scene.title
         }
+        portrait={npc ? <NpcPortrait id={npc} /> : undefined}
         body={
           resolved
             ? "This room has already been searched this expedition. Your saved connections remain on the map."

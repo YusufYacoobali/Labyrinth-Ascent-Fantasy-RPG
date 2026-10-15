@@ -1,3 +1,6 @@
+import { STORY_ILLUSTRATIONS } from "@/game/story-illustrations";
+import { STORY_ILLUSTRATION_SHEETS } from "./story-illustration-sheets";
+import type { StoryStage } from "@/game/story-types";
 import { battleAtlases } from "./battle-backdrop";
 import { arenaFloor } from "@/game/visual-environments";
 import type { Route } from "@/game/world";
@@ -116,6 +119,37 @@ export function EnvironmentArt({
             height: "480%",
             left: `${-(cell % 2) * 100}%`,
             top: `${-Math.floor(cell / 2) * 240 - 65}%`,
+          }}
+        />
+      </SceneMotion>
+    </View>
+  );
+}
+
+/** Each authored atlas has three equally sized, independently illustrated stages. */
+export function StoryStageArt({ stage }: { stage: StoryStage }) {
+  const art = STORY_ILLUSTRATIONS[stage.id];
+  if (!art || !STORY_ILLUSTRATION_SHEETS[art.sheet])
+    return stage.location === "field" ? (
+      <EventArt floor={stage.floor || 1} label={stage.title} />
+    ) : (
+      <StoryArt group="rooms" index={1} label={stage.title} />
+    );
+  return (
+    <View style={{ width: "100%", aspectRatio: 1.6, overflow: "hidden" }}>
+      <SceneMotion key={stage.id} style={{ flex: 1 }}>
+        <Image
+          source={STORY_ILLUSTRATION_SHEETS[art.sheet]}
+          accessibilityLabel={art.label}
+          contentFit="fill"
+          cachePolicy="disk"
+          style={{
+            position: "absolute",
+            // Bleed each panel by 2% to hide generation seams and rounding at atlas boundaries.
+            width: "104%",
+            height: "312%",
+            left: "-2%",
+            top: `${-art.panel * 104 - 2}%`,
           }}
         />
       </SceneMotion>

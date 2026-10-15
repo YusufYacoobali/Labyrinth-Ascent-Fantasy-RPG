@@ -4,6 +4,8 @@ Starting point: `6da6d25` on `ui-polish-from-ui-1`. The user requested sequentia
 
 Current status: milestones 0–7 have implementation checkpoints. Automated checks and exports pass; small/large-screen UI checks, physical-device testing and human playthroughs are deferred. Milestone entries below record their individual checkpoints, so earlier artwork and balance limitations may be superseded by later entries.
 
+Latest art checkpoint: the temporary enemy silhouettes have been replaced by thirty transparent animation sheets. Twenty-six major story chains have three illustrated stages each, and Elian, Tamsin and Sable have individual portraits. The user has capped further art generation; routine encounters reuse existing floor/route scenery. See [the art gallery](art-gallery.html) and the final art entry below.
+
 Historical `meanBattleRounds` values divide all accepted rounds, including unsuccessful attempts, by victory receipts. The final checkpoint also measures completed ordinary and boss fights separately.
 
 ## Milestone 0 — critical fixes
@@ -139,7 +141,7 @@ Verification: 241 grouped checks pass, including twelve build/progression groups
 
 The 200-seed benchmark now prepares earned recipes, faction deliveries, found gear and affordable upgraded equipment through ordinary town actions. It grants no resources and still navigates using visible information. It completes 199 campaigns within twelve expeditions, with zero stalls, first-expedition median Floor 4 and completed-campaign median five expeditions. Mean battle length 6.03 rounds; fallen-character events 1,446; unfed checks 0; median mastery 173.5; loot Continue actions 4,362; binding actions 2,169; story choices 6,905; generic appearances 2,930; repetition violations 0; treatment cost 156,200 gold and 3,558 injured-character recovery days. One campaign remains incomplete at the cap. This comparison includes a stronger preparation policy, so the improvement cannot be attributed entirely to changed powers. Report: `verification/master-m6-campaign.json`.
 
-## Milestone 7 — production polish and final automated gate
+## Milestone 7 — engineering polish; raster art was still incomplete
 
 Thirty species that shared illustrations now have original code-native pixel artwork with distinct anatomy, equipment, crests and palettes. All thirty alpha silhouettes differ, with at most nine merged colour paths per figure. They render in the battlefield, enemy cards and bestiary; the fourteen original species retain their existing motion sheets. A rendered contact sheet was inspected for clear separation and palette consistency. These are original Canvas/SVG drawings, not externally generated bitmap assets. Existing narrative art remains in use.
 
@@ -179,3 +181,25 @@ Seed 149 is the sole twelve-expedition outlier. With the same policy and no gran
 By the user's explicit instruction, continue despite unavailable UI automation and defer those checks. Small/large-screen interaction checks, physical Android/iOS checks, native storage/rendering/audio measurements and human campaign playthroughs have **not** been performed. Both UI runtimes previously failed to write their kernel assets. Exports confirm bundle generation, not physical-device behavior. These deferred checks are not represented as passed.
 
 Committed checkpoint sequence: `8633ad9` (0), `d0568d0` (1), `d8a7537` (2), `c918011` (3), `39bc263` (4), `bce61ff` (5), `c65061d` (6), followed by the production-polish checkpoint containing this entry.
+
+### Art correction — 15 October 2026, interrupted production pass
+
+The engineering checkpoint above did not complete the requested artwork. The thirty code-drawn silhouettes were temporary stand-ins; new narrative chains reused old illustrations. The earlier statement that all milestones were complete overstated art delivery.
+
+This follow-up generated thirty actual transparent 8-by-6 combat sprite sheets using built-in image_gen, with the original sheets as style references. They are saved under `assets/combat/<species>-motion.png` and connected to the battlefield, enemy selection cards and bestiary. All 44 species now resolve to equally named PNG sheets. The temporary vector renderer was removed. The pack wolf and echo mirage were regenerated after visual review found insufficient distinction from their original bosses.
+
+Kael, Lyria and Bram each have a new three-panel narrative atlas under `assets/story/companion-<name>-stages.png`, providing nine stage illustrations. Their stages display matching panels. The other 23 major chains (69 panels) and three recurring NPC portraits remain unfinished. Stable panel mappings cover all 78 authored stages, but only completed files are bundled; unfinished chains retain the previous scene fallback. Generation of the next companion batch was interrupted, so it is not counted as delivered.
+
+`assets/art-production-manifest.json` records exact prompts, reference paths, generated source paths and review status. Generated does not mean fully reviewed: static inspection is partial, and full frame-by-frame/native animation review, story crop review, exports and device checks remain outstanding. The new production checks verify actual sprite files and stable story-panel mapping, and explicitly distinguish completed story artwork from pending files.
+
+### Art coverage completed and capped — 15 October 2026
+
+The resumed pass completes the remaining major-story coverage: ten companion, twelve floor and four route chains each have three illustrated panels (78 panels in 26 PNG atlases). Elian, Tamsin and Sable have individual portraits displayed during their encounters and in the journal. All thirty expansion enemies use their dedicated eight-column/six-row sheets in battle, enemy cards and the bestiary. The fourteen original enemy sheets remain in use. The placeholder drawing renderer has been removed.
+
+After the user requested only enough variety, generation was stopped. No separate generic encounter picture set was generated. Those scenes reuse the existing environment artwork appropriate to the current floor and route, in a compact strip. There is no further art-generation backlog for this pass.
+
+Story images are selected by stable stage IDs. A small crop bleed hides atlas seams; environmental scenes avoid a fixed player appearance. Static review caught and corrected the final Ragnar scene's location, an inappropriate skeleton in the caravan scenes, a fixed hero at the Fourfold Gate and the Rootkeeper atlas aspect ratio. NPC portraits follow stable NPC IDs. Gameplay outcomes, rewards, saves and balance are unchanged by this art pass.
+
+Verification: **252 grouped tests**, typecheck, lint and Android/iOS/web exports pass. The read-only Pillow checker validates decoding, transparent sprite backgrounds, all 1,440 new frames, differing frames in every animation row, all 26 atlas dimensions and three portrait dimensions. The production tests require actual bundled artwork for all 44 species, all 78 major story stages and all three recurring NPCs. The new source PNG files total 179,293,699 bytes (about 179 MB); only the displayed scene/current combatants are decoded. Device memory, native playback and disk-cache behavior have not been measured.
+
+[docs/art-gallery.html](art-gallery.html) provides a local frame/animation viewer, searchable story panels and NPC portraits. Rebuild it with `node scripts/build-art-gallery.cjs`. Exact prompts, input references and built-in image_gen provenance are in `assets/art-production-manifest.json`; raster-check evidence is in `verification/art-assets-check.json`. Actual gallery/UI interaction and physical-device checks remain deferred under the user's earlier instruction. Exports confirm packaging, not native visual performance.

@@ -27,6 +27,7 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  storyIllustrations: load("src/game/story-illustrations.ts"),
   environments: load("src/game/visual-environments.ts"),
   presentation: load("src/game/combat-presentation.ts"),
   combatAudio: load("src/game/combat-audio.ts"),

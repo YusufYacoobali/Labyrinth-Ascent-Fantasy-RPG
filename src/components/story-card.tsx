@@ -7,10 +7,12 @@ import { theme as t } from "@/theme";
 export function StoryCard({
   title,
   body,
+  portrait,
   children,
 }: {
   title: string;
   body?: string;
+  portrait?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   return (
@@ -27,9 +29,11 @@ export function StoryCard({
       }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <View
-          style={{ height: 1, width: 20, backgroundColor: t.color.goldDim }}
-        />
+        {portrait || (
+          <View
+            style={{ height: 1, width: 20, backgroundColor: t.color.goldDim }}
+          />
+        )}
         <Copy
           title
           style={{
@@ -37,14 +41,16 @@ export function StoryCard({
             fontSize: 29,
             lineHeight: 33,
             color: t.color.goldLight,
-            textAlign: "center",
+            textAlign: portrait ? "left" : "center",
           }}
         >
           {title}
         </Copy>
-        <View
-          style={{ height: 1, width: 20, backgroundColor: t.color.goldDim }}
-        />
+        {!portrait && (
+          <View
+            style={{ height: 1, width: 20, backgroundColor: t.color.goldDim }}
+          />
+        )}
       </View>
       {!!body && (
         <Copy

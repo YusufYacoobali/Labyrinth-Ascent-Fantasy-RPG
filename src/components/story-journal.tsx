@@ -1,5 +1,6 @@
 import { optionalGoals } from "@/game/expedition-report";
-import { StoryArt, EventArt } from "./story-art";
+import { StoryStageArt } from "./story-art";
+import { NpcPortrait } from "./npc-portrait";
 import { WORLD_NPCS, type WorldNpcId } from "@/game/world-npcs";
 import { reconciliationStage } from "@/game/reconciliation";
 import { ROUTE_FACTIONS } from "@/game/route-stories";
@@ -90,23 +91,7 @@ export function StoryScene() {
       <Copy title style={{ fontSize: 28, color: t.color.goldLight }}>
         {stage.title}
       </Copy>
-      {stage.location === "field" ? (
-        stage.site === "shelter" ? (
-          <StoryArt
-            group="rooms"
-            index={4}
-            label="Evidence in the established sanctuary"
-          />
-        ) : (
-          <EventArt floor={stage.floor || state.floor} label={stage.title} />
-        )
-      ) : (
-        <StoryArt
-          group="rooms"
-          index={1}
-          label="A quiet conversation among expedition companions"
-        />
-      )}
+      <StoryStageArt stage={stage} />
       <Copy>{stage.body}</Copy>
       {stage.choices.map((c) => (
         <Button
@@ -159,7 +144,12 @@ export function StoryChronicle() {
       )}
       {Object.entries(state.npcs || {}).map(([id, memory]) => (
         <Panel key={id} style={{ gap: 5, padding: 12 }}>
-          <Copy title>{WORLD_NPCS[id as WorldNpcId]?.name || id}</Copy>
+          <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+            <NpcPortrait id={id} width={54} />
+            <Copy title style={{ flex: 1 }}>
+              {WORLD_NPCS[id as WorldNpcId]?.name || id}
+            </Copy>
+          </View>
           <Copy muted>
             {memory.visits} meetings · trust {memory.trust} · last decisions:{" "}
             {memory.decisions.join(", ")}

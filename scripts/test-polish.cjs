@@ -4,6 +4,9 @@ const {
   e,
   monsters: m,
   speciesArt: a,
+  storyIllustrations: illustrations,
+  stories,
+  npcs,
   visuals: v,
   animation: anim,
   combatAudio: audio,
@@ -27,28 +30,92 @@ function fresh() {
     roll: 0.5,
   });
 }
-test("Thirty previously shared species own distinct transparent pixel silhouettes and cached vector portraits", () => {
-  assert.equal(Object.keys(a.SPECIES_ART).length, 30);
-  assert.equal(
-    new Set(
-      Object.values(a.SPECIES_ART).map((a) =>
-        a.pixels.map((c) => (c ? 1 : 0)).join(""),
-      ),
-    ).size,
-    30,
+test("All forty-four species resolve to distinct real transparent animation sheets", () => {
+  const hashes = new Set(),
+    crypto = require("node:crypto");
+  const sheetBindings = fs.readFileSync(
+    "src/components/combat-sheets.ts",
+    "utf8",
   );
-  for (const [id, art] of Object.entries(a.SPECIES_ART)) {
-    assert.ok(m.MONSTERS.some((m) => m.id === id));
-    assert.equal(art.pixels.length, 40 * 48);
-    assert.ok(art.pixels.filter(Boolean).length > 100);
-    assert.ok(art.pixels.some((p) => !p));
-    assert.ok(art.paths.length <= 10);
-    assert.ok(art.paths.every((p) => !p.path.includes("NaN")));
-    assert.ok(decodeURIComponent(art.uri).includes("<svg"));
-    const s = { ...fresh(), enemy: { ...e.enemyFor(1), species: id } };
-    assert.equal(v.enemyVisual(s).style, art.profile.style, id);
-    assert.equal(v.enemyVisual(s).color, art.profile.accent, id);
+  assert.equal(m.MONSTERS.length, 44);
+  for (const monster of m.MONSTERS) {
+    assert.equal(monster.visual, monster.id);
+    const path = "assets/combat/" + monster.visual + "-motion.png";
+    assert.ok(
+      sheetBindings.includes(path.replace("assets/", "../../assets/")),
+      path,
+    );
+    const data = fs.readFileSync(path);
+    assert.equal(
+      data.readUInt32BE(16) / 8,
+      data.readUInt32BE(20) / 6,
+      monster.id + " square cells",
+    );
+    assert.equal(data[25], 6, monster.id + " RGBA alpha");
+    hashes.add(crypto.createHash("sha256").update(data).digest("hex"));
+    const profile = a.SPECIES_PROFILES[monster.id];
+    const s = { ...fresh(), enemy: { ...e.enemyFor(1), species: monster.id } };
+    assert.equal(v.enemyVisual(s).key, monster.id);
+    if (profile) assert.equal(v.enemyVisual(s).style, profile.style);
   }
+  assert.equal(hashes.size, 44);
+});
+
+test("All major story stages have stable panel mappings and bundled artwork", () => {
+  const stages = stories.STORY_CHAINS.filter((c) => c.category !== "generic");
+  const mapped = illustrations.STORY_ILLUSTRATIONS;
+  assert.equal(Object.keys(mapped).length, 78);
+  const cells = new Set();
+  const bindings = fs.readFileSync(
+    "src/components/story-illustration-sheets.ts",
+    "utf8",
+  );
+  const completed = JSON.parse(
+    fs.readFileSync("assets/art-production-manifest.json", "utf8"),
+  ).stories;
+  assert.equal(completed.length, stages.length);
+  for (const chain of stages) {
+    const path = "assets/story/" + chain.id.replace(".", "-") + "-stages.png";
+    if (completed.some((a) => a.id === chain.id)) {
+      assert.ok(bindings.includes("../../" + path));
+      const data = fs.readFileSync(path);
+      const ratio = (data.readUInt32BE(16) * 3) / data.readUInt32BE(20);
+      assert.ok(Math.abs(ratio - 1.6) < 0.06, path + " landscape panels");
+    } else
+      assert.ok(
+        !bindings.includes("../../" + path),
+        "Pending artwork cannot break the bundle",
+      );
+    chain.stages.forEach((stage, panel) => {
+      assert.equal(mapped[stage.id].sheet, chain.id);
+      assert.equal(mapped[stage.id].panel, panel);
+      assert.equal(mapped[stage.id].label, stage.title);
+      cells.add(chain.id + ":" + panel);
+    });
+  }
+  assert.equal(cells.size, 78);
+});
+test("Every recurring NPC has a distinct portrait bound to its stable identity", () => {
+  const completed = JSON.parse(
+    fs.readFileSync("assets/art-production-manifest.json", "utf8"),
+  ).npcs;
+  const bindings = fs.readFileSync("src/components/npc-portrait.tsx", "utf8");
+  assert.deepEqual(
+    completed.map((a) => a.id).sort(),
+    Object.keys(npcs.WORLD_NPCS).sort(),
+  );
+  const hashes = new Set();
+  for (const npc of completed) {
+    assert.ok(bindings.includes("../../" + npc.path));
+    const data = fs.readFileSync(npc.path);
+    assert.ok(
+      Math.abs(data.readUInt32BE(16) / data.readUInt32BE(20) - 0.75) < 0.06,
+    );
+    hashes.add(
+      require("node:crypto").createHash("sha256").update(data).digest("hex"),
+    );
+  }
+  assert.equal(hashes.size, 3);
 });
 test("All sixteen four-character rank arrangements fit phone and large-screen health bounds with correct front distance", () => {
   for (const width of [280, 320, 390, 430, 768])

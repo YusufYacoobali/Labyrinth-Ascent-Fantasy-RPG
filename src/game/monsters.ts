@@ -173,7 +173,7 @@ MONSTERS.push(
   {
     id: "goblin-shieldbearer",
     name: "Goblin Shieldbearer",
-    visual: "roadkeeper",
+    visual: "goblin-shieldbearer",
     skill: "Candle Ward",
     gold: 30,
     xp: 14,
@@ -184,7 +184,7 @@ MONSTERS.push(
   {
     id: "goblin-slinger",
     name: "Goblin Slinger",
-    visual: "plunderer",
+    visual: "goblin-slinger",
     skill: "Sling Shot",
     gold: 25,
     xp: 12,
@@ -193,8 +193,8 @@ MONSTERS.push(
     essenceValue: 35,
   },
 );
-// Route families reuse the established artwork while owning rewards and signature essences.
-for (const [route, regular, elite, guardian, visual, skill, material] of [
+// Route families own their artwork, rewards and signature essences.
+for (const [route, regular, elite, guardian, , skill, material] of [
   [
     "roots",
     "Briar Stalker",
@@ -236,7 +236,7 @@ for (const [route, regular, elite, guardian, visual, skill, material] of [
     MONSTERS.push({
       id: `${route}-${["roamer", "elite", "guardian"][i]}`,
       name,
-      visual,
+      visual: `${route}-${["roamer", "elite", "guardian"][i]}`,
       skill,
       gold: [120, 180, 295][i],
       xp: [60, 75, 90][i],
@@ -247,7 +247,7 @@ for (const [route, regular, elite, guardian, visual, skill, material] of [
   );
 }
 export const essenceId = (species: string) => `essence-${species}`;
-for (const [id, name, visual, skill, material] of [
+for (const [id, name, , skill, material] of [
   [
     "skeleton-mender",
     "Ossuary Mender",
@@ -310,7 +310,7 @@ for (const [id, name, visual, skill, material] of [
   MONSTERS.push({
     id,
     name,
-    visual,
+    visual: id,
     skill,
     gold: 20 + ECOLOGY[id].floors[0] * 8,
     xp: 12 + ECOLOGY[id].floors[0] * 3,
