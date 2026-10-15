@@ -27,6 +27,9 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  status: load("src/game/combat-status.ts"),
+  commands: load("src/game/combat-commands.ts"),
+  moves: load("src/game/enemy-moves.ts"),
   behavior: load("src/game/monster-behavior.ts"),
   relationships: load("src/game/relationships.ts"),
   narration: load("src/game/room-narration.ts"),

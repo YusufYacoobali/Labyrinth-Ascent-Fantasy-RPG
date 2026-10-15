@@ -1,5 +1,15 @@
+import { resolveEnemySupport } from "./enemy-support";
 import { bondedProtector } from "./relationships";
 import { goblinGroup } from "./goblin-ecosystem";
+import {
+  applyCondition,
+  cleanse,
+  consumeFreeze,
+  immune,
+  impeded,
+  stacks,
+  tickConditions,
+} from "./combat-status";
 import type { EnemyIntent } from "./monster-behavior";
 import {
   MIXED_GROUPS,
@@ -31,6 +41,9 @@ export interface CombatEnemy extends Enemy {
   waves?: number;
 }
 export interface CombatState {
+  rules?: 2;
+  intents?: Record<string, EnemyIntent>;
+  lastCommands?: QueuedAction[];
   id: string;
   enemies: CombatEnemy[];
   round: number;
@@ -49,7 +62,7 @@ export interface CombatState {
 }
 export interface QueuedAction {
   actor: string;
-  kind: "attack" | "skill" | "guard" | "focus" | "item" | "burst";
+  kind: "attack" | "skill" | "guard" | "taunt" | "focus" | "item" | "burst";
   target?: string;
   skill?: Skill;
   item?: string;
@@ -74,9 +87,13 @@ export interface RoundRequest {
   animate?: boolean;
 }
 export const effectiveSpeed = (c: Character) =>
-  Math.max(1, c.speed * fatigueMultiplier(c));
+  Math.max(
+    1,
+    c.speed * fatigueMultiplier(c) -
+      stacks(c.ailments.conditions, "chilled") * 2,
+  );
 export const enemySpeed = (e: CombatEnemy) =>
-  Math.max(1, e.speed - (e.slowed || 0));
+  Math.max(1, e.speed - (e.slowed || 0) - stacks(e.conditions, "chilled") * 2);
 export function initiative(s: Game, actions: QueuedAction[] = []) {
   return [
     ...s.party
@@ -225,6 +242,7 @@ export function beginCombat(
     },
   );
   const combat: CombatState = {
+    rules: 2,
     id,
     enemies,
     round: 1,
@@ -233,6 +251,9 @@ export function beginCombat(
     resume,
     complete: false,
   };
+  combat.intents = Object.fromEntries(
+    enemies.map((e) => [e.id, enemyIntent({ ...s, combat }, e)]),
+  );
   return {
     ...s,
     combat,
@@ -240,7 +261,20 @@ export function beginCombat(
     rng: { ...s.rng, encounters: draw.seed },
     turn: 1,
     momentum: 0,
-    party: s.party.map((c) => ({ ...c, battleMastery: {}, cooldowns: {} })),
+    party: s.party.map((c) => ({
+      ...c,
+      ailments: {
+        ...c.ailments,
+        conditions: Object.fromEntries(
+          Object.entries(c.ailments.conditions || {}).map(([id, condition]) => [
+            id,
+            { ...condition!, applied: 0 },
+          ]),
+        ),
+      },
+      battleMastery: {},
+      cooldowns: {},
+    })),
     expedition: {
       ...s.expedition,
       battles: { ...s.expedition.battles, [id]: combat },
@@ -248,6 +282,14 @@ export function beginCombat(
   };
 }
 export function enemyIntent(s: Game, e: CombatEnemy): EnemyIntent {
+  if (stacks(e.conditions, "frozen"))
+    return {
+      kind: "wait",
+      label: "Frozen · loses one action",
+      targets: [],
+      power: 0,
+    };
+  if (s.combat?.intents?.[e.id]) return s.combat.intents[e.id];
   const authored = speciesIntent(s, e);
   if (authored) return authored;
   const alive = s.party.filter((c) => c.hp > 0),
@@ -341,7 +383,7 @@ export function validateQueue(s: Game, a: RoundRequest): string {
   )
     return "This round has already resolved.";
   if (a.flee) return a.actions.length ? "Retreat uses the whole round." : "";
-  const ready = s.party.filter((c) => c.hp > 0 && !c.ailments.paralysis),
+  const ready = s.party.filter((c) => c.hp > 0 && !impeded(c)),
     ids = a.actions.map((q) => q.actor);
   if (
     ids.length !== ready.length ||
@@ -355,7 +397,9 @@ export function validateQueue(s: Game, a: RoundRequest): string {
     const actor = ready.find((c) => c.id === q.actor);
     if (!actor) return "That companion cannot act.";
     if (
-      !["attack", "skill", "guard", "focus", "item", "burst"].includes(q.kind)
+      !["attack", "skill", "guard", "taunt", "focus", "item", "burst"].includes(
+        q.kind,
+      )
     )
       return "Unknown action.";
     if (q.kind === "skill") {
@@ -369,9 +413,12 @@ export function validateQueue(s: Game, a: RoundRequest): string {
       )
         return "A queued skill is unavailable.";
     }
-    const friendly = q.kind === "item" || q.kind === "guard";
+    const friendly =
+      q.kind === "item" || q.kind === "guard" || q.kind === "taunt";
     if (friendly && !s.party.some((c) => c.id === q.target && c.hp > 0))
       return "Select a standing ally for items and Guard.";
+    if (q.kind === "taunt" && q.target !== q.actor)
+      return "Taunt guards its own actor.";
     if (
       ["attack", "burst"].includes(q.kind) ||
       (q.kind === "skill" && q.skill !== "Second Wind")
@@ -442,6 +489,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
       .map((e) => [e.id, enemyIntent(s, e)]),
   );
   const covers = new Map<string, { protector: string; fraction: number }>();
+  let taunter: string | undefined;
   for (const entry of initiative(s, a.actions)) {
     if (
       next.party.every((c) => c.hp <= 0) ||
@@ -468,7 +516,12 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
     if (entry.enemy) {
       const enemy = next.combat!.enemies.find((e) => e.id === entry.id)!;
       if (!enemy || enemy.hp <= 0) continue;
-      if (enemy.broken || enemy.paralysis) {
+      if (
+        enemy.broken ||
+        enemy.paralysis ||
+        stacks(enemy.conditions, "frozen")
+      ) {
+        enemy.conditions = consumeFreeze(enemy.conditions);
         enemySkipped.add(enemy.id);
         enemy.controlWard = 3;
         enemy.charged = false;
@@ -476,69 +529,24 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
         continue;
       }
       const intent = intents[enemy.id];
-      if (intent.kind === "summon") {
-        const species = MONSTERS.find((m) => m.id === intent.summon);
-        if (
-          species &&
-          (enemy.waves || 0) < (intent.limit || 0) &&
-          next.combat!.enemies.filter((e) => e.hp > 0).length < 3
-        ) {
-          const profile = SPECIES_BEHAVIOR[species.id],
-            spawned = (next.combat!.spawned || 0) + 1;
-          const hp = Math.round(
-            (B.normalHp[0] + s.floor * B.normalHp[1]) *
-              (1 + B.partyHpScale * (s.party.length - 1)) *
-              B.goblins.minionHp,
-          );
-          const reinforcement: CombatEnemy = {
-            ...enemy,
-            id: `${combat.id}:summon-${spawned}`,
-            species: species.id,
-            behaviorId: species.id,
-            name: species.name,
-            boss: false,
-            hp,
-            maxHp: hp,
-            atk: Math.round(
-              (B.enemyAttack[0] + s.floor * B.enemyAttack[1]) *
-                B.goblins.minionAttack,
-            ),
-            speed: profile.speed,
-            archetype: profile.role,
-            stage: 0,
-            poison: 0,
-            paralysis: 0,
-            broken: 0,
-            controlWard: 0,
-            charged: false,
-            guard: 0,
-            poise: 50,
-            maxPoise: 50,
-            waves: 0,
-          };
-          enemy.waves = (enemy.waves || 0) + 1;
-          const empty = next.combat!.enemies.findIndex((e) => e.hp <= 0);
-          if (empty >= 0) {
-            next.combat!.defeated = [
-              ...(next.combat!.defeated || []),
-              next.combat!.enemies[empty],
-            ];
-            next.combat!.enemies[empty] = reinforcement;
-          } else next.combat!.enemies.push(reinforcement);
-          next.combat!.spawned = spawned;
-          emit(
-            enemy.id,
-            reinforcement.id,
-            `${enemy.name} calls ${species.name}. This scout has no waves left. Reinforcements act next round.`,
-            "summon",
-          );
-        } else
-          emit(
-            enemy.id,
-            "",
-            `${enemy.name}'s call finds no room for reinforcements.`,
-            "cancel",
-          );
+      if (intent.kind === "wait") {
+        emit(
+          enemy.id,
+          "",
+          `${enemy.name} recovers; its announced action remains cancelled.`,
+          "recover",
+        );
+        continue;
+      }
+      if (intent.move && intent.cooldown)
+        enemy.moveCooldowns = {
+          ...enemy.moveCooldowns,
+          [intent.move]: intent.cooldown + 1,
+        };
+      const support = resolveEnemySupport(next, enemy.id, intent);
+      if (support) {
+        next = support.state;
+        emit(enemy.id, support.target, support.text, support.kind);
         continue;
       }
       if (intent.kind === "cover") {
@@ -558,44 +566,13 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
         );
         continue;
       }
-      if (intent.kind === "heal") {
-        const target = [...next.combat!.enemies]
-          .filter((e) => e.hp > 0)
-          .sort(
-            (a, b) =>
-              a.hp / a.maxHp - b.hp / b.maxHp || a.id.localeCompare(b.id),
-          )[0];
-        target.hp = Math.min(
-          target.maxHp,
-          target.hp + Math.round(target.maxHp * 0.18),
-        );
-        emit(
-          enemy.id,
-          target.id,
-          `${enemy.name} mends ${target.name}.`,
-          "heal",
-        );
-        continue;
-      }
-      if (intent.kind === "guard") {
-        for (const ally of next.combat!.enemies.filter((e) => e.hp > 0))
-          ally.guard += 3;
-        emit(
-          enemy.id,
-          "",
-          `${enemy.name} braces allied ranks (+3 armor this round).`,
-          "guard",
-        );
-        continue;
-      }
-      if (intent.kind === "charge") {
-        enemy.charged = true;
-        emit(enemy.id, "", `${enemy.name}: ${intent.label}.`, "charge");
-        continue;
-      }
-      const targetIds = intent.targets.filter((id) =>
-        next.party.some((c) => c.id === id && c.hp > 0),
-      );
+      const targetIds = (
+        taunter &&
+        intent.targets.length === 1 &&
+        next.party.some((c) => c.id === taunter && c.hp > 0)
+          ? [taunter]
+          : intent.targets
+      ).filter((id) => next.party.some((c) => c.id === id && c.hp > 0));
       if (!targetIds.length) {
         const alive = next.party.find((c) => c.hp > 0);
         if (alive) targetIds.push(alive.id);
@@ -609,7 +586,9 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
           Math.max(
             2,
             enemy.atk * intent.power -
-              (target.def * (1 - target.exhaustion * 0.0015) +
+              (target.def *
+                (1 - stacks(target.ailments.conditions, "fractured") * 0.1) *
+                (1 - target.exhaustion * 0.0015) +
                 (target.traitRevealed &&
                 target.trait === "Last Stand" &&
                 target.hp / target.maxHp < 0.35
@@ -618,6 +597,8 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
                 0.6,
           ) *
           (1 - resist(target, enemy.element) / 100) *
+          (1 - stacks(enemy.conditions, "weakened") * 0.2) *
+          (1 + stacks(target.ailments.conditions, "exposed") * 0.15) *
           (enemy.element === "physical" &&
           next.party.some(
             (c) => c.hp > 0 && c.traitRevealed && c.trait === "Vanguard",
@@ -640,6 +621,18 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
         };
         if (intent.slow && !guards.has(id) && !target.ailments.ward)
           target.exhaustion = Math.min(100, target.exhaustion + intent.slow);
+        if (
+          intent.status &&
+          target.hp > 0 &&
+          hit > 0 &&
+          !guards.has(id) &&
+          !immune(target, intent.status)
+        )
+          target.ailments.conditions = applyCondition(
+            target.ailments.conditions,
+            intent.status,
+            combat.round,
+          );
         const ward: Skill =
           enemy.element === "fire"
             ? "Ember Ward"
@@ -660,6 +653,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
         if (target.hp > 0 && !target.ailments.ward) {
           if (
             enemy.element === "venom" &&
+            !(combat.rules === 2 && enemy.behaviorId) &&
             !target.skills.includes("Toxic Adaptation")
           )
             target.ailments.poison = 2;
@@ -672,6 +666,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
                   ? "Grave Guard"
                   : undefined;
           if (
+            !(combat.rules === 2 && enemy.behaviorId) &&
             intent.power > 1 &&
             protection &&
             !(target.traitRevealed && target.trait === "Iron Will") &&
@@ -728,7 +723,8 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
     }
     const actor = next.party.find((c) => c.id === entry.id)!;
     if (actor.hp <= 0 || a.flee) continue;
-    if (actor.ailments.paralysis) {
+    if (impeded(actor)) {
+      actor.ailments.conditions = consumeFreeze(actor.ailments.conditions);
       skipped.add(actor.id);
       emit(actor.id, "", `${actor.name} cannot act.`, "interrupt");
       continue;
@@ -744,7 +740,8 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
       continue;
     }
     const target = next.party.find((c) => c.id === q.target && c.hp > 0);
-    if (q.kind === "guard") {
+    if (q.kind === "guard" || q.kind === "taunt") {
+      if (q.kind === "taunt") taunter = actor.id;
       if (target) {
         if (
           actor.skills.includes("Candle Ward") &&
@@ -787,8 +784,14 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
           (id === "ether"
             ? target.mp < target.maxMp
             : id === "antidote"
-              ? target.ailments.poison > 0 || target.ailments.paralysis > 0
+              ? target.ailments.poison > 0 ||
+                target.ailments.paralysis > 0 ||
+                Object.keys(target.ailments.conditions || {}).some((id) =>
+                  ["venom", "chilled", "frozen"].includes(id),
+                )
               : target.hp < target.maxHp ||
+                (id === "bandage" &&
+                  stacks(target.ailments.conditions, "bleeding") > 0) ||
                 (id === "bandage" && target.ailments.poison > 0));
       if (!useful) {
         emit(
@@ -809,6 +812,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
           poison: 0,
           paralysis: 0,
           ward: 2,
+          conditions: cleanse(target.ailments.conditions, "antidote"),
         };
       else {
         target.hp = Math.min(
@@ -817,6 +821,11 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
             (id === "greater-potion" ? 120 : id === "bandage" ? 90 : 65),
         );
         if (id === "bandage") target.ailments.poison = 0;
+        if (id === "bandage")
+          target.ailments.conditions = cleanse(
+            target.ailments.conditions,
+            "bandage",
+          );
       }
       next.effects = {
         ...next.effects,
@@ -843,6 +852,8 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
           c.hp > 0 &&
           (c.hp < c.maxHp ||
             c.ailments.poison > 0 ||
+            (skillRank(actor, "Second Wind") >= 2 &&
+              Object.keys(c.ailments.conditions || {}).length > 0) ||
             (skillRank(actor, "Second Wind") === 3 &&
               (c.ailments.barrier || 0) < c.maxHp * 0.1)),
       )
@@ -861,7 +872,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
       next,
       {
         type: "BATTLE",
-        kind: q.kind,
+        kind: q.kind as "attack" | "skill" | "burst",
         actor: q.actor,
         skill: q.skill,
         roll: draw.roll,
@@ -912,8 +923,18 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
     );
   }
   // Status durations and cooldowns advance exactly once after the complete initiative queue.
+  const beforeTicks =
+    next.party.reduce((n, c) => n + c.hp, 0) +
+    next.combat!.enemies.reduce((n, e) => n + e.hp, 0);
   next.party = next.party.map((c) => {
     let hp = c.hp;
+    const tick = tickConditions(
+      c.ailments.conditions,
+      combat.round,
+      c.maxHp,
+      (element) => resist(c, element),
+    );
+    hp = Math.max(0, hp - tick.damage);
     if (hp > 0 && c.ailments.poison)
       hp = Math.max(
         0,
@@ -928,6 +949,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
       hp,
       ailments: {
         ...c.ailments,
+        conditions: tick.conditions,
         poison: Math.max(0, c.ailments.poison - 1),
         paralysis: skipped.has(c.id)
           ? Math.max(0, c.ailments.paralysis - 1)
@@ -945,6 +967,8 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
   next.combat!.enemies = next.combat!.enemies.map((e) => {
     const original = combat.enemies.find((o) => o.id === e.id) || e;
     let hp = e.hp;
+    const tick = tickConditions(e.conditions, combat.round, e.maxHp);
+    hp = Math.max(0, hp - tick.damage);
     if (hp > 0 && e.poison)
       hp = Math.max(
         0,
@@ -985,6 +1009,13 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
       ...e,
       hp,
       stage,
+      conditions: tick.conditions,
+      moveCooldowns: Object.fromEntries(
+        Object.entries(e.moveCooldowns || {}).map(([id, n]) => [
+          id,
+          Math.max(0, n - 1),
+        ]),
+      ),
       guard: original.guard,
       poison: Math.max(0, e.poison - 1),
       paralysis: enemySkipped.has(e.id)
@@ -1000,10 +1031,30 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
   });
   next.combat = {
     ...next.combat!,
+    intents: undefined,
+    lastCommands: a.flee
+      ? combat.lastCommands
+      : a.actions.map((q) => ({ ...q })),
     round: combat.round + 1,
     mastery: Object.fromEntries(next.party.map((c) => [c.id, c.battleMastery])),
     complete: next.combat!.enemies.every((e) => e.hp <= 0),
   };
+  const statusLoss =
+    beforeTicks -
+    next.party.reduce((n, c) => n + c.hp, 0) -
+    next.combat.enemies.reduce((n, e) => n + e.hp, 0);
+  if (statusLoss > 0)
+    emit(
+      "",
+      "",
+      `Lingering ailments deal ${statusLoss} total HP damage across the battlefield.`,
+      "status",
+    );
+  next.combat.intents = Object.fromEntries(
+    next.combat.enemies
+      .filter((e) => e.hp > 0)
+      .map((e) => [e.id, enemyIntent(next, e)]),
+  );
   next = {
     ...next,
     turn: next.combat.round,

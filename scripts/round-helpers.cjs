@@ -16,7 +16,13 @@ function act(s, a) {
   s = {
     ...s,
     enemy: first,
-    combat: { ...s.combat, complete: false, enemies: [first] },
+    combat: {
+      ...s.combat,
+      rules: undefined,
+      intents: undefined,
+      complete: false,
+      enemies: [first],
+    },
   };
   const active =
     s.party.find((c) => c.id === a.actor) || s.party.find((c) => c.hp > 0);

@@ -201,6 +201,8 @@ export function earnMastery(
                 (p) =>
                   p.hp > 0 &&
                   (p.hp < p.maxHp ||
+                    (skillRank(old, skill) >= 2 &&
+                      Object.keys(p.ailments.conditions || {}).length > 0) ||
                     (p.ailments.poison > 0 &&
                       (p.id === actorId || skillRank(old, skill) >= 2)) ||
                     (skillRank(old, skill) === 3 &&

@@ -1,4 +1,6 @@
 import { trainingLimit, trainingXp, temperingOffer } from "./town-progression";
+import { canAutoResolve } from "./combat-commands";
+import type { Conditions } from "./combat-status";
 import { deserializeSave } from "./skill-ids";
 import { BALANCE as B } from "./balance";
 import { resolveGenericAction } from "./generic-stories";
@@ -120,6 +122,7 @@ export type Skill =
   | "Crown Pulse"
   | "Scavenge";
 export interface Ailments {
+  conditions?: Conditions;
   poison: number;
   paralysis: number;
   ward?: number;
@@ -127,6 +130,7 @@ export interface Ailments {
   candleOwner?: string;
 }
 export interface Character {
+  formation?: "front" | "back";
   id: string;
   injuries: number;
   uninjuredHp: number;
@@ -158,6 +162,8 @@ export interface Character {
   cooldowns: Partial<Record<Skill, number>>;
 }
 export interface Enemy {
+  conditions?: Conditions;
+  moveCooldowns?: Record<string, number>;
   level?: number;
   species?: string;
   vulnerable?: number;
@@ -205,6 +211,7 @@ export interface BattleEffect {
   broken: boolean;
 }
 export interface Game {
+  combatSpeed?: "normal" | "fast";
   version: 2;
   rulesVersion: 4;
   stories: StoryState;
@@ -793,6 +800,9 @@ export function questProgress(s: Game, id: QuestId): number {
   return Math.min(QUESTS.find((q) => q.id === id)!.target, s.bestFloor);
 }
 export type Action =
+  | { type: "SET_FORMATION"; id: string; formation: "front" | "back" }
+  | { type: "COMBAT_SPEED"; speed: "normal" | "fast" }
+  | { type: "AUTO_COMBAT" }
   | { type: "GENERIC_CHOICE"; room: string; id: string; choice: string }
   | { type: "OPEN_STORY"; id: string }
   | { type: "CLOSE_STORY" }
@@ -1014,6 +1024,56 @@ export function reducer(s: Game, a: Action): Game {
   if (a.type === "FINISH_PLAYBACK")
     return { ...s, playback: null, roundPlayback: null };
   if (s.playback || s.roundPlayback) return s;
+  if (a.type === "COMBAT_SPEED") return { ...s, combatSpeed: a.speed };
+  if (a.type === "SET_FORMATION") {
+    if (
+      !["town", "camp", "exploration", "victory"].includes(s.phase) ||
+      !["front", "back"].includes(a.formation)
+    )
+      return s;
+    const { id, formation } = a;
+    const place = (c: Character) => (c.id === id ? { ...c, formation } : c);
+    return {
+      ...s,
+      party: s.party.map(place),
+      reserve: s.phase === "town" ? s.reserve.map(place) : s.reserve,
+    };
+  }
+  if (a.type === "AUTO_COMBAT") {
+    if (!canAutoResolve(s))
+      return note(
+        s,
+        "Auto combat requires a safely outlevelled ordinary fight, a healthy party and a conservative damage margin.",
+      );
+    let next = s;
+    for (let i = 0; i < 24 && next.phase === "combat"; i++) {
+      if (
+        next.party.some(
+          (c) =>
+            c.hp < c.maxHp * 0.75 ||
+            Object.keys(c.ailments.conditions || {}).length ||
+            c.ailments.poison ||
+            c.ailments.paralysis,
+        )
+      )
+        break;
+      const target = next.combat!.enemies.find((e) => e.hp > 0)?.id;
+      next = reducer(next, {
+        type: "ROUND",
+        battleId: next.combat!.id,
+        round: next.combat!.round,
+        actions: next.party
+          .filter(
+            (c) =>
+              c.hp > 0 &&
+              !c.ailments.paralysis &&
+              !c.ailments.conditions?.frozen,
+          )
+          .map((c) => ({ actor: c.id, kind: "attack", target })),
+      });
+    }
+    return next;
+  }
   if (a.type === "WALKTHROUGH") {
     if (!s.started) return s;
     if (a.kind === "restart")

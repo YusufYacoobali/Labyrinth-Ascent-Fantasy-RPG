@@ -2,8 +2,13 @@ import type { Element } from "./world";
 import type { Game } from "./engine";
 import type { Archetype, CombatEnemy } from "./round-combat";
 import { goblinIntent } from "./goblin-ecosystem";
+import { selectMove } from "./enemy-moves";
+import type { StatusId } from "./combat-status";
 
 export interface EnemyIntent {
+  move?: string;
+  cooldown?: number;
+  status?: StatusId;
   kind: string;
   label: string;
   targets: string[];
@@ -311,6 +316,7 @@ export function speciesIntent(s: Game, e: CombatEnemy): EnemyIntent | null {
       : alive[(round + profile.speed) % Math.max(1, alive.length)];
   if (e.broken || e.paralysis)
     return { kind: "wait", label: "Interrupted", targets: [], power: 0 };
+  if (s.combat?.rules === 2) return selectMove(s, e, profile);
   const goblin = goblinIntent(s, e);
   if (goblin) return goblin;
   if (e.boss) {

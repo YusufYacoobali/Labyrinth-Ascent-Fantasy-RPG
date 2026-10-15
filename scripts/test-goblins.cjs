@@ -25,13 +25,15 @@ function arena(seed = 0, defender = false) {
   });
   s = e.reducer(s, { type: "RECRUIT", id: "kael" });
   s = e.reducer({ ...s, day: 30 }, { type: "ENTER" });
-  return r.beginCombat({
+  const n = r.beginCombat({
     ...s,
     phase: "combat",
     rng: { ...s.rng, encounters: seed },
     enemy: e.enemyFor(1, null, 2),
     journey: { ...s.journey, room: defender ? "portal" : "entrance", defender },
   });
+  n.combat.intents = undefined;
+  return n;
 }
 function round(
   s,

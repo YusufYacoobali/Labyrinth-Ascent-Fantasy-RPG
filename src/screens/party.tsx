@@ -4,6 +4,7 @@ import {
   CompanionRelationships,
 } from "@/components/story-journal";
 import { SkillLibrary } from "@/components/skill-library";
+import { formationOf } from "@/game/combat-commands";
 import React, { useState } from "react";
 import { View, Pressable, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
@@ -62,6 +63,27 @@ export function PartyScreen() {
   return (
     <Guard>
       <Frame active="Party" title="Your Party">
+        {["town", "camp", "exploration", "victory"].includes(state.phase) && (
+          <Panel style={{ margin: 10, gap: 6 }}>
+            <Copy>
+              {c.name} · {formationOf(c)} rank. Ordinary front attacks prefer
+              standing front companions; hunters and area attacks can reach the
+              back.
+            </Copy>
+            <Button
+              small
+              tone="dark"
+              label={`Move ${c.name} to ${formationOf(c) === "front" ? "Back" : "Front"}`}
+              onPress={() =>
+                dispatch({
+                  type: "SET_FORMATION",
+                  id: c.id,
+                  formation: formationOf(c) === "front" ? "back" : "front",
+                })
+              }
+            />
+          </Panel>
+        )}
         {state.phase === "story" ? (
           <StoryScene />
         ) : (

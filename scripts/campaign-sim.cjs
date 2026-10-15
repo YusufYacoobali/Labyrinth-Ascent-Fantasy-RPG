@@ -10,6 +10,7 @@ const {
   genericData: gd,
   monsters: m,
   townProgression: tp,
+  status,
 } = require("./engine-loader.cjs");
 const events = {
   1: "leave",
@@ -29,7 +30,7 @@ const mean = (list) =>
 function combatQueue(s) {
   const foes = s.combat.enemies.filter((e) => e.hp > 0),
     living = s.party.filter((c) => c.hp > 0),
-    ready = living.filter((c) => !c.ailments.paralysis),
+    ready = living.filter((c) => !status.impeded(c)),
     intents = foes.map((e) => r.enemyIntent(s, e));
   let potions = s.potions,
     greater = s.inventory["greater-potion"] || 0,
@@ -64,7 +65,14 @@ function combatQueue(s) {
       else potions--;
       plannedHeals.add(low.id);
       q = { actor: c.id, kind: "item", item, target: low.id };
-    } else if ((c.ailments.poison || c.ailments.paralysis) && antidote) {
+    } else if (
+      (c.ailments.poison ||
+        c.ailments.paralysis ||
+        Object.keys(c.ailments.conditions || {}).some((id) =>
+          ["venom", "chilled", "frozen"].includes(id),
+        )) &&
+      antidote
+    ) {
       antidote--;
       q = { actor: c.id, kind: "item", item: "antidote", target: c.id };
     } else if (

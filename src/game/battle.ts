@@ -1,4 +1,5 @@
 import { fatigueMultiplier } from "./exhaustion";
+import { cleanse, stacks } from "./combat-status";
 import { SKILLS, resist } from "./combat-data";
 import { earnMastery, potency, skillRank } from "./progression";
 import type { Action, BattleEffect, Character, Enemy, Game } from "./engine";
@@ -283,6 +284,9 @@ export function resolveBattle(
             ? 0.55
             : 1;
       if (cast) mult *= power;
+      mult *=
+        (1 - stacks(c.ailments.conditions, "weakened") * 0.2) *
+        (1 + stacks(enemy.conditions, "exposed") * 0.15);
       if (enemy.vulnerable) mult *= 1.1;
       if (
         c.traitRevealed &&
@@ -303,6 +307,7 @@ export function resolveBattle(
         enemy.broken > 0 || (cast && skill === "Arcane Bolt")
           ? 0
           : enemy.guard *
+            (1 - stacks(enemy.conditions, "fractured") * 0.1) *
             (cast && skill === "Sling Shot" ? 0.5 : 1) *
             (c.traitRevealed && c.trait === "Moon Sight" ? 0.5 : 1);
       const hit =
@@ -383,6 +388,10 @@ export function resolveBattle(
               ailments: {
                 ...c.ailments,
                 poison: rank >= 2 ? 0 : c.ailments.poison,
+                conditions:
+                  rank >= 2
+                    ? cleanse(c.ailments.conditions, "healing")
+                    : c.ailments.conditions,
                 barrier:
                   rank === 3 ? Math.round(c.maxHp * 0.1) : c.ailments.barrier,
                 candleOwner: rank === 3 ? undefined : c.ailments.candleOwner,
@@ -400,6 +409,10 @@ export function resolveBattle(
               ailments: {
                 ...c.ailments,
                 poison: rank >= 2 ? 0 : c.ailments.poison,
+                conditions:
+                  rank >= 2
+                    ? cleanse(c.ailments.conditions, "healing")
+                    : c.ailments.conditions,
                 barrier:
                   rank === 3 ? Math.round(c.maxHp * 0.1) : c.ailments.barrier,
                 candleOwner: rank === 3 ? undefined : c.ailments.candleOwner,

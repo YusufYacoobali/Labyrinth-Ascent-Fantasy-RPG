@@ -1,6 +1,13 @@
 import { Image } from "expo-image";
 import { MOTION_SHEETS } from "./combat-sheets";
 import { enemyVisual } from "@/game/combat-visuals";
+import {
+  canAutoResolve,
+  commandPreview,
+  formationOf,
+  repeatCommands,
+} from "@/game/combat-commands";
+import { conditionText, impeded } from "@/game/combat-status";
 import { battleCue, type CombatCue } from "@/game/combat-animation";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { View } from "react-native";
@@ -23,12 +30,13 @@ export default function TacticalCombat() {
   const source = playback?.before || state,
     combat = source.combat;
   const [cursor, setCursor] = useState(0),
+    [showRules, setShowRules] = useState(false),
     [selected, setSelected] = useState(
-      source.party.find((c) => c.hp > 0 && !c.ailments.paralysis)?.id || "",
+      source.party.find((c) => c.hp > 0 && !impeded(c))?.id || "",
     ),
     [queue, setQueue] = useState<Record<string, QueuedAction>>({});
   const reduced = useReducedMotion(),
-    ready = source.party.filter((c) => c.hp > 0 && !c.ailments.paralysis);
+    ready = source.party.filter((c) => c.hp > 0 && !impeded(c));
   const frame = playback?.events[Math.min(cursor, playback.events.length - 1)],
     party = frame?.party || source.party,
     enemies = frame?.enemies || combat?.enemies || [];
@@ -43,10 +51,10 @@ export default function TacticalCombat() {
           dispatch({ type: "FINISH_PLAYBACK" });
         else setCursor((n) => n + 1);
       },
-      reduced ? 50 : 450,
+      reduced ? 50 : state.combatSpeed === "fast" ? 160 : 450,
     );
     return () => clearTimeout(timer);
-  }, [playback, cursor, reduced, dispatch]);
+  }, [playback, cursor, reduced, dispatch, state.combatSpeed]);
   const cue = useMemo(() => {
     if (
       !frame ||
@@ -59,6 +67,7 @@ export default function TacticalCombat() {
         "interrupt",
         "recover",
         "summon",
+        "status",
       ].includes(frame.kind)
     )
       return null;
@@ -83,7 +92,7 @@ export default function TacticalCombat() {
     const action = frame.action;
     const generated = battleCue(before, after, {
       type: "BATTLE",
-      kind: action?.kind || "guard",
+      kind: action?.kind === "taunt" ? "guard" : action?.kind || "guard",
       actor: action?.actor,
       skill: action?.skill,
       item: action?.item,
@@ -133,7 +142,7 @@ export default function TacticalCombat() {
         actor: actor.id,
         kind,
         target:
-          kind === "guard" || kind === "item"
+          kind === "guard" || kind === "item" || kind === "taunt"
             ? actor.id
             : enemies.find((e) => e.hp > 0)?.id,
         ...extra,
@@ -149,7 +158,7 @@ export default function TacticalCombat() {
       animate: true,
     };
   const issue = validateQueue(source, request),
-    friendly = q?.kind === "guard" || q?.kind === "item";
+    friendly = q?.kind === "guard" || q?.kind === "item" || q?.kind === "taunt";
   return (
     <View style={{ padding: 10, gap: 10, paddingBottom: 24 }}>
       <Eyebrow>
@@ -161,6 +170,35 @@ export default function TacticalCombat() {
           .map((c) => `${c.name} (${Math.round(c.speed)})`)
           .join(" → ")}
       </Copy>
+      <Button
+        small
+        tone="dark"
+        label={showRules ? "Hide combat rules" : "Status and formation rules"}
+        onPress={() => setShowRules((v) => !v)}
+      />
+      {showRules && (
+        <Panel style={{ gap: 6 }}>
+          <Copy>
+            Front attacks prefer the front rank; hunters seek wounded companions
+            and volleys reach everyone. Guard halves damage and prevents
+            special-hit ailments after its initiative. Taunt redirects
+            subsequent single-target attacks to its user.
+          </Copy>
+          <Copy>
+            Bleeding: 2% maximum HP per stack; burning and venom: 2.5%. Each
+            caps at three stacks for three future round ticks. Chilled: −2 speed
+            per stack for four rounds; three stacks become one skipped action
+            from frozen.
+          </Copy>
+          <Copy>
+            Weakened: −20% damage for two rounds. Fractured: −10% armor per
+            stack, up to three, for three rounds. Exposed: +15% incoming damage
+            for two rounds. Reapplying refreshes duration. Antidote clears
+            venom, chill and freeze; bandages clear bleeding; mastered healing
+            cleanses ailments. Matching mastered wards prevent their ailments.
+          </Copy>
+        </Panel>
+      )}
       <View style={{ flexDirection: "row", gap: 6 }}>
         {enemies.map((enemy) => (
           <Panel
@@ -197,6 +235,11 @@ export default function TacticalCombat() {
             <Copy style={{ fontSize: 11 }}>
               {enemy.hp}/{enemy.maxHp} HP · {enemy.archetype}
             </Copy>
+            {!!conditionText(enemy.conditions) && (
+              <Copy muted style={{ fontSize: 11 }}>
+                {conditionText(enemy.conditions)}
+              </Copy>
+            )}
             {enemy.hp > 0 && (
               <Copy style={{ fontSize: 11, color: t.color.goldLight }}>
                 Intent: {enemyIntent(source, enemy).power > 1 ? "Heavy · " : ""}
@@ -233,7 +276,9 @@ export default function TacticalCombat() {
           state={stage}
           selected={frame?.actor || selected}
           cue={cue}
-          playbackDuration={reduced ? 50 : 450}
+          playbackDuration={
+            reduced ? 50 : state.combatSpeed === "fast" ? 160 : 450
+          }
           busy={!!playback}
           onSelect={setSelected}
           onReady={onReady}
@@ -269,16 +314,16 @@ export default function TacticalCombat() {
                 style={{ flexGrow: 1, minWidth: "40%" }}
                 disabled={c.hp <= 0 || !!c.ailments.paralysis}
                 tone={selected === c.id ? "gold" : "dark"}
-                label={`${c.name} · ${c.hp} HP · ${c.mp} MP${c.ailments.paralysis ? " · impeded" : queue[c.id] ? " · queued" : ""}`}
+                label={`${c.name} · ${formationOf(c)} · ${c.hp} HP · ${c.mp} MP${impeded(c) ? " · impeded" : queue[c.id] ? " · queued" : ""}${conditionText(c.ailments.conditions) ? " · " + conditionText(c.ailments.conditions) : ""}`}
                 onPress={() => setSelected(c.id)}
               />
             ))}
           </View>
-          {actor && actor.hp > 0 && !actor.ailments.paralysis && (
+          {actor && actor.hp > 0 && !impeded(actor) && (
             <Panel style={{ gap: 8 }}>
               <Copy title>{actor.name}’s action</Copy>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 5 }}>
-                {(["attack", "guard", "focus", "burst"] as const).map(
+                {(["attack", "guard", "taunt", "focus", "burst"] as const).map(
                   (kind) => (
                     <Button
                       small
@@ -328,37 +373,49 @@ export default function TacticalCombat() {
                   ) : null;
                 })}
               </View>
-              {q && q.kind !== "focus" && q.skill !== "Second Wind" && (
-                <>
-                  <Copy muted>Target</Copy>
-                  {(friendly
-                    ? source.party.filter((c) => c.hp > 0)
-                    : enemies.filter((e) => e.hp > 0)
-                  ).map((target) => (
-                    <Button
-                      key={target.id}
-                      small
-                      label={target.name}
-                      tone={q.target === target.id ? "gold" : "dark"}
-                      onPress={() =>
-                        setQueue((old) => ({
-                          ...old,
-                          [actor.id]: { ...old[actor.id], target: target.id },
-                        }))
-                      }
-                    />
-                  ))}
-                </>
-              )}
+              {q &&
+                q.kind !== "focus" &&
+                q.kind !== "taunt" &&
+                q.skill !== "Second Wind" && (
+                  <>
+                    <Copy muted>Target</Copy>
+                    {(friendly
+                      ? source.party.filter((c) => c.hp > 0)
+                      : enemies.filter((e) => e.hp > 0)
+                    ).map((target) => (
+                      <Button
+                        key={target.id}
+                        small
+                        label={target.name}
+                        tone={q.target === target.id ? "gold" : "dark"}
+                        onPress={() =>
+                          setQueue((old) => ({
+                            ...old,
+                            [actor.id]: { ...old[actor.id], target: target.id },
+                          }))
+                        }
+                      />
+                    ))}
+                  </>
+                )}
               {q?.skill === "Second Wind" && (
                 <Copy muted>Group healing: all standing allies.</Copy>
+              )}
+              {!!commandPreview(source, q) && (
+                <Copy muted>{commandPreview(source, q)}</Copy>
+              )}
+              {q?.kind === "taunt" && (
+                <Copy muted>
+                  Guard yourself and redirect single-target strikes after your
+                  initiative. Area attacks retain their announced targets.
+                </Copy>
               )}
             </Panel>
           )}
           <Button
             small
             tone="dark"
-            label="Queue remaining attacks"
+            label="Quick Attack · fill remaining commands"
             onPress={() =>
               setQueue((old) => ({
                 ...old,
@@ -377,6 +434,42 @@ export default function TacticalCombat() {
               }))
             }
           />
+          <Button
+            small
+            tone="dark"
+            label="Repeat last commands"
+            disabled={!combat.lastCommands?.length}
+            onPress={() =>
+              setQueue(
+                Object.fromEntries(
+                  repeatCommands(source).map((q) => [q.actor, q]),
+                ),
+              )
+            }
+          />
+          <Button
+            small
+            tone="dark"
+            label={
+              state.combatSpeed === "fast"
+                ? "Playback: Fast"
+                : "Playback: Normal"
+            }
+            onPress={() =>
+              dispatch({
+                type: "COMBAT_SPEED",
+                speed: state.combatSpeed === "fast" ? "normal" : "fast",
+              })
+            }
+          />
+          {canAutoResolve(source) && (
+            <Button
+              small
+              label="Auto resolve · ordinary rewards"
+              disabled={saving}
+              onPress={() => dispatch({ type: "AUTO_COMBAT" })}
+            />
+          )}
           <Panel style={{ gap: 5 }}>
             {ready.map((c) => (
               <Copy key={c.id}>

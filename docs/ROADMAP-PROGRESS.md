@@ -61,9 +61,22 @@ Verification: 184 grouped checks, typecheck, lint and Android/iOS/web exports pa
 
 The 200-seed benchmark completes 198 campaigns within twelve expeditions, with zero state stalls, first-expedition median Floor 4 and completed-campaign median six expeditions. Mean battle length is 4.97 rounds; fallen-character events 2,156; unfed checks 0; median mastery 179; loot Continue actions 5,021; binding actions 1,788; story choices 6,897; generic appearances 7,710; repetition violations 0; treatment cost 251,200 gold and 5,187 injured-character recovery days. Two campaigns remain incomplete at the simulation cap. Report: `verification/master-m1-campaign.json`.
 
+## Milestone 2 — combat framework
+
+Implemented following the Floor 1 checkpoint. New fights persist their announced intents, move cooldowns, current phase and previous commands. Species profiles feed reusable basic/special/defensive move definitions with explicit targets, effects and phase-dependent patterns. Support actions share a dedicated resolver for healing, armor, charging and finite reinforcements. Existing unfinished fights retain their previous behavior rules.
+
+Characters have Front/Back formation selectable outside combat. Ordinary front attacks prefer standing front companions; hunting moves seek wounded targets and volleys retain their announced group targets. Guard and Taunt use the actor's action: Taunt guards its own actor and redirects subsequent single-target attacks after its initiative, while area attacks remain unchanged.
+
+The status registry defines stack caps, durations, damage, cleansing and matching mastery immunities. Bleeding caps at three stacks, 2% maximum HP per stack for three future ticks. Burning and venom use 2.5% with the same cap/duration. Chilled removes two speed per stack for four rounds; three stacks convert into one action lost to freezing. Weakened reduces damage 20% for two rounds; fractured reduces armor 10% per stack (three maximum) for three rounds; exposed increases incoming damage 15% for two rounds. Fresh effects start ticking the following round, and freezing is consumed by exactly one missed action. Guard prevents special-hit ailments; antidotes, bandages, mastered healing and matching wards provide explicit counters. Rules and active durations are available in combat.
+
+Repeat Last Commands retargets defeated units and replaces unavailable skills, while the complete queue still validates shared resources before spending them. Quick Attack fills remaining commands. Normal/fast playback preference persists, and Skip remains available. Selected offensive commands show a read-only damage range. Conservative auto resolution is limited to ordinary fights with a substantial level, health and estimated damage margin; it uses real round resolution, watches and ordinary seeded rewards, and stops if new ailments or significant damage require attention.
+
+Verification: 196 grouped checks, typecheck, lint and Android/iOS/web exports pass. Twelve framework regression groups cover move definitions, intent persistence, formation targeting, taunts, exact status ticks and caps, freezing, remedies/immunities, Guard, phase patterns/cooldowns, repeated-command validation, previews/preferences and auto rewards. User-authorized UI deferral remains in effect; no physical-device or human playthrough result is claimed.
+
+The 200-seed benchmark completes all 200 campaigns within twelve expeditions, with zero stalls. First-expedition median Floor 3; completed-campaign median five expeditions; mean battle length 4.75 rounds; fallen-character events 1,442; unfed checks 0; median mastery 165.5; loot Continue actions 4,560; binding actions 1,740; story choices 6,873; generic appearances 7,167; repetition violations 0; treatment cost 149,300 gold and 3,444 injured-character recovery days. Report: `verification/master-m2-campaign.json`. These aggregate simulations remain balance regression evidence, not a substitute for player feedback.
+
 ## Remaining sequence
 
-2. Combat framework: authored moves, elemental statuses, formation/protection, phases and faster command entry.
 3. Remaining floor and route ecosystems.
 4. Exploration director, map presentation, shortcuts, persistent NPC placement and known-route travel.
 5. Conditional stories, rivals, authored reconciliation and tangible faction opportunities.
