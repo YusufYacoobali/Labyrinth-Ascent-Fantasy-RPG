@@ -92,30 +92,32 @@ export function battleCue(
           ? "#bca0ff"
           : visual?.color,
     enemyColor: foe.color,
-    healing: Object.fromEntries(
-      before.party
-        .filter((c) => c.hp > 0)
-        .map((c) => [
-          c.id,
-          heal
-            ? Math.min(c.maxHp - c.hp, Math.round(c.maxHp * 0.22))
-            : action.kind === "item" &&
-                ["potion", "greater-potion", "bandage"].includes(
-                  action.item || "potion",
-                )
-              ? Math.min(
-                  c.maxHp - c.hp,
-                  action.item === "bandage"
-                    ? c.id === actor?.id
-                      ? 90
-                      : 0
-                    : action.item === "greater-potion"
-                      ? 120
-                      : 65,
-                )
-              : 0,
-        ]),
-    ),
+    healing:
+      after.effects.healing ||
+      Object.fromEntries(
+        before.party
+          .filter((c) => c.hp > 0)
+          .map((c) => [
+            c.id,
+            heal
+              ? Math.min(c.maxHp - c.hp, Math.round(c.maxHp * 0.22))
+              : action.kind === "item" &&
+                  ["potion", "greater-potion", "bandage"].includes(
+                    action.item || "potion",
+                  )
+                ? Math.min(
+                    c.maxHp - c.hp,
+                    action.item === "bandage"
+                      ? c.id === actor?.id
+                        ? 90
+                        : 0
+                      : action.item === "greater-potion"
+                        ? 120
+                        : 65,
+                  )
+                : 0,
+          ]),
+      ),
     enemyAttacks:
       after.effects.enemyDamage > 0 &&
       !after.effects.stunned &&

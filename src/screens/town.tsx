@@ -16,7 +16,11 @@ export function Guard({
   const { ready, state } = useGame();
   if (!ready) return null;
   if (!state.started) return <Redirect href="/" />;
-  if (!expedition && state.phase !== "town")
+  if (
+    !expedition &&
+    state.phase !== "town" &&
+    !(state.phase === "story" && state.stories.active?.resume === "town")
+  )
     return <Redirect href="/expedition" />;
   return <>{children}</>;
 }

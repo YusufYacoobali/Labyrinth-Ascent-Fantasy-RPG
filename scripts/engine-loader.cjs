@@ -27,6 +27,16 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  skillIds: load("src/game/skill-ids.ts"),
+  generic: load("src/game/generic-stories.ts"),
+  genericData: load("src/game/generic-encounters.ts"),
+  stories: load("src/game/stories.ts"),
+  rounds: load("src/game/round-combat.ts"),
+  survival: load("src/game/survival.ts"),
+  progression: load("src/game/progression.ts"),
+  monsters: load("src/game/monsters.ts"),
+  saves: load("src/game/save-store.ts"),
+  combatData: load("src/game/combat-data.ts"),
   visuals: load("src/game/combat-visuals.ts"),
   trial: load("src/game/combat-trial.ts"),
   animation: load("src/game/combat-animation.ts"),

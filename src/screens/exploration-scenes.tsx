@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import { GenericEncounterScene } from "@/components/generic-encounter";
+import { ShelterBinding } from "@/components/skill-library";
+import React from "react";
 import { View } from "react-native";
 import {
   art,
@@ -20,8 +22,14 @@ import {
   type Direction,
 } from "@/game/exploration";
 import { StoryCard } from "@/components/story-card";
-import { currentRoom, floorMap, backRoom } from "@/game/exploration";
-import { visibleRooms } from "@/game/floor-map";
+import {
+  currentRoom,
+  backRoom,
+  exitsFor,
+  roomOccupant,
+  encounterKey,
+} from "@/game/exploration";
+import RouteMap from "@/components/route-map";
 import { theme as t } from "@/theme";
 
 export function TeamCondition() {
@@ -63,148 +71,61 @@ export function TeamCondition() {
     </View>
   );
 }
+export { default as RouteMap } from "@/components/route-map";
 const arrows: Record<Direction, string> = {
   left: "←",
-  right: "→",
   straight: "↑",
+  right: "→",
+  back: "↓",
 };
-export function RouteMap() {
-  const { state } = useGame();
-  const [width, setWidth] = useState(300);
-  const [open, setOpen] = useState(false);
-  const map = floorMap(state);
-  const { named, visible } = visibleRooms(map);
-  const rooms = Object.values(map.nodes).filter((n) => visible.has(n.id));
-  const point = (n: (typeof rooms)[number]) => ({
-    x: 12 + (n.x / 6.5) * (width - 28),
-    y: 12 + n.y * 25,
-  });
-  const edges = new Set<string>();
-  const links: [(typeof rooms)[number], (typeof rooms)[number]][] = [];
-  for (const room of rooms)
-    for (const id of Object.values(room.exits)) {
-      if (!visible.has(id)) continue;
-      if (!named.has(room.id) && !named.has(id)) continue;
-      const key = [room.id, id].sort().join(":");
-      if (!edges.has(key)) {
-        edges.add(key);
-        links.push([room, map.nodes[id]]);
-      }
-    }
-  const icons = {
-    monster: "⚔",
-    story: "◇",
-    crossroads: "·",
-    treasure: "◆",
-    npc: "♟",
-    spring: "≈",
-    trap: "!",
-    portal: "♜",
-    camp: "△",
-    "dead-end": "×",
-  };
+function Directions() {
+  const { state, dispatch } = useGame();
   return (
-    <Panel style={{ padding: 10, gap: 7 }}>
+    <View style={{ gap: 6 }}>
+      <Copy muted style={{ fontSize: 12 }}>
+        Facing {state.journey.facing} · directions are relative to you
+      </Copy>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+        {exitsFor(state).map(({ direction, heading }) => (
+          <Button
+            key={direction}
+            label={`${arrows[direction]} ${direction[0].toUpperCase() + direction.slice(1)} · ${heading}`}
+            small
+            tone="blue"
+            style={{ minWidth: "45%", flexGrow: 1 }}
+            onPress={() => dispatch({ type: "MOVE", direction })}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+function FieldSurvival() {
+  const { state, dispatch } = useGame();
+  const suitable =
+      currentRoom(state).kind === "landmark" ||
+      roomOccupant(state) === "spring" ||
+      currentRoom(state).kind === "dead-end",
+    foraged = state.expedition.foraged.includes(encounterKey(state));
+  return (
+    <View style={{ gap: 6 }}>
+      {suitable && (
+        <Button
+          small
+          tone="dark"
+          label={foraged ? "This room has been foraged" : "Forage · one watch"}
+          disabled={foraged}
+          onPress={() => dispatch({ type: "FORAGE" })}
+        />
+      )}
       <Button
         small
-        compact
         tone="dark"
-        label={open ? "Hide floor map" : "Show floor map"}
-        onPress={() => setOpen((v) => !v)}
+        label={`Make wild camp · ${state.inventory["camp-kit"] || 0} camping kits`}
+        disabled={!(state.inventory["camp-kit"] > 0)}
+        onPress={() => dispatch({ type: "WILD_CAMP" })}
       />
-      {open && (
-        <>
-          <View
-            onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-            style={{ height: 233, position: "relative" }}
-          >
-            {links.map(([a, b]) => {
-              const p = point(a),
-                q = point(b);
-              const length = Math.hypot(q.x - p.x, q.y - p.y);
-              return (
-                <View
-                  key={[a.id, b.id].sort().join(":")}
-                  style={{
-                    position: "absolute",
-                    left: (p.x + q.x) / 2 - length / 2,
-                    top: (p.y + q.y) / 2,
-                    width: length,
-                    height: 1,
-                    backgroundColor:
-                      named.has(a.id) && named.has(b.id)
-                        ? "#58839f"
-                        : "#263e52",
-                    transform: [
-                      { rotate: Math.atan2(q.y - p.y, q.x - p.x) + "rad" },
-                    ],
-                  }}
-                />
-              );
-            })}
-            {rooms.map((n) => {
-              const p = point(n),
-                known = named.has(n.id),
-                here = n.id === state.journey.room;
-              return (
-                <View
-                  key={n.id}
-                  accessibilityLabel={
-                    here
-                      ? "Current room"
-                      : known
-                        ? n.kind +
-                          (map.explored.includes(n.id)
-                            ? ", explored"
-                            : ", reported")
-                        : "Unexplored passage"
-                  }
-                  style={{
-                    position: "absolute",
-                    left: p.x - 8,
-                    top: p.y - 8,
-                    width: 17,
-                    height: 17,
-                    borderRadius: n.kind === "crossroads" ? 9 : 3,
-                    borderWidth: here ? 2 : 1,
-                    borderColor: here
-                      ? t.color.goldLight
-                      : known
-                        ? "#7097b3"
-                        : "#38526a",
-                    backgroundColor: here
-                      ? "#806036"
-                      : known
-                        ? "#173449"
-                        : "#091421",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Copy
-                    style={{
-                      fontSize: 10,
-                      lineHeight: 12,
-                      color: here ? t.color.goldLight : "#b3d9ee",
-                    }}
-                  >
-                    {known ? icons[n.kind] : "?"}
-                  </Copy>
-                </View>
-              );
-            })}
-          </View>
-          <Copy muted style={{ fontSize: 11, lineHeight: 15 }}>
-            Gold: you · blue: explored · ?: unseen · △ shelter · ♜ portal. Lines
-            are actual connected passages. Rumours reveal reported rooms.
-          </Copy>
-        </>
-      )}
-      <Copy muted style={{ fontSize: 11, lineHeight: 15 }}>
-        {map.explored.length} rooms explored ·{" "}
-        {map.known.filter((id) => !map.explored.includes(id)).length} reported
-      </Copy>
-    </Panel>
+    </View>
   );
 }
 export function MissionTracker() {
@@ -273,24 +194,12 @@ export function ExploreScene() {
             {state.message}
           </Copy>
         )}
-        <View style={{ flexDirection: "row", gap: 6 }}>
-          {(["left", "straight", "right"] as Direction[])
-            .filter((d) => currentRoom(state).exits[d])
-            .map((direction) => (
-              <Button
-                key={direction}
-                label={`${arrows[direction]} ${direction === "straight" ? "Straight" : direction === "left" ? "Left" : "Right"}`}
-                small
-                tone="blue"
-                style={{ flex: 1 }}
-                onPress={() => dispatch({ type: "MOVE", direction })}
-              />
-            ))}
-        </View>
+        <Directions />
+        <FieldSurvival />
         <TeamCondition />
         {!!backRoom(state) && (
           <Button
-            label="Back to the previous room"
+            label="Retrace previous connection"
             small
             tone="dark"
             onPress={() => dispatch({ type: "MOVE_BACK" })}
@@ -298,13 +207,17 @@ export function ExploreScene() {
         )}
         {currentRoom(state).kind === "portal" && (
           <Button
-            label="Return to the portal"
+            label={
+              state.journey.portal
+                ? "Return to the open portal"
+                : "Approach the portal defender"
+            }
             small
             onPress={() => dispatch({ type: "AT_PORTAL" })}
           />
         )}
         <Button
-          label="Find shelter and check the team"
+          label="Check for an adjacent sanctuary"
           small
           tone="dark"
           onPress={() => dispatch({ type: "SEEK_SHELTER" })}
@@ -336,7 +249,7 @@ const branchScenes = {
   company: {
     art: art.clan,
     title: "Another lantern",
-    body: "An exhausted survey team raises empty hands. Their leader has two turns marked on a torn chart. They know something about the floor above.",
+    body: "An exhausted survey team raises empty hands. Their chart records connected rooms and compass headings, with the direction they approached from.",
     choices: [
       {
         id: "talk",
@@ -391,6 +304,8 @@ export function BranchScene() {
   if (!b) return null;
   const scene = branchScenes[b.kind];
   const resolved = state.journey.resolvedBranches.includes(b.id);
+  if (b.kind === "company" && state.expedition.generic[encounterKey(state)])
+    return <GenericEncounterScene />;
   return (
     <View style={{ gap: 12, paddingBottom: 20 }}>
       {currentRoom(state).kind === "dead-end" ? (
@@ -419,9 +334,9 @@ export function BranchScene() {
         }
         body={
           currentRoom(state).kind === "dead-end"
-            ? "Stone closes off the corridor. A narrow opening leads farther into a side chamber, but the main crossing is behind you."
+            ? "Stone closes off this chamber. Its single passage is the way you entered."
             : resolved
-              ? "This room has already been searched this expedition. Your marks point back to the crossing."
+              ? "This room has already been searched this expedition. Your saved connections remain on the map."
               : scene.body
         }
       >
@@ -439,25 +354,16 @@ export function BranchScene() {
                 dispatch({
                   type: "BRANCH_CHOICE",
                   choice: c.id,
-                  roll: Math.random(),
+                  roll: -1,
                 })
               }
             />
           ))}
-        {(["left", "straight", "right"] as Direction[])
-          .filter((d) => currentRoom(state).exits[d])
-          .map((d) => (
-            <Choice
-              key={d}
-              label={`Take the ${d} passage`}
-              detail="Travel to the connected room"
-              icon="map-outline"
-              tone="blue"
-              onPress={() => dispatch({ type: "MOVE", direction: d })}
-            />
-          ))}
+        <RouteMap />
+        <Directions />
+        <FieldSurvival />
         <Button
-          label="Return to the previous room"
+          label="Retrace previous connection"
           small
           tone="dark"
           onPress={() =>
@@ -477,13 +383,14 @@ export function CampScene() {
     <View style={{ gap: 12, paddingBottom: 20 }}>
       <StoryArt group="rooms" index={4} />
       <StoryCard
-        title="The watch room"
+        title={state.journey.wildCamp ? "Wild camp" : "The sanctuary"}
         body={
           state.message ||
           "The lantern is sheltered. Your team can rest here until the return gate opens."
         }
       >
         <TeamCondition />
+        {!state.journey.wildCamp && <ShelterBinding />}
         <Copy muted style={{ fontSize: 13 }}>
           {state.food} rations · {daysRemaining(state)} days until the return
           gate
@@ -496,13 +403,13 @@ export function CampScene() {
         )}
         <Choice
           label="Rest for one day"
-          detail="Use 1 ration for 25% HP/MP; without food, forage for 8%"
+          detail={`At dawn: 1 party ration, 25% HP/MP and −35 exhaustion. ${state.journey.wildCamp ? `${state.floor <= 4 ? 20 : state.floor <= 8 ? 30 : 40}% interruption risk.` : "Safe from ambush."}`}
           icon="campfire"
           onPress={() => dispatch({ type: "CAMP_REST" })}
         />
         <Choice
           label="Keep watch until the gate returns"
-          detail="Count down the remaining days in shelter"
+          detail="Apply daily food and rest checks; stop for hunger or an interruption"
           icon="timer-sand"
           tone="blue"
           onPress={() => dispatch({ type: "CAMP_REST", untilClose: true })}
@@ -540,8 +447,8 @@ export function NagScene() {
           </View>
         </View>
         <Choice
-          label="Find a sheltered watch room"
-          detail="Move to the adjoining alcove; choose how long to rest"
+          label="Check the adjoining sanctuary"
+          detail="Only succeeds if a sanctuary is connected here; use the map to reach it"
           icon="tent"
           tone="gold"
           onPress={() => dispatch({ type: "NAG_DECISION", rest: true })}

@@ -1,3 +1,4 @@
+import { MONSTERS } from "./monsters";
 import type { Character, Game } from "./engine";
 
 export type MotionStyle = "melee" | "arrow" | "magic" | "slam";
@@ -97,5 +98,12 @@ export function enemyVisual(
     return { key: "bonegnaw", style: "melee", color: "#ccbb89" };
   if (state.sideBattle || /plunderer/i.test(state.enemy?.name || ""))
     return { key: "plunderer", style: "melee", color: "#9bd1ff" };
+  const species = FLOOR_VISUALS.find(
+    (v) =>
+      v.key ===
+      (MONSTERS.find((m) => m.id === state.enemy?.species)?.visual ||
+        state.enemy?.species),
+  );
+  if (species) return species;
   return FLOOR_VISUALS[Math.max(0, Math.min(11, state.floor - 1))];
 }

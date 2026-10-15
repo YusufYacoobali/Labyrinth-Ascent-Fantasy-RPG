@@ -2,6 +2,7 @@ import type { CombatCue } from "@/game/combat-animation";
 import type { Character, Game } from "@/game/engine";
 export type CombatStageProps = {
   state: Game;
+  playbackDuration?: number;
   selected: string;
   cue: CombatCue | null;
   busy: boolean;

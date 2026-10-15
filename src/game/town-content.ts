@@ -362,7 +362,7 @@ export const TOWN_ITEMS: Item[] = [
     vendor: "provisioner",
     effect: "camp",
     description:
-      "Outside combat: +30% HP/MP to standing allies. Costs 1 ration, once per floor.",
+      "Supplies one wild camp. Daily rest uses party rations and may be interrupted.",
   },
   {
     id: "labyrinth-key",
@@ -384,9 +384,15 @@ export interface Recipe {
   gold: number;
   materials: { id: string; quantity: number }[];
   floor?: number;
+  essence?: string;
 }
 export const RECIPES: Recipe[] = [
-  { id: "iron-helm", gold: 60, materials: [{ id: "beast-core", quantity: 2 }] },
+  {
+    id: "iron-helm",
+    gold: 60,
+    materials: [{ id: "beast-core", quantity: 2 }],
+    essence: "guardian",
+  },
   {
     id: "scout-boots",
     gold: 50,
@@ -411,12 +417,14 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: "frost-charm",
+    essence: "frostfang",
     gold: 60,
     materials: [{ id: "frost-shard", quantity: 2 }],
     floor: 3,
   },
   {
     id: "ember-charm",
+    essence: "ashen",
     gold: 60,
     materials: [{ id: "ancient-ore", quantity: 1 }],
     floor: 3,
@@ -432,6 +440,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: "root-mantle",
+    essence: "broodmother",
     gold: 150,
     materials: [
       { id: "night-herb", quantity: 3 },

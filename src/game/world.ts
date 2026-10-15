@@ -1,3 +1,4 @@
+import { MONSTERS, essenceId } from "./monsters";
 import { TOWN_ITEMS, TOWN_QUESTS } from "./town-content";
 export type Element = "physical" | "fire" | "frost" | "venom";
 export type Route = "roots" | "frost" | "forge" | "crypt";
@@ -259,7 +260,8 @@ export const ITEMS: Item[] = [
     vendor: "provisioner",
     quantity: 3,
     effect: "food",
-    description: "Entry uses three. Each new floor uses one.",
+    description:
+      "One party ration per elapsed expedition day. Thirty cover the sealed month.",
   },
   {
     id: "potion",
@@ -450,6 +452,17 @@ export const ITEMS: Item[] = [
     description: "Proof that your party reached the twelfth floor.",
   },
   ...TOWN_ITEMS,
+  ...MONSTERS.map((m): Item => ({
+    id: essenceId(m.id),
+    name: `${m.name} essence`,
+    icon: "creation",
+    kind: "loot",
+    quality: "fine",
+    price: 0,
+    sell: m.essenceValue,
+    vendor: "guild",
+    description: `Bind ${m.skill} in town or shelter. Duplicates can be crafted, taught to another ally, or sold.`,
+  })),
   {
     id: "iron-helm",
     name: "Ironbell helm",
@@ -594,7 +607,7 @@ export const EVENTS: Record<
   caravan: {
     eyebrow: "FLOOR 2 · WHAT REMAINS",
     title: "The abandoned caravan",
-    body: "The roadkeeper falls beside a shattered guild wagon. Its owner's ledger lies open in the mud. There is still cargo in the locked chest, but fine wires connect its lid to the stones beneath your feet.",
+    body: "A shattered guild wagon blocks the old road. Its owner's ledger lies open in the mud. There is still cargo in the locked chest, but fine wires connect its lid to the stones beneath your feet.",
     art: "treasure",
     choices: [
       {
@@ -622,7 +635,7 @@ export const EVENTS: Record<
   clan: {
     eyebrow: "FLOOR 3 · WHITE STAG CLAN",
     title: "A banner greater than yours",
-    body: "Commander Serin steps beyond the fallen guardian. “You held your line. We could use people like you.” She unrolls a map marked with missing scouts on Floor 9. Taking her supplies means carrying her clan's promise upward.",
+    body: "Commander Serin waits beside the threshold. “You have come this far. We could use people like you.” She unrolls a map marked with missing scouts on Floor 9. Taking her supplies means carrying her clan's promise upward.",
     art: "clan",
     choices: [
       {
@@ -650,7 +663,7 @@ export const EVENTS: Record<
   routes: {
     eyebrow: "FLOOR 4 · CHOOSE YOUR ASCENT",
     title: "The fourfold gate",
-    body: "Beyond the broodmother, four doors open. Roots push through one; frost covers another. A third smells of hot iron, while the last gives back no sound at all. Each leads upward. You must choose the path your party will take through Floors 5–7.",
+    body: "Four ancient doors open around the chamber. Roots push through one; frost covers another. A third smells of hot iron, while the last gives back no sound at all. Each leads upward. You must choose the path your party will take through Floors 5–7.",
     art: "labyrinth",
     choices: ROUTES.map((r) => ({
       id: r.id,
@@ -663,7 +676,7 @@ export const EVENTS: Record<
   shrine: {
     eyebrow: "FLOOR 5 · AN ECHO OF YOURSELF",
     title: "The shrine answers",
-    body: "The reflection retreats into the basin. Its voice returns with your own breath. “Rest, and I will remember your strength. Give me a little life, and I will give you power.” The surface waits for your answer.",
+    body: "A reflection moves across the basin. Its voice returns with your own breath. “Rest, and I will remember your strength. Give me a little life, and I will give you power.” The surface waits for your answer.",
     art: "relic",
     choices: [
       {
@@ -676,7 +689,7 @@ export const EVENTS: Record<
       {
         id: "blood",
         title: "Offer a little blood",
-        detail: "Trade 18 party HP for one boss essence.",
+        detail: "Trade 18 party HP for two relic fragments.",
         icon: "water-opacity",
       },
       {
@@ -691,7 +704,7 @@ export const EVENTS: Record<
   distillery: {
     eyebrow: "FLOOR 6 · THE FALLEN ALCHEMIST",
     title: "What survives the poison",
-    body: "The warden's chain goes still. Behind the workbench, living silverleaf grows between cracked vessels. The alchemist left enough notes to finish one preparation before the passage fills with mist again. What will you carry onward?",
+    body: "A rusted chain hangs beside the workbench. Beyond it, living silverleaf grows between cracked vessels. The alchemist left enough notes to finish one preparation before the passage fills with mist again. What will you carry onward?",
     art: "forest",
     choices: [
       {
@@ -719,7 +732,7 @@ export const EVENTS: Record<
   bridge: {
     eyebrow: "FLOOR 7 · THE PRICE OF PASSAGE",
     title: "The broken span",
-    body: "The masked traveler takes the wolf's place on the span. “Ninety gold,” he says, drawing the rope toward him. Two more figures step out behind your party. Beyond the bridge, a narrow ledge runs along the wall.",
+    body: "A masked traveler steps onto the span. “Ninety gold,” he says, drawing the rope toward him. Two more figures step out behind your party. Beyond the bridge, a narrow ledge runs along the wall.",
     art: "labyrinth",
     choices: [
       {
@@ -803,7 +816,7 @@ export const EVENTS: Record<
   vault: {
     eyebrow: "FLOOR 10 · A KING’S LOCK",
     title: "The starless vault",
-    body: "The hunter's claws stop scraping. Behind the frost, the vault lock has seven tumblers. Beneath them are seven narrow slots in the floor. A careful hand might open it safely; forcing it would leave no time to escape the mechanism.",
+    body: "Ice covers the old vault. Behind the frost, the vault lock has seven tumblers. Beneath them are seven narrow slots in the floor. A careful hand might open it safely; forcing it would leave no time to escape the mechanism.",
     art: "treasure",
     choices: [
       {
@@ -831,7 +844,7 @@ export const EVENTS: Record<
   merchant: {
     eyebrow: "FLOOR 11 · THE LAST LANTERN",
     title: "Hope has a price",
-    body: "The merchant opens his pack after the swordsman falls. “One floor left. No shops beyond this lantern.” He sets out food and medicine, then points to a sheltered alcove. His prices are high, but your companions look toward the final stairs.",
+    body: "The merchant opens his pack beneath the last lantern. “One floor left. No shops beyond this lantern.” He sets out food and medicine, then points to a sheltered alcove. His prices are high, but your companions look toward the final stairs.",
     art: "tavern",
     choices: [
       {
@@ -871,7 +884,7 @@ export const EVENTS: Record<
       {
         id: "claim",
         title: "Carry the crown home",
-        detail: "Gain a legendary trophy and an extra essence.",
+        detail: "Claim the legendary crown and two extra relic fragments.",
         icon: "crown",
         tone: "blue",
       },

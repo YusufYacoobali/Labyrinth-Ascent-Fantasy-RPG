@@ -62,6 +62,7 @@ test("Reduced motion is still and short; fallen allies cannot return to idle", (
 test("Animation cue uses actual resolver damage, targets and selected actor", () => {
   let s = e.reducer(e.initialGame(), {
     type: "CREATE",
+    seed: 42,
     race: "barbarian",
     name: "Test",
     roll: 0.5,
@@ -135,7 +136,12 @@ test("Floor enemy identity stays distinct even when the old sprite indices or ro
         floor: floor.id,
         enemy: e.enemyFor(floor.id, route, 4),
       };
-      assert.equal(v.enemyVisual(s).key, v.FLOOR_VISUALS[floor.id - 1].key);
+      assert.equal(
+        v.enemyVisual(s).key,
+        require("./engine-loader.cjs").monsters.MONSTERS.find(
+          (m) => m.id === s.enemy.species,
+        ).visual,
+      );
     }
   }
   assert.equal(v.mirrorEnemy("roadkeeper"), true);

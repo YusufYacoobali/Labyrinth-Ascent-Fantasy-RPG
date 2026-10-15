@@ -1,5 +1,6 @@
 import { fatigueMultiplier } from "./exhaustion";
 import { SKILLS, resist } from "./combat-data";
+import { earnMastery, potency, skillRank } from "./progression";
 import type { Action, BattleEffect, Character, Enemy, Game } from "./engine";
 
 export type BattleAction = Extract<Action, { type: "BATTLE" }>;
@@ -93,6 +94,8 @@ function hitDamage(
   )
     n *= 0.85;
   if (guard) n *= 0.5;
+  if (e.weakened) n *= 1 - e.weakened;
+  n = Math.max(0, n - (c.ailments.barrier || 0));
   return Math.round(n);
 }
 export function battleForecast(
@@ -119,7 +122,12 @@ export function battleForecast(
   );
 }
 
-export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
+export function resolveBattle(
+  s: Game,
+  a: BattleAction,
+  won: Win,
+  singleActor = false,
+): Game {
   if (!Number.isFinite(a.roll)) return s;
   const roll = Math.max(0, Math.min(0.999999, a.roll)),
     intent = battleIntent(s);
@@ -131,6 +139,8 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
     a.skill ||
     actor.skills.find((k) => !SKILLS.find((x) => x.name === k)?.passive);
   const spec = SKILLS.find((x) => x.name === skill);
+  const rank = skill ? skillRank(actor, skill) : 1;
+  const power = skill ? potency(actor, skill) : 1;
   const reject = (message: string) => ({ ...s, message });
   if (
     a.kind === "skill" &&
@@ -165,7 +175,7 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
     cooldowns: Object.fromEntries(
       Object.entries(c.cooldowns).map(([k, v]) => [
         k,
-        Math.max(0, (v || 0) - 1),
+        Math.max(0, (v || 0) - (singleActor ? 0 : 1)),
       ]),
     ),
   }));
@@ -228,15 +238,22 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
       momentum -= 2;
       logs.push("Burst: −2 momentum; +35% party damage; 50 break damage.");
     }
-    const inspire = party.some(
+    const inspirer = party.find(
       (c) => c.hp > 0 && c.skills.includes("Inspiring Presence"),
-    )
-      ? 1.15
-      : 1;
+    );
+    const inspireRank = inspirer
+      ? skillRank(inspirer, "Inspiring Presence")
+      : 0;
+    const inspire = inspirer ? 1.15 + (inspireRank - 1) * 0.02 : 1;
     const opening =
       enemy.broken > 0 ? 1.3 : intent.kind === "recovery" ? 1.2 : 1;
     party = party.map((c) => {
-      if (c.hp <= 0 || c.ailments.paralysis > 0) return c;
+      if (
+        c.hp <= 0 ||
+        c.ailments.paralysis > 0 ||
+        (singleActor && c.id !== actor.id)
+      )
+        return c;
       if (a.kind === "focus" && c.id === actor.id)
         return { ...c, mp: Math.min(c.maxMp, c.mp + 20) };
       const cast = a.kind === "skill" && c.id === actor.id;
@@ -251,12 +268,20 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
                 ? 1.65
                 : skill === "Second Wind"
                   ? 0
-                  : 1
+                  : skill === "Sunder"
+                    ? 1.45
+                    : skill === "Crown Pulse"
+                      ? 1.35
+                      : skill === "Scavenge"
+                        ? 0.85
+                        : 1
         : a.kind === "burst"
           ? 1.35
           : a.kind === "focus"
             ? 0.55
             : 1;
+      if (cast) mult *= power;
+      if (enemy.vulnerable) mult *= 1.1;
       if (
         c.traitRevealed &&
         c.hp / c.maxHp < 0.4 &&
@@ -288,9 +313,40 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
           : 0;
       damage += hit;
       if (hit > 0) strikes[c.id] = hit;
+      if (hit > 0 && inspireRank >= 2)
+        c = {
+          ...c,
+          mp: Math.min(c.maxMp, c.mp + inspireRank - 1),
+          hp: Math.min(c.maxHp, c.hp + (inspireRank === 3 ? 2 : 0)),
+        };
       if (!cast) return c;
       logs.push(`${c.name} uses ${skill}.`);
-      if (skill === "Venom Fang") enemy.poison = 3;
+      if (skill === "Venom Fang") {
+        enemy.poison = 3;
+        enemy.poisonPower = power;
+      }
+      if ((skill === "Shield Bash" || skill === "Nerve Lock") && rank >= 2)
+        enemy.weakened = rank === 3 ? 0.2 : 0.1;
+      if (
+        singleActor &&
+        (skill === "Shield Bash" || skill === "Nerve Lock") &&
+        rank >= 2
+      ) {
+        enemy.slowed = rank;
+        enemy.slowTurns = 3;
+      }
+      if (skill === "Sunder") enemy.weakened = 0.1 + (rank - 1) * 0.05;
+      if (
+        rank === 3 &&
+        ![
+          "Second Wind",
+          "Crown Pulse",
+          "Scavenge",
+          "Shield Bash",
+          "Nerve Lock",
+        ].includes(skill!)
+      )
+        enemy.vulnerable = 3;
       const interrupt =
         enemy.controlWard === 0 &&
         ((skill === "Nerve Lock" && (enemy.boss ? roll < 0.5 : true)) ||
@@ -304,11 +360,44 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
           skill === "Second Wind" ? { poison: 0, paralysis: 0 } : c.ailments,
       };
     });
-    if (a.kind === "skill" && skill === "Second Wind")
+    if (
+      a.kind === "skill" &&
+      (skill === "Second Wind" || skill === "Crown Pulse")
+    )
       party = party.map((c) =>
         c.hp > 0
-          ? { ...c, hp: Math.min(c.maxHp, c.hp + Math.round(c.maxHp * 0.22)) }
+          ? {
+              ...c,
+              hp: Math.min(
+                c.maxHp,
+                c.hp +
+                  Math.round(
+                    c.maxHp * (skill === "Second Wind" ? 0.22 : 0.1) * power,
+                  ),
+              ),
+              ailments: {
+                ...c.ailments,
+                poison: rank >= 2 ? 0 : c.ailments.poison,
+                barrier:
+                  rank === 3 ? Math.round(c.maxHp * 0.1) : c.ailments.barrier,
+              },
+            }
           : c,
+      );
+    if (a.kind === "skill" && skill === "Scavenge")
+      party = party.map((c) =>
+        c.id !== actor.id
+          ? c
+          : {
+              ...c,
+              hp: Math.min(c.maxHp, c.hp + Math.round(c.maxHp * 0.12 * power)),
+              ailments: {
+                ...c.ailments,
+                poison: rank >= 2 ? 0 : c.ailments.poison,
+                barrier:
+                  rank === 3 ? Math.round(c.maxHp * 0.1) : c.ailments.barrier,
+              },
+            },
       );
     poiseDamage =
       a.kind === "burst"
@@ -327,8 +416,27 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
                     ? 22
                     : skill === "Venom Fang"
                       ? 12
-                      : 0;
-    if (enemy.broken === 0 && poiseDamage > 0) {
+                      : skill === "Sunder"
+                        ? 35
+                        : skill === "Crown Pulse"
+                          ? 15
+                          : skill === "Scavenge"
+                            ? 8
+                            : 0;
+    if (
+      a.kind === "skill" &&
+      !["Second Wind", "Crown Pulse", "Scavenge"].includes(skill!)
+    )
+      poiseDamage += ["Shield Bash", "Nerve Lock"].includes(skill!)
+        ? rank === 3
+          ? 10
+          : 0
+        : (rank - 1) * 10;
+    if (
+      enemy.broken === 0 &&
+      (!singleActor || enemy.controlWard === 0) &&
+      poiseDamage > 0
+    ) {
       enemy.poise = Math.max(0, enemy.poise - poiseDamage);
       if (enemy.poise === 0) {
         enemy.broken = 2;
@@ -343,6 +451,43 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
         `Party deals ${damage}${critical ? " · CRITICAL" : ""} damage.`,
       );
   }
+  if (singleActor) {
+    const effects: BattleEffect = {
+      id: s.effects.id + 1,
+      damage,
+      enemyDamage: 0,
+      critical,
+      kind: a.kind,
+      target: actor.id,
+      poisonDamage: 0,
+      stunned: enemy.paralysis > 0,
+      targets: {},
+      strikes,
+      broken,
+      healing: Object.fromEntries(
+        party.map((c) => [
+          c.id,
+          Math.max(0, c.hp - (s.party.find((p) => p.id === c.id)?.hp || 0)),
+        ]),
+      ),
+    };
+    return earnMastery(
+      {
+        ...s,
+        party,
+        enemy,
+        inventory,
+        potions,
+        momentum,
+        effects,
+        message: "",
+        log: [...logs, ...s.log].slice(0, 10),
+      },
+      s,
+      actor.id,
+      a.kind === "skill" ? skill : undefined,
+    );
+  }
   // An already paralysed ally loses one action; newly inflicted paralysis lasts into the next turn.
   party = party.map((c) => ({
     ...c,
@@ -356,7 +501,11 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
       (c) => c.hp > 0 && c.traitRevealed && c.trait === "Venom Savant",
     );
     poisonDamage = Math.round(
-      enemy.maxHp * 0.06 * (enemy.boss ? 0.5 : 1) * (savant ? 1.5 : 1),
+      enemy.maxHp *
+        0.06 *
+        (enemy.boss ? 0.5 : 1) *
+        (savant ? 1.5 : 1) *
+        (enemy.poisonPower || 1),
     );
     enemy.hp = Math.max(0, enemy.hp - poisonDamage);
     enemy.poison--;
@@ -372,18 +521,20 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
     poisonDamage,
     stunned: false,
     targets,
+    healing: Object.fromEntries(
+      party.map((c) => [
+        c.id,
+        Math.max(0, c.hp - (s.party.find((p) => p.id === c.id)?.hp || 0)),
+      ]),
+    ),
     strikes,
     broken,
   };
+  const mastery = (next: Game) =>
+    earnMastery(next, s, actor.id, a.kind === "skill" ? skill : undefined);
   if (enemy.hp === 0)
-    return won(
-      { ...s, momentum },
-      party,
-      enemy,
-      effects,
-      logs,
-      potions,
-      inventory,
+    return mastery(
+      won({ ...s, momentum }, party, enemy, effects, logs, potions, inventory),
     );
   if (enemy.broken > 0 || enemy.paralysis > 0) {
     const recoveringBreak = enemy.broken > 0;
@@ -404,6 +555,19 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
       const hit = hitDamage({ ...s, party, enemy }, c, intent.power, guard);
       targets[c.id] = hit;
       c.hp = Math.max(0, c.hp - hit);
+      c.ailments.barrier = 0;
+      const ward =
+        enemy.element === "fire"
+          ? "Ember Ward"
+          : enemy.element === "frost"
+            ? "Winter Veil"
+            : enemy.element === "venom"
+              ? "Toxic Adaptation"
+              : "Grave Guard";
+      if (c.hp > 0 && c.skills.includes(ward) && skillRank(c, ward) >= 2) {
+        c.hp = Math.min(c.maxHp, c.hp + 5);
+        if (skillRank(c, ward) === 3) c.mp = Math.min(c.maxMp, c.mp + 3);
+      }
       if (
         enemy.element === "venom" &&
         !c.skills.includes("Toxic Adaptation") &&
@@ -413,6 +577,9 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
       if (
         enemy.element === "frost" &&
         intent.kind === "heavy" &&
+        !(
+          c.skills.includes("Winter Veil") && skillRank(c, "Winter Veil") >= 2
+        ) &&
         !c.ailments.ward &&
         !(c.traitRevealed && c.trait === "Iron Will")
       )
@@ -429,7 +596,9 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
     }
     if (intent.kind === "recovery") logs.push("The enemy recovers. No attack.");
     enemy.controlWard = Math.max(0, enemy.controlWard - 1);
+    if (Object.keys(targets).length) enemy.weakened = 0;
   }
+  enemy.vulnerable = Math.max(0, (enemy.vulnerable || 0) - 1);
   party = party.map((c) => {
     let hp = c.hp;
     if (hp > 0 && c.ailments.poison > 0) {
@@ -452,7 +621,7 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
   });
   const dead = party.every((c) => c.hp <= 0),
     enemyDamage = Object.values(targets).reduce((n, x) => n + x, 0);
-  return {
+  return mastery({
     ...s,
     party,
     inventory,
@@ -470,5 +639,5 @@ export function resolveBattle(s: Game, a: BattleAction, won: Win): Game {
     },
     lastOutcome: dead ? "The expedition was lost" : s.lastOutcome,
     log: [...logs, ...s.log].slice(0, 10),
-  };
+  });
 }

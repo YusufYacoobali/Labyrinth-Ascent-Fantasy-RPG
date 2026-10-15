@@ -30,6 +30,21 @@ export function Arrival() {
     }
   }, [audio.isLoaded, player, state.sound, state.floor, state.arrivalChoice]);
   const resolved = !!state.arrivalChoice;
+  if (!state.journey.defender)
+    return (
+      <View style={{ gap: 12, paddingBottom: 20 }}>
+        <ArrivalArt floor={state.floor} label="A new floor" />
+        <StoryCard
+          title={"Floor " + state.floor + " · " + scene.cue}
+          body="The entry lantern burns behind you. Find a route through the passages; a defender guards the upward portal."
+        >
+          <Button
+            label="Explore the passages"
+            onPress={() => dispatch({ type: "ENGAGE" })}
+          />
+        </StoryCard>
+      </View>
+    );
   return (
     <View
       style={{
@@ -93,7 +108,7 @@ export function Arrival() {
                     dispatch({
                       type: "APPROACH",
                       choice: choice.id,
-                      roll: Math.random(),
+                      roll: -1,
                     })
                   }
                 />

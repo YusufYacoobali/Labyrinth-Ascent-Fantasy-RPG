@@ -111,15 +111,18 @@ export function trialSave(config: TrialConfig): Game {
   s = reducer(s, { type: "MISSION", id: "survey" });
   const enemy = enemyFor(target.floor, null, party.length);
   if (config.enemy === "plunderer") {
+    enemy.species = "plunderer";
     enemy.name = "The Plunderer";
     enemy.sprite = 6;
   }
   if (config.enemy === "bonegnaw") {
+    enemy.species = "bonegnaw";
     enemy.name = "Bonegnaw Scavenger";
     enemy.sprite = 20;
   }
   return {
     ...s,
+    trial: true,
     floor: target.floor,
     party,
     enemy,

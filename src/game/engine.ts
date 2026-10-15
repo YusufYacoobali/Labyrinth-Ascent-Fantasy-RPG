@@ -1,4 +1,44 @@
-import { generateFloor, seedFor } from "./floor-map";
+import { deserializeSave } from "./skill-ids";
+import { BALANCE as B } from "./balance";
+import { resolveGenericAction } from "./generic-stories";
+import { newStoryState, type StoryState } from "./story-types";
+import {
+  resolveStoryAction,
+  storyConsequences,
+  loyalty,
+  principalResolved,
+  principalAftermath,
+  recordPrincipal,
+} from "./stories";
+import {
+  beginCombat,
+  resolveRound,
+  type CombatState,
+  type RoundEvent,
+  type RoundRequest,
+} from "./round-combat";
+import {
+  townRecovery,
+  rescueInjuries,
+  setInjuries,
+  healthyMaxHp,
+} from "./survival";
+import { generateFloor, seedFor, mapKey, populateFloor } from "./floor-map";
+import {
+  MONSTERS,
+  essenceId,
+  monsterFor,
+  monsterDrops,
+  nextRandom,
+} from "./monsters";
+import {
+  prepareSkills,
+  skillSlots,
+  newExpedition,
+  trackSpoils,
+  loseSpoils,
+  type Expedition,
+} from "./progression";
 import {
   advanceWalkthrough,
   newWalkthrough,
@@ -31,8 +71,9 @@ import {
   missionProgress,
   chartRumour,
   currentRoom,
-  backRoom,
-  moveRoom,
+  floorMap,
+  currentMapKey,
+  encounterKey,
   enterMappedRoom,
   type Journey,
   type Mission,
@@ -44,6 +85,7 @@ export { battleIntent, battleForecast } from "./battle";
 export type Race = "barbarian" | "human" | "elf" | "dwarf";
 export type Phase =
   | "town"
+  | "story"
   | "arrival"
   | "combat"
   | "loot"
@@ -68,14 +110,22 @@ export type Skill =
   | "Twin Strike"
   | "Ember Ward"
   | "Winter Veil"
-  | "Toxic Adaptation";
+  | "Toxic Adaptation"
+  | "Grave Guard"
+  | "Sunder"
+  | "Crown Pulse"
+  | "Scavenge";
 export interface Ailments {
   poison: number;
   paralysis: number;
   ward?: number;
+  barrier?: number;
 }
 export interface Character {
   id: string;
+  injuries: number;
+  uninjuredHp: number;
+  recoveryDays: number;
   name: string;
   race: Race;
   job: string;
@@ -92,6 +142,10 @@ export interface Character {
   gear: number;
   exhaustion: number;
   skills: Skill[];
+  learnedSkills: Skill[];
+  mastery: Partial<Record<Skill, number>>;
+  battleMastery: Partial<Record<Skill, number>>;
+  refinements: Partial<Record<Element, boolean>>;
   trait: string;
   traitRevealed: boolean;
   ailments: Ailments;
@@ -99,6 +153,13 @@ export interface Character {
   cooldowns: Partial<Record<Skill, number>>;
 }
 export interface Enemy {
+  level?: number;
+  species?: string;
+  vulnerable?: number;
+  weakened?: number;
+  slowed?: number;
+  slowTurns?: number;
+  poisonPower?: number;
   name: string;
   hp: number;
   maxHp: number;
@@ -133,11 +194,24 @@ export interface BattleEffect {
   poisonDamage: number;
   stunned: boolean;
   targets: Record<string, number>;
+  healing?: Record<string, number>;
   strikes?: Record<string, number>;
   broken: boolean;
 }
 export interface Game {
-  version: 1;
+  version: 2;
+  rulesVersion: 4;
+  stories: StoryState;
+  expedition: Expedition;
+  rng: { combat: number; loot: number; encounters: number };
+  lootReceipt: LootReceipt | null;
+  trial: boolean;
+  combat: CombatState | null;
+  roundPlayback: { before: Game; events: RoundEvent[] } | null;
+  playback: {
+    before: Game;
+    action: Extract<Action, { type: "BATTLE" }>;
+  } | null;
   started: boolean;
   day: number;
   gold: number;
@@ -164,13 +238,16 @@ export interface Game {
   log: string[];
   journal: string[];
   message: string;
-  essence: number;
   questClaimed: boolean;
   relic: boolean;
   encounterExamined: boolean;
   lastOutcome: string;
   inventory: Record<string, number>;
   route: Route | null;
+  checkpoints: number[];
+  discoveredRoutes: Route[];
+  startFloor: number;
+  startRoute: Route | null;
   eventResolved: boolean;
   sideBattle: boolean;
   rapport: Record<string, Rapport>;
@@ -193,6 +270,23 @@ export interface Game {
   arrivalScouted: boolean;
   usedSupplies: string[];
   townProgress: { signed: string[]; trained: number; crafted: number };
+}
+export interface LootReceipt {
+  enemies?: { id: string; species: string; name: string }[];
+  id: string;
+  species: string;
+  name: string;
+  gross: number;
+  shares: Record<string, number>;
+  net: number;
+  items: Record<string, number>;
+  xp: {
+    id: string;
+    name: string;
+    amount: number;
+    before: number;
+    after: number;
+  }[];
 }
 export const RACES = [
   {
@@ -272,6 +366,9 @@ export function makeCharacter(
     speed: r.speed,
   };
   const character: Character = {
+    injuries: 0,
+    uninjuredHp: stats.hp,
+    recoveryDays: 0,
     id,
     name,
     race,
@@ -288,6 +385,10 @@ export function makeCharacter(
     speed: stats.speed,
     gear: 0,
     exhaustion: 0,
+    learnedSkills: [],
+    mastery: {},
+    battleMastery: {},
+    refinements: {},
     skills: recruit?.skills || [
       mage
         ? "Arcane Bolt"
@@ -304,9 +405,9 @@ export function makeCharacter(
     cooldowns: {},
   };
   const level = recruit?.level || 1;
-  return level > 1
-    ? gainXp(character, (70 * level * (level - 1)) / 2)
-    : character;
+  return prepareSkills(
+    level > 1 ? gainXp(character, (70 * level * (level - 1)) / 2) : character,
+  );
 }
 export const recruitAvailable = (s: Game, recruit: Recruit) =>
   s.bestFloor >= (recruit.floor || 0);
@@ -324,7 +425,16 @@ const emptyEffects = (): BattleEffect => ({
 });
 export function initialGame(): Game {
   return {
-    version: 1,
+    version: 2,
+    rulesVersion: 4,
+    stories: newStoryState(),
+    expedition: newExpedition(),
+    rng: { combat: 1, loot: 2, encounters: 3 },
+    lootReceipt: null,
+    trial: false,
+    combat: null,
+    roundPlayback: null,
+    playback: null,
     started: false,
     day: 24,
     gold: 2340,
@@ -351,13 +461,16 @@ export function initialGame(): Game {
     log: [],
     journal: [],
     message: "",
-    essence: 0,
     questClaimed: false,
     relic: false,
     encounterExamined: false,
     lastOutcome: "",
     inventory: { antidote: 1, ether: 1 },
     route: null,
+    checkpoints: [1],
+    discoveredRoutes: [],
+    startFloor: 1,
+    startRoute: null,
     eventResolved: false,
     sideBattle: false,
     rapport: {},
@@ -383,7 +496,10 @@ export function initialGame(): Game {
   };
 }
 export function normalizeSave(raw: Game): Game {
+  raw = deserializeSave(raw);
   const s = { ...initialGame(), ...raw };
+  s.rulesVersion = 4;
+  s.stories = { ...newStoryState(), ...raw.stories };
   // Existing journeys do not suddenly acquire a first-play tutorial.
   s.walkthrough = raw.walkthrough
     ? {
@@ -443,71 +559,22 @@ export function normalizeSave(raw: Game): Game {
   ];
   s.heardRumours = raw.heardRumours || [];
   s.journey = { ...newJourney(), ...raw.journey };
-  // Old route notes reveal the corresponding graph rooms without inventing visits.
-  for (const [key, chart] of Object.entries(s.journey.chart)) {
-    const floor = Number(key);
-    if (!Number.isInteger(floor) || floor < 1 || floor > 12 || !chart.length)
-      continue;
-    const map = s.journey.maps[floor] || generateFloor(floor, s.journey.seed);
-    s.journey.maps = {
-      ...s.journey.maps,
-      [floor]: {
-        ...map,
-        known: [
-          ...new Set([
-            ...map.known,
-            ...Array.from(
-              { length: Math.min(6, chart.length) + 1 },
-              (_, i) => `cross-${i}`,
-            ).filter((id) => !map.explored.includes(id)),
-          ]),
-        ],
-      },
-    };
-  }
-  if (!raw.journey?.reachedPortals && s.phase !== "town")
-    s.journey.reachedPortals = Array.from(
-      { length: Math.max(0, s.floor - 1) },
-      (_, i) => i + 1,
-    );
+  // Version 2 geography has compass edges; development saves are backed up by loadSave.
+  s.journey.maps = Object.fromEntries(
+    Object.entries(s.journey.maps).filter(([, map]) => map.version === 2),
+  );
+  const key = currentMapKey(s),
+    map = floorMap(s);
+  s.journey.maps = { ...s.journey.maps, [key]: map };
+  s.journey.occupants = {
+    ...s.journey.occupants,
+    [key]: s.journey.occupants[key] || populateFloor(map, s.expedition.number),
+  };
+  if (!map.nodes[s.journey.room]) s.journey.room = map.entrance;
+  s.journey.facing = s.journey.facing || "north";
   if (s.phase !== "town" && s.journey.startDay === null)
     s.journey.startDay = s.day;
   s.journey.watches = Math.min(180, Math.max(0, s.journey.watches));
-  s.journey.step = Math.min(6, Math.max(0, s.journey.step));
-  if (!raw.journey?.maps?.[s.floor]) {
-    const map =
-      s.journey.maps[s.floor] || generateFloor(s.floor, s.journey.seed);
-    let room = ["exploration", "victory", "branch"].includes(s.phase)
-      ? `cross-${s.journey.step}`
-      : s.phase === "event"
-        ? "aftermath"
-        : "entrance";
-    if (s.phase === "victory" && !s.journey.portal && s.journey.step === 0)
-      room = "aftermath";
-    if (s.phase === "branch") s.phase = "exploration";
-    if (s.phase === "camp") {
-      const resume = s.journey.campReturn;
-      const parent =
-        resume === "arrival" || resume === "combat"
-          ? "entrance"
-          : resume === "event" ||
-              (resume === "victory" &&
-                !s.journey.portal &&
-                s.journey.step === 0)
-            ? "aftermath"
-            : `cross-${s.journey.step}`;
-      room = `camp-${parent}`;
-    }
-    s.journey.room = room;
-    s.journey.maps = {
-      ...s.journey.maps,
-      [s.floor]: { ...map, explored: [...new Set([...map.explored, room])] },
-    };
-    if (s.phase !== "town" && s.journey.portal)
-      s.journey.reachedPortals = [
-        ...new Set([...s.journey.reachedPortals, s.floor]),
-      ];
-  }
   s.party = s.party.map((c) => ({
     ...c,
     exhaustion: Math.min(100, Math.max(0, c.exhaustion || 0)),
@@ -540,6 +607,20 @@ export function normalizeSave(raw: Game): Game {
   s.effects = { ...emptyEffects(), ...s.effects };
   if (s.enemy)
     s.enemy = { ...enemyFor(s.floor, s.route, s.party.length), ...s.enemy };
+  s.party = s.party.map((c) => ({
+    ...prepareSkills(c),
+    battleMastery: c.battleMastery || {},
+  }));
+  s.reserve = s.reserve.map((c) => ({
+    ...prepareSkills(c),
+    battleMastery: c.battleMastery || {},
+  }));
+  s.expedition = {
+    ...newExpedition(),
+    ...raw.expedition,
+    unsecured: { ...newExpedition().unsecured, ...raw.expedition?.unsecured },
+  };
+  s.rng = { ...initialGame().rng, ...raw.rng };
   return s;
 }
 export const daysToGate = (day: number) => (30 - (day % 30)) % 30;
@@ -602,9 +683,10 @@ export function enemyFor(
   floor: number,
   route: Route | null = null,
   partySize = 1,
+  role: "regular" | "portal" = "portal",
 ): Enemy {
   const f = FLOORS[floor - 1];
-  const boss = floor % 3 === 0;
+  const boss = role === "portal" && floor % 3 === 0;
   let element: Element = f.element;
   let sprite: number = f.sprite;
   if (floor >= 5 && floor <= 7 && route) {
@@ -623,8 +705,19 @@ export function enemyFor(
     (boss ? 230 + floor * 50 : 100 + floor * 28) *
       (1 + 0.7 * (Math.max(1, partySize) - 1)),
   );
+  const routeSpec =
+    floor >= 5 && floor <= 7 && route
+      ? MONSTERS.find(
+          (m) =>
+            m.id ===
+            `${route}-${role === "regular" ? "roamer" : floor === 6 ? "guardian" : "elite"}`,
+        )
+      : undefined;
   return {
-    name: f.enemy,
+    species: routeSpec?.id || MONSTERS[floor - 1].id,
+    name:
+      routeSpec?.name ||
+      (role === "portal" && !boss ? `${f.enemy} · Portal elite` : f.enemy),
     hp,
     maxHp: hp,
     atk: (boss ? 30 : 24) + floor * 4,
@@ -658,8 +751,17 @@ export function gainXp(c: Character, amount: number): Character {
       level: n.level + 1,
       atk: n.atk + 4,
       def: n.def + 2,
-      maxHp: n.maxHp + 15,
-      hp: n.hp > 0 ? Math.min(n.hp + 25, n.maxHp + 15) : 0,
+      uninjuredHp: healthyMaxHp(n) + 15,
+      maxHp: Math.floor((healthyMaxHp(n) + 15) * (1 - (n.injuries || 0) * 0.1)),
+      hp:
+        n.hp > 0
+          ? Math.min(
+              n.hp + 25,
+              Math.floor(
+                (healthyMaxHp(n) + 15) * (1 - (n.injuries || 0) * 0.1),
+              ),
+            )
+          : 0,
       maxMp: n.maxMp + 5,
       mp: Math.min(n.mp + 10, n.maxMp + 5),
     };
@@ -685,7 +787,13 @@ export function questProgress(s: Game, id: QuestId): number {
   return Math.min(QUESTS.find((q) => q.id === id)!.target, s.bestFloor);
 }
 export type Action =
-  | { type: "CREATE"; race: Race; name: string; roll: number }
+  | { type: "GENERIC_CHOICE"; room: string; id: string; choice: string }
+  | { type: "OPEN_STORY"; id: string }
+  | { type: "CLOSE_STORY" }
+  | { type: "STORY_CHOICE"; stage: string; choice: string }
+  | { type: "RECONCILE"; id: string }
+  | RoundRequest
+  | { type: "CREATE"; race: Race; name: string; roll: number; seed?: number }
   | { type: "RECRUIT"; id: string; offer?: number }
   | { type: "RUMOUR"; id: string }
   | { type: "MISSION"; id: Mission }
@@ -697,6 +805,9 @@ export type Action =
   | { type: "AT_PORTAL" }
   | { type: "BRANCH_CHOICE"; choice: string; roll: number }
   | { type: "SEEK_SHELTER" }
+  | { type: "WILD_CAMP" }
+  | { type: "FORAGE" }
+  | { type: "TREAT_INJURY"; id: string }
   | { type: "CAMP_REST"; untilClose?: boolean }
   | { type: "LEAVE_CAMP" }
   | { type: "BENCH"; id: string }
@@ -712,13 +823,15 @@ export type Action =
   | { type: "BUY"; item: "food" | "potion" }
   | { type: "BUY_ITEM"; id: string }
   | { type: "BUY_BATCH"; items: { id: string; quantity: number }[] }
-  | { type: "CRAFT"; id: string }
+  | { type: "CRAFT"; id: string; essence?: boolean }
   | { type: "USE_SUPPLY"; id: "torch" | "camp-kit" | "labyrinth-key" }
   | { type: "RENAME"; name: string }
   | { type: "SELL"; id: string; vendor: Vendor; quantity: number }
   | { type: "EQUIP"; character: string; item: string }
   | { type: "FORGE"; id: string }
   | { type: "ENCHANT"; id: string; skill: Skill }
+  | { type: "REFINE_GEAR"; id: string; element: Element }
+  | { type: "SELECT_START"; floor: number; route?: Route }
   | { type: "ENTER" }
   | { type: "APPROACH"; choice: string; roll: number }
   | { type: "ENGAGE" }
@@ -729,11 +842,14 @@ export type Action =
       actor?: string;
       skill?: Skill;
       item?: string;
+      animate?: boolean;
     }
   | { type: "COLLECT" }
+  | { type: "FINISH_PLAYBACK" }
   | { type: "ENCOUNTER"; choice: "take" | "examine" | "leave"; roll: number }
   | { type: "EVENT"; choice: string; roll: number }
-  | { type: "LEARN"; skill: Skill; id: string }
+  | { type: "LEARN"; skill: Skill; id: string; species?: string }
+  | { type: "SLOT_SKILL"; id: string; skill: Skill; equip: boolean }
   | { type: "CONTINUE" }
   | { type: "RETURN" }
   | { type: "CLAIM"; id?: QuestId }
@@ -750,12 +866,22 @@ export type Action =
   | { type: "INTRO_COMPLETED" }
   | { type: "SETTING"; key: "sound" | "haptics"; value: boolean };
 function afterFloor(s: Game): Game {
-  if (s.journey.branchFight) {
-    const next = { ...s, journey: { ...s.journey, branchFight: false } };
-    return enterMappedRoom(next, backRoom(s) || "cross-0");
-  }
-  const next = moveRoom(s, "aftermath");
-  return { ...next, phase: s.eventResolved ? "victory" : "event" };
+  if (s.journey.watches >= 180) return { ...s, phase: "extraction" };
+  if (s.combat?.resume === "camp") return { ...s, phase: "camp", combat: null };
+  if (s.journey.defender)
+    return {
+      ...s,
+      phase: s.floor === 12 && !principalResolved(s) ? "event" : "victory",
+      journey: { ...s.journey, portal: true, defender: false },
+    };
+  return enterMappedRoom(
+    {
+      ...s,
+      sideBattle: false,
+      journey: { ...s.journey, branchFight: false, branch: null },
+    },
+    s.journey.room,
+  );
 }
 function battleWon(
   s: Game,
@@ -766,53 +892,96 @@ function battleWon(
   potions: number,
   inventory: Record<string, number>,
 ): Game {
-  const gold = (s.sideBattle ? 95 : 45) + s.floor * 20 + (enemy.boss ? 130 : 0);
-  inventory = addLoot(inventory, "beast-core", enemy.boss ? 3 : 1);
-  if (s.floor >= 5 && s.floor <= 7 && s.route)
-    inventory = addLoot(
-      inventory,
-      s.route === "roots"
-        ? "night-herb"
-        : s.route === "frost"
-          ? "frost-shard"
-          : s.route === "forge"
-            ? "ancient-ore"
-            : "relic-fragment",
-      2,
-    );
-  const n = {
-    ...s,
-    party: party.map((c) => ({
-      ...gainXp(c, 35 + s.floor * 8),
-      traitRevealed: c.traitRevealed || enemy.boss,
-    })),
-    gold: s.gold + gold,
-    runGold: s.runGold + gold,
-    kills: s.kills + 1,
-    runKills: s.runKills + 1,
-    bestFloor: Math.max(s.bestFloor, s.floor),
-    enemy,
-    essence: s.essence + (enemy.boss ? 1 : 0),
-    potions,
-    inventory,
-    effects,
-    plunderers: s.plunderers + (s.sideBattle ? 1 : 0),
-    log: [
-      ...logs,
-      `${enemy.name} defeated. +${gold} gold; monster cores recovered.`,
-      ...s.log,
-    ].slice(0, 8),
-  };
+  const defeated = s.combat?.enemies || [enemy];
+  const spec = monsterFor(enemy, s.floor);
+  let seed = s.rng.loot,
+    gold = 0,
+    xp = 0;
+  const items: Record<string, number> = {};
+  for (const foe of defeated) {
+    const reward = monsterFor(foe, s.floor),
+      drop = monsterDrops(reward, seed);
+    seed = drop.seed;
+    gold += reward.gold;
+    xp += reward.xp;
+    for (const [id, qty] of Object.entries(drop.items)) {
+      items[id] = (items[id] || 0) + qty;
+      inventory = addLoot(inventory, id, qty);
+    }
+  }
+  const nextParty = party.map((c) => ({
+    ...gainXp(c, xp),
+    traitRevealed: c.traitRevealed || defeated.some((e) => e.boss),
+  }));
+  const shares = Object.fromEntries(
+    Object.entries(s.runContracts).map(([id, share]) => [
+      id,
+      Math.floor((gold * share) / 100),
+    ]),
+  );
+  const net = gold - Object.values(shares).reduce((n, x) => n + x, 0);
   return note(
-    enemy.boss ? { ...n, phase: "essence" } : afterFloor(n),
-    enemy.boss
-      ? "A guardian’s essence is yours. Bind a new skill."
-      : s.sideBattle
-        ? "The plunderer falls. Your party is safe."
-        : `Floor ${s.floor} cleared. Recover what the labyrinth left behind.`,
+    {
+      ...s,
+      party: nextParty,
+      gold: s.gold + gold,
+      kills: s.kills + defeated.length,
+      runKills: s.runKills + defeated.length,
+      bestFloor: s.journey.defender
+        ? Math.max(s.bestFloor, s.floor)
+        : s.bestFloor,
+      checkpoints:
+        s.journey.defender && [3, 6, 9].includes(s.floor)
+          ? [...new Set([...s.checkpoints, s.floor + 1])]
+          : s.checkpoints,
+      journey: {
+        ...s.journey,
+        defeatedPortals: s.journey.defender
+          ? [...new Set([...s.journey.defeatedPortals, currentMapKey(s)])]
+          : s.journey.defeatedPortals,
+        resolvedBranches: s.journey.branch
+          ? [...new Set([...s.journey.resolvedBranches, s.journey.branch.id])]
+          : s.journey.resolvedBranches,
+      },
+      enemy,
+      potions,
+      inventory,
+      effects,
+      phase: "loot",
+      rng: { ...s.rng, loot: seed },
+      lootReceipt: {
+        id: `${s.expedition.number}:${s.kills + 1}`,
+        species: spec.id,
+        name: enemy.name,
+        gross: gold,
+        shares,
+        net,
+        items,
+        enemies: defeated.map((foe, i) => ({
+          id: `${s.combat?.id || "battle"}:${i}`,
+          species: foe.species || spec.id,
+          name: foe.name,
+        })),
+        xp: nextParty.map((c, i) => ({
+          id: c.id,
+          name: c.name,
+          amount: xp,
+          before: party[i].level,
+          after: c.level,
+        })),
+      },
+      plunderers:
+        s.plunderers + defeated.filter((e) => e.species === "plunderer").length,
+      log: [
+        ...logs,
+        `${enemy.name} defeated. Rewards recorded.`,
+        ...s.log,
+      ].slice(0, 8),
+    },
+    "Victory. Your spoils are unsecured until extraction.",
   );
 }
-/** Pay contracted shares on each gold find; town earnings and trades are excluded. */
+/** Reserve contracted shares on each gold find; settle them at successful extraction. */
 export function needsGateConfirmation(s: Game, a: Action) {
   return (
     s.phase === "town" &&
@@ -824,6 +993,9 @@ export function needsGateConfirmation(s: Game, a: Action) {
   );
 }
 export function reducer(s: Game, a: Action): Game {
+  if (a.type === "FINISH_PLAYBACK")
+    return { ...s, playback: null, roundPlayback: null };
+  if (s.playback || s.roundPlayback) return s;
   if (a.type === "WALKTHROUGH") {
     if (!s.started) return s;
     if (a.kind === "restart")
@@ -850,7 +1022,105 @@ export function reducer(s: Game, a: Action): Game {
       },
     };
   }
-  return advanceWalkthrough(s, resolveGameAction(s, a), a);
+  let randomSeed: number | undefined;
+  let stream: "combat" | "encounters" = "encounters";
+  if ("roll" in a && !Number.isFinite(a.roll)) return s;
+  if ("roll" in a && a.type !== "CREATE" && a.roll === -1) {
+    stream = a.type === "BATTLE" ? "combat" : "encounters";
+    const draw = nextRandom(s.rng[stream]);
+    randomSeed = draw.seed;
+    a = { ...a, roll: draw.roll };
+  }
+  let next = resolveGameAction(s, a);
+  if (
+    randomSeed !== undefined &&
+    next !== s &&
+    (a.type !== "BATTLE" || next.effects.id !== s.effects.id)
+  )
+    next = { ...next, rng: { ...next.rng, [stream]: randomSeed } };
+  if (a.type === "CREATE" && next.started && !s.started)
+    next = {
+      ...next,
+      rng: {
+        combat: seedFor(`${next.journey.seed}:combat`),
+        loot: seedFor(`${next.journey.seed}:loot`),
+        encounters: seedFor(`${next.journey.seed}:encounters`),
+      },
+    };
+  if (next.lootReceipt && next.kills > s.kills)
+    next = {
+      ...next,
+      expedition: {
+        ...next.expedition,
+        receipts: {
+          ...next.expedition.receipts,
+          [next.lootReceipt.id]: next.lootReceipt,
+        },
+      },
+    };
+  if (
+    s.phase !== "town" &&
+    next !== s &&
+    ((a.type === "BRANCH_CHOICE" &&
+      a.choice !== "leave" &&
+      next.journey.resolvedBranches.length >
+        s.journey.resolvedBranches.length) ||
+      (a.type === "EVENT" && next.eventResolved && !s.eventResolved) ||
+      (a.type === "FORAGE" &&
+        next.expedition.foraged.length > s.expedition.foraged.length))
+  ) {
+    const id = `${encounterKey(s)}:${a.type}`;
+    const items = Object.fromEntries(
+      [
+        ...new Set([
+          ...Object.keys(s.inventory),
+          ...Object.keys(next.inventory),
+        ]),
+      ]
+        .map((id) => [id, (next.inventory[id] || 0) - (s.inventory[id] || 0)])
+        .filter(([, qty]) => qty !== 0),
+    );
+    next = {
+      ...next,
+      expedition: {
+        ...next.expedition,
+        resolutions: {
+          ...next.expedition.resolutions,
+          [id]: {
+            action: a.type,
+            outcome: next.message,
+            gold: next.gold - s.gold,
+            food: next.food - s.food,
+            items,
+          },
+        },
+      },
+    };
+  }
+  if (
+    (a.type === "EVENT" ||
+      (a.type === "USE_SUPPLY" && a.id === "labyrinth-key")) &&
+    !s.eventResolved &&
+    next.eventResolved
+  )
+    next = recordPrincipal(s, next, a.type === "EVENT" ? a.choice : "key");
+  next = townRecovery(s, next, ["REST", "WORK", "TRAIN"].includes(a.type));
+  next = trackSpoils(s, next, a);
+  if (
+    next.phase === "defeat" ||
+    (next.party.length > 0 &&
+      next.phase !== "town" &&
+      next.party.every((c) => c.hp <= 0))
+  )
+    next = loseSpoils(next);
+  next = storyConsequences(s, next, a);
+  next = advanceWalkthrough(s, next, a);
+  if (a.type === "BATTLE" && a.animate && next.effects.id !== s.effects.id)
+    next = {
+      ...next,
+      playback: { before: { ...s, playback: null }, action: a },
+    };
+  return next;
 }
 function resolveGameAction(s: Game, a: Action): Game {
   if (needsGateConfirmation(s, a))
@@ -860,26 +1130,97 @@ function resolveGameAction(s: Game, a: Action): Game {
     );
   let next = reduceGame(s, a);
   if (
+    !next.trial &&
+    ((next.phase === "arrival" &&
+      next.journey.defender &&
+      s.journey.room !== next.journey.room) ||
+      (next.phase === "arrival" &&
+        next.journey.defender &&
+        !s.journey.defender))
+  )
+    next = beginCombat(next);
+  if (
+    next.phase === "combat" &&
+    s.phase !== "combat" &&
+    !next.trial &&
+    !(s.phase === "arrival" && s.combat)
+  )
+    next = beginCombat(
+      next,
+      s.phase === "camp" ? "camp" : "exploration",
+      a.type === "FORAGE" ? "forage" : "roamer",
+    );
+  if (
+    next.combat &&
+    ((a.type === "APPROACH" && next.arrivalChoice !== s.arrivalChoice) ||
+      (a.type === "USE_SUPPLY" && a.id === "torch" && next.enemy !== s.enemy))
+  ) {
+    const combat = {
+      ...next.combat,
+      enemies: next.combat.enemies.map((e, i) =>
+        i === 0 ? { ...e, ...next.enemy } : e,
+      ),
+      preparation: {
+        choice: next.arrivalChoice,
+        outcome: next.arrivalOutcome,
+        effect: next.arrivalEffect,
+        scouted: next.arrivalScouted,
+      },
+    };
+    next = {
+      ...next,
+      combat,
+      expedition: {
+        ...next.expedition,
+        battles: { ...next.expedition.battles, [combat.id]: combat },
+      },
+    };
+  }
+  if (
+    a.type === "ROUND" &&
+    next.expedition.rounds > s.expedition.rounds &&
+    next.combat?.complete &&
+    next.phase === "combat"
+  )
+    next = battleWon(
+      next,
+      next.party,
+      next.enemy!,
+      next.effects,
+      [],
+      next.potions,
+      next.inventory,
+    );
+  if (
     s.phase !== "town" &&
     next !== s &&
     next.journey.watches === s.journey.watches
   ) {
     const timed =
-      ((a.type === "MOVE" || a.type === "MOVE_BACK") &&
+      ((a.type === "MOVE" ||
+        a.type === "MOVE_BACK" ||
+        a.type === "LEAVE_CAMP") &&
         next.journey.room !== s.journey.room) ||
       (a.type === "BRANCH_CHOICE" &&
         (next.phase !== s.phase || next.journey.room !== s.journey.room)) ||
-      (a.type === "BATTLE" && next.kills > s.kills) ||
+      (a.type === "ROUND" &&
+        next.expedition.rounds > s.expedition.rounds &&
+        next.expedition.rounds % 3 === 0) ||
       (a.type === "APPROACH" && next.arrivalChoice !== s.arrivalChoice) ||
       (a.type === "EVENT" &&
         (next.eventResolved !== s.eventResolved ||
           next.encounterExamined !== s.encounterExamined ||
           next.route !== s.route)) ||
+      (a.type === "GENERIC_CHOICE" &&
+        next.journey.resolvedBranches.length >
+          s.journey.resolvedBranches.length) ||
+      (a.type === "STORY_CHOICE" &&
+        next.stories.history.length > s.stories.history.length) ||
       (a.type === "CONTINUE" && next.floor > s.floor) ||
       (a.type === "SEEK_SHELTER" && next.phase === "camp");
     if (timed)
       next = spendWatches(
-        a.type === "BATTLE" ? next : exertForAction(s, next, a),
+        a.type === "ROUND" ? next : exertForAction(s, next, a),
         1,
       );
   }
@@ -888,28 +1229,54 @@ function resolveGameAction(s: Game, a: Action): Game {
   if (next !== s && s.phase !== "town" && a.type !== "NAG_DECISION")
     next = maybeComplain(next);
   const gross = next.gold - s.gold;
-  if (s.phase === "town" || a.type === "RETURN" || gross <= 0) return next;
+  if (
+    s.journey.startDay === null ||
+    s.phase === "town" ||
+    a.type === "RETURN" ||
+    gross <= 0
+  )
+    return next;
   const paid = Object.fromEntries(
     Object.entries(s.runContracts).map(([id, share]) => [
       id,
       Math.floor((gross * share) / 100),
     ]),
   );
-  const cut = Object.values(paid).reduce((n, amount) => n + amount, 0);
+  const cut = Object.values(paid).reduce((n, x) => n + x, 0);
   return {
     ...next,
     gold: next.gold - cut,
+    message:
+      next.phase === "loot"
+        ? next.message
+        : `${next.message} Gross ${gross} gold · contracted shares held ${cut}${
+            cut
+              ? ` (${Object.entries(paid)
+                  .map(
+                    ([id, n]) =>
+                      `${next.party.find((c) => c.id === id)?.name || id}: ${n}`,
+                  )
+                  .join(", ")})`
+              : ""
+          } · net ${gross - cut} gold.`,
     runGross: s.runGross + gross,
     runGold: s.runGold + gross - cut,
-    runPaid: Object.fromEntries(
-      Object.entries(s.runContracts).map(([id]) => [
-        id,
-        (s.runPaid[id] || 0) + paid[id],
-      ]),
-    ),
+    expedition: {
+      ...next.expedition,
+      accruedShares: Object.fromEntries(
+        Object.entries(s.runContracts).map(([id]) => [
+          id,
+          (s.expedition.accruedShares[id] || 0) + paid[id],
+        ]),
+      ),
+    },
   };
 }
 function reduceGame(s: Game, a: Action): Game {
+  const genericAction = resolveGenericAction(s, a);
+  if (genericAction) return genericAction;
+  const storyAction = resolveStoryAction(s, a);
+  if (storyAction) return storyAction;
   if (a.type === "LEAD") {
     if (
       ![
@@ -940,9 +1307,33 @@ function reduceGame(s: Game, a: Action): Game {
         );
   }
   const exploration = resolveExploration(s, a, (floor, partySize) =>
-    enemyFor(floor, s.route, partySize),
+    enemyFor(floor, s.route, partySize, "regular"),
   );
-  if (exploration) return exploration;
+  if (exploration) {
+    if (
+      exploration.phase === "arrival" &&
+      exploration.journey.defender &&
+      (s.journey.room !== exploration.journey.room || !s.journey.defender)
+    )
+      return {
+        ...exploration,
+        enemy: enemyFor(s.floor, s.route, s.party.length),
+        turn: 1,
+        momentum: 0,
+        sideBattle: false,
+        arrivalChoice: "",
+        arrivalOutcome: "",
+        arrivalEffect: "",
+        arrivalScouted: false,
+        effects: emptyEffects(),
+        party: exploration.party.map((c) => ({
+          ...c,
+          cooldowns: {},
+          battleMastery: {},
+        })),
+      };
+    return exploration;
+  }
   if (a.type === "RESET") return initialGame();
   if (a.type === "DISMISS") return { ...s, message: "" };
   if (a.type === "SETTING") return { ...s, [a.key]: a.value };
@@ -990,13 +1381,17 @@ function reduceGame(s: Game, a: Action): Game {
     if (s.phase !== "town" || !recipe) return s;
     if (s.bestFloor < (recipe.floor || 0))
       return note(s, "Clear Floor " + recipe.floor + " to unlock this recipe.");
+    if (a.essence && !recipe.essence) return s;
+    const materials = a.essence
+      ? [{ id: essenceId(recipe.essence!), quantity: 1 }]
+      : recipe.materials;
     if (
       s.gold < recipe.gold ||
-      recipe.materials.some((m) => (s.inventory[m.id] || 0) < m.quantity)
+      materials.some((m) => (s.inventory[m.id] || 0) < m.quantity)
     )
       return note(s, "You need the recipe’s gold and materials.");
     const inventory = { ...s.inventory, [a.id]: (s.inventory[a.id] || 0) + 1 };
-    for (const m of recipe.materials) inventory[m.id] -= m.quantity;
+    for (const m of materials) inventory[m.id] -= m.quantity;
     return note(
       {
         ...s,
@@ -1011,6 +1406,11 @@ function reduceGame(s: Game, a: Action): Game {
     );
   }
   if (a.type === "USE_SUPPLY") {
+    if (a.id === "camp-kit")
+      return note(
+        s,
+        "Use a camping kit to make a wild camp from exploration. Rest uses ordinary daily checks.",
+      );
     if (!(s.inventory[a.id] > 0) || s.usedSupplies.includes(a.id))
       return note(s, "You do not have an unused supply for this floor.");
     const inventory = { ...s.inventory, [a.id]: s.inventory[a.id] - 1 };
@@ -1035,31 +1435,6 @@ function reduceGame(s: Game, a: Action): Game {
         "Torch lit. Enemy revealed; enemy ATK −8%.",
       );
     if (
-      a.id === "camp-kit" &&
-      ["arrival", "victory"].includes(s.phase) &&
-      s.food > 0 &&
-      s.party.some((c) => c.hp > 0 && (c.hp < c.maxHp || c.mp < c.maxMp))
-    )
-      return note(
-        {
-          ...s,
-          inventory,
-          usedSupplies,
-          food: s.food - 1,
-          party: s.party.map((c) =>
-            c.hp > 0
-              ? {
-                  ...c,
-                  hp: Math.min(c.maxHp, c.hp + Math.round(c.maxHp * 0.3)),
-                  mp: Math.min(c.maxMp, c.mp + Math.round(c.maxMp * 0.3)),
-                  ailments: { poison: 0, paralysis: 0 },
-                }
-              : c,
-          ),
-        },
-        "Camp restored 30% HP and MP; consumed 1 ration. Fallen allies remain fallen.",
-      );
-    if (
       a.id === "labyrinth-key" &&
       s.phase === "event" &&
       !s.eventResolved &&
@@ -1079,12 +1454,7 @@ function reduceGame(s: Game, a: Action): Game {
         "The key opens an untouched compartment. Safe treasure, +100 gold and an extra relic fragment.",
       );
     }
-    return note(
-      s,
-      a.id === "camp-kit" && !s.food
-        ? "You need 1 ration to camp."
-        : "You cannot use this supply here.",
-    );
+    return note(s, "You cannot use this supply here.");
   }
   if (a.type === "CREATE") {
     if (s.started) return s;
@@ -1103,10 +1473,34 @@ function reduceGame(s: Game, a: Action): Game {
         party: [hero],
         journey: {
           ...newJourney(),
-          seed: seedFor(`${hero.name}:${hero.race}`),
+          seed:
+            (a.seed ??
+              (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0) >>>
+            0,
         },
       },
       `${hero.name}, a ${hero.job}, arrived in Stormhold.`,
+    );
+  }
+  if (a.type === "TREAT_INJURY" && s.phase === "town") {
+    const c = s.party.concat(s.reserve).find((c) => c.id === a.id);
+    if (!c || !c.injuries) return s;
+    const cost = 100 * c.level;
+    if (s.gold < cost)
+      return note(
+        s,
+        `Treatment costs ${cost} gold. Three town days also heal an injury.`,
+      );
+    const heal = (p: Character) =>
+      p.id === c.id ? setInjuries(p, p.injuries - 1) : p;
+    return note(
+      {
+        ...s,
+        gold: s.gold - cost,
+        party: s.party.map(heal),
+        reserve: s.reserve.map(heal),
+      },
+      `${c.name} has one injury treated.`,
     );
   }
   if (a.type === "RETURN") {
@@ -1116,19 +1510,25 @@ function reduceGame(s: Game, a: Action): Game {
         s,
         `The return gate is sealed for ${daysRemaining(s)} more days. Find shelter if your team cannot continue.`,
       );
+    s = rescueInjuries(s);
     const mission = MISSIONS.find((m) => m.id === s.journey.mission);
     const reward =
-      mission && missionProgress(s) >= mission.target ? mission.reward : 0;
+      !s.expedition.lost && mission && missionProgress(s) >= mission.target
+        ? mission.reward
+        : 0;
     return note(
       {
         ...s,
         day: (s.journey.startDay ?? s.day) + 31,
         gold: s.gold + reward,
+        runPaid: { ...s.expedition.accruedShares },
+        expedition: newExpedition(s.expedition.number),
         journey: { ...s.journey, startDay: null },
         phase: "town",
         enemy: null,
-        lastOutcome:
-          s.phase === "defeat" ? "Lost expedition" : "Returned safely",
+        combat: null,
+        roundPlayback: null,
+        lastOutcome: s.expedition.lost ? "Lost expedition" : "Returned safely",
       },
       `The return gate carried your team home.${reward ? ` Mission fulfilled: +${reward} guild gold.` : ""} Trade your spoils and prepare for the next opening.`,
     );
@@ -1170,29 +1570,84 @@ function reduceGame(s: Game, a: Action): Game {
       `${q.title} fulfilled: ${q.gold} gold and ${q.gems} crystals.`,
     );
   }
-  if (a.type === "LEARN") {
+  if (a.type === "SLOT_SKILL") {
+    if (s.phase !== "town") return note(s, "Change skill loadouts in town.");
+    const c = s.party.concat(s.reserve).find((c) => c.id === a.id);
+    if (!c || !c.learnedSkills.includes(a.skill)) return s;
     if (
-      !s.party.some((c) => c.id === a.id && !c.skills.includes(a.skill)) ||
-      s.essence < 1
+      a.equip &&
+      (c.skills.includes(a.skill) || c.skills.length >= skillSlots(c.level))
     )
-      return note(s, "Select an unlearned skill and an available essence.");
-    const n = note(
+      return note(s, "Unequip a skill to free a slot.");
+    const update = (p: Character) =>
+      p.id !== a.id
+        ? p
+        : {
+            ...p,
+            skills: a.equip
+              ? [...p.skills, a.skill]
+              : p.skills.filter((k) => k !== a.skill),
+          };
+    return { ...s, party: s.party.map(update), reserve: s.reserve.map(update) };
+  }
+  if (a.type === "LEARN") {
+    if (s.phase === "camp" && s.journey.wildCamp)
+      return note(
+        s,
+        "Bind essences in town or an established sanctuary; a wild camp is not safe enough.",
+      );
+    if (!["town", "camp"].includes(s.phase))
+      return note(s, "Bind essences in town or shelter.");
+    const spec = MONSTERS.find(
+      (m) => m.skill === a.skill && (!a.species || a.species === m.id),
+    );
+    const c = s.party
+      .concat(s.phase === "town" ? s.reserve : [])
+      .find((c) => c.id === a.id);
+    if (
+      !spec ||
+      !c ||
+      c.hp <= 0 ||
+      c.learnedSkills.includes(a.skill) ||
+      !(s.inventory[essenceId(spec.id)] > 0)
+    )
+      return note(s, "Choose an unlearned skill and its species essence.");
+    const id = essenceId(spec.id);
+    const provisional =
+      s.phase !== "town" && (s.expedition.unsecured.inventory[id] || 0) > 0;
+    const update = (p: Character) =>
+      p.id !== c.id
+        ? p
+        : {
+            ...p,
+            learnedSkills: [...p.learnedSkills, a.skill],
+            skills:
+              p.skills.length < skillSlots(p.level)
+                ? [...p.skills, a.skill]
+                : p.skills,
+          };
+    return note(
       {
         ...s,
-        essence: s.essence - 1,
-        party: s.party.map((c) =>
-          c.id === a.id ? { ...c, skills: [...c.skills, a.skill] } : c,
-        ),
+        inventory: { ...s.inventory, [id]: s.inventory[id] - 1 },
+        party: s.party.map(update),
+        reserve: s.reserve.map(update),
+        expedition: {
+          ...s.expedition,
+          provisionalSkills: provisional
+            ? {
+                ...s.expedition.provisionalSkills,
+                [c.id]: [
+                  ...(s.expedition.provisionalSkills[c.id] || []),
+                  a.skill,
+                ],
+              }
+            : s.expedition.provisionalSkills,
+        },
       },
-      `${a.skill} was permanently bound to your companion.`,
+      `${a.skill} learned.${provisional ? " Secured on extraction; lost on defeat." : " Permanently secured."}`,
     );
-    return s.phase === "essence" ? afterFloor(n) : n;
   }
-  if (a.type === "DEFER" && s.phase === "essence")
-    return note(
-      afterFloor(s),
-      "Essence stored. Bind it later from Party → Skills.",
-    );
   if (s.phase === "town") {
     if (a.type === "PREPARE_CYCLE") {
       const days = daysToGate(s.day);
@@ -1286,7 +1741,7 @@ function reduceGame(s: Game, a: Action): Game {
         {
           ...s,
           knownFloors: [...new Set([...s.knownFloors, rumour.floor])],
-          journey: chartRumour(s, rumour.floor),
+          journey: chartRumour(s, rumour.floor, rumour.title),
           heardRumours: [...s.heardRumours, rumour.id],
         },
         `${rumour.speaker}: ${rumour.body}`,
@@ -1568,50 +2023,94 @@ function reduceGame(s: Game, a: Action): Game {
         "Weapon tempered. Attack +6, defense +2.",
       );
     }
-    if (a.type === "ENCHANT") {
-      if (s.gems < 30 || s.gold < 100)
-        return note(s, "Essence refinement costs 30 crystals and 100 gold.");
-      if (!s.party.some((c) => c.id === a.id && !c.skills.includes(a.skill)))
+    if (a.type === "REFINE_GEAR") {
+      const c = s.party.find((p) => p.id === a.id);
+      if (
+        !c ||
+        !["fire", "frost", "venom"].includes(a.element) ||
+        c.refinements?.[a.element]
+      )
         return s;
+      if (!c.equipment.length)
+        return note(s, "Equip gear before refining its protection.");
+      if (s.gems < 30 || s.gold < 100)
+        return note(s, "Equipment refinement costs 30 crystals and 100 gold.");
       return note(
         {
           ...s,
-          gems: s.gems - 30,
           gold: s.gold - 100,
-          party: s.party.map((c) =>
-            c.id === a.id ? { ...c, skills: [...c.skills, a.skill] } : c,
+          gems: s.gems - 30,
+          party: s.party.map((p) =>
+            p.id !== c.id
+              ? p
+              : { ...p, refinements: { ...p.refinements, [a.element]: true } },
           ),
         },
-        `${a.skill} refined from crystals and bound to your companion.`,
+        `${c.name}'s gear protection refined: +10% ${a.element} resistance. This tempering remains with the companion.`,
       );
     }
+    if (a.type === "ENCHANT")
+      return note(
+        s,
+        "Hunt a monster and bind its essence. Crystals refine equipment, not skills.",
+      );
+    if (a.type === "SELECT_START") {
+      if (!s.checkpoints.includes(a.floor)) return s;
+      const route = a.route || s.startRoute;
+      if (a.floor === 7 && (!route || !s.discoveredRoutes.includes(route)))
+        return note(s, "Choose a previously discovered route for Floor 7.");
+      return { ...s, startFloor: a.floor, startRoute: route || null };
+    }
     if (a.type === "ENTER") {
+      if (
+        s.party.some(
+          (c) =>
+            c.id !== "hero" && loyalty(s, c.id) < B.reconciliationThreshold,
+        )
+      )
+        return note(
+          s,
+          "A companion needs reconciliation. Open Party and speak with them before entering.",
+        );
       if (!gateOpen(s.day))
         return note(s, `The labyrinth opens in ${daysToGate(s.day)} days.`);
-      if (s.food < 3)
-        return note(s, "You need 3 rations to enter. Visit Copper Lane.");
+
       if (!s.party.some((c) => c.hp > 0))
         return note(s, "Rest your party before entering.");
       return note(
         {
           ...s,
-          food: s.food - 3,
-          floor: 1,
+          food: s.food,
+          combat: null,
+          roundPlayback: null,
+          expedition: newExpedition(s.expedition.number + 1),
+          lootReceipt: null,
+          floor: s.startFloor,
           phase: "mission",
           journey: {
             ...newJourney(),
             seed: s.journey.seed,
             maps: {
               ...s.journey.maps,
-              1: s.journey.maps[1] || generateFloor(1, s.journey.seed),
+              [mapKey(s.startFloor, s.startRoute)]:
+                s.journey.maps[mapKey(s.startFloor, s.startRoute)] ||
+                generateFloor(
+                  s.startFloor,
+                  s.journey.seed,
+                  s.startFloor === 7 ? s.startRoute || "roots" : "",
+                ),
             },
             chart: s.journey.chart,
             startDay: s.day,
           },
-          enemy: enemyFor(1, null, s.party.length),
+          enemy: enemyFor(s.startFloor, s.startRoute, s.party.length),
           turn: 1,
           momentum: 0,
-          party: s.party.map((c) => ({ ...c, cooldowns: {} })),
+          party: s.party.map((c) => ({
+            ...c,
+            cooldowns: {},
+            battleMastery: {},
+          })),
           runKills: 0,
           runGold: 0,
           runGross: 0,
@@ -1621,27 +2120,30 @@ function reduceGame(s: Game, a: Action): Game {
               .filter((c) => s.contracts[c.id] !== undefined)
               .map((c) => [c.id, s.contracts[c.id]]),
           ),
-          route: null,
+          route: s.startFloor === 7 ? s.startRoute : null,
           eventResolved: false,
           sideBattle: false,
-          ending: "",
+          ending: s.ending,
           arrivalChoice: "",
           arrivalOutcome: "",
           arrivalEffect: "",
           arrivalScouted: false,
           usedSupplies: [],
           effects: emptyEffects(),
-          log: [FLOORS[0].intro],
+          log: [FLOORS[s.startFloor - 1].intro],
         },
-        "Entered the cave. Goblin voices echo beyond the bend.",
+        "The sealed month begins. Explore the passages and find the portal defender.",
       );
     }
     return s;
   }
+  if (a.type === "ENGAGE" && s.phase === "arrival" && !s.journey.defender)
+    return { ...s, phase: "exploration", message: "" };
   if (
     a.type === "APPROACH" &&
     s.phase === "arrival" &&
     s.enemy &&
+    s.journey.defender &&
     !s.arrivalChoice
   ) {
     const choice = ARRIVALS[s.floor - 1]?.choices.find(
@@ -1721,7 +2223,8 @@ function reduceGame(s: Game, a: Action): Game {
       message: "",
       log: [s.arrivalOutcome, ...s.log].slice(0, 8),
     };
-  if (a.type === "BATTLE" && s.phase === "combat" && s.enemy)
+  if (a.type === "ROUND") return resolveRound(s, a);
+  if (a.type === "BATTLE" && s.phase === "combat" && s.enemy && s.trial)
     return resolveBattle(s, a, battleWon);
   if (a.type === "EVENT" && s.phase === "event")
     return resolveEvent(s, a.choice, a.roll);
@@ -1731,16 +2234,17 @@ function reduceGame(s: Game, a: Action): Game {
         s,
         "Find the upward portal before ascending. Search the corridors.",
       );
+    if (s.floor === 4 && !s.route)
+      return note(
+        s,
+        "Return to the fourfold gate chamber and choose a route before ascending.",
+      );
     if (s.floor >= 12)
       return note(
         s,
         "The campaign is complete. Return with your story and the crown.",
       );
-    if (s.food < 1)
-      return note(
-        s,
-        "No rations remain. Search side passages for cave roots, or wait in shelter.",
-      );
+
     const floor = s.floor + 1;
     return {
       ...s,
@@ -1753,17 +2257,25 @@ function reduceGame(s: Game, a: Action): Game {
         branchFight: false,
         room: "entrance",
         history: [],
+        facing: "north",
+        defender: false,
         maps: {
           ...s.journey.maps,
-          [floor]:
-            s.journey.maps[floor] || generateFloor(floor, s.journey.seed),
+          [mapKey(floor, s.route)]:
+            s.journey.maps[mapKey(floor, s.route)] ||
+            generateFloor(
+              floor,
+              s.journey.seed,
+              floor >= 5 && floor <= 7 ? s.route || "roots" : "",
+            ),
         },
       },
       floor,
-      food: s.food - 1,
+      food: s.food,
+      combat: null,
       enemy: enemyFor(floor, s.route, s.party.length),
       momentum: 0,
-      party: s.party.map((c) => ({ ...c, cooldowns: {} })),
+      party: s.party.map((c) => ({ ...c, cooldowns: {}, battleMastery: {} })),
       eventResolved: false,
       sideBattle: false,
       encounterExamined: false,
@@ -1778,12 +2290,8 @@ function reduceGame(s: Game, a: Action): Game {
       usedSupplies: [],
     };
   }
-  // Compatibility for older saves at the original relic/treasure screens.
-  if (a.type === "COLLECT" && s.phase === "loot")
-    return note(
-      { ...s, phase: "victory", gold: s.gold + 100, potions: s.potions + 1 },
-      "Treasure recovered: 100 gold and a healing potion.",
-    );
+  if (a.type === "COLLECT" && s.phase === "loot" && s.lootReceipt)
+    return afterFloor({ ...s, lootReceipt: null });
   if (a.type === "ENCOUNTER" && s.phase === "encounter") {
     if (a.choice === "examine")
       return note(
@@ -1812,10 +2320,26 @@ function reduceGame(s: Game, a: Action): Game {
 }
 function resolveEvent(s: Game, choice: string, roll: number): Game {
   const kind = FLOORS[s.floor - 1].event;
+  if (principalResolved(s) && kind !== "routes")
+    return note(
+      {
+        ...s,
+        phase: s.floor === 12 ? "victory" : "exploration",
+        eventResolved: true,
+      },
+      principalAftermath(s),
+    );
   const allowed = EVENTS[kind].choices.some((c) => c.id === choice);
   if (!allowed) return s;
   const done = (n: Game, message: string) =>
-    note({ ...n, phase: "victory", eventResolved: true }, message);
+    note(
+      {
+        ...n,
+        phase: s.floor === 12 ? "victory" : "exploration",
+        eventResolved: true,
+      },
+      message,
+    );
   const fight = (name: string, ambush = false) => {
     const hp = Math.round(
       (140 + s.floor * 35) * (1 + 0.7 * (s.party.length - 1)),
@@ -1831,8 +2355,10 @@ function resolveEvent(s: Game, choice: string, roll: number): Game {
         party: (ambush ? hurtParty(s.party, 22) : s.party).map((c) => ({
           ...c,
           cooldowns: {},
+          battleMastery: {},
         })),
         enemy: {
+          species: "plunderer",
           name,
           hp,
           maxHp: hp,
@@ -1924,7 +2450,13 @@ function resolveEvent(s: Game, choice: string, roll: number): Game {
   }
   if (kind === "routes")
     return done(
-      { ...s, route: choice as Route },
+      {
+        ...s,
+        route: choice as Route,
+        discoveredRoutes: [
+          ...new Set([...s.discoveredRoutes, choice as Route]),
+        ],
+      },
       `You choose ${ROUTES.find((r) => r.id === choice)!.name}. Its dangers and spoils will shape the next three floors.`,
     );
   if (kind === "shrine") {
@@ -1941,8 +2473,12 @@ function resolveEvent(s: Game, choice: string, roll: number): Game {
       );
     if (choice === "blood")
       return done(
-        { ...s, party: hurtParty(s.party, 18), essence: s.essence + 1 },
-        "The shrine takes 18 HP from standing allies. A new essence crystallizes.",
+        {
+          ...s,
+          party: hurtParty(s.party, 18),
+          inventory: addLoot(s.inventory, "relic-fragment", 2),
+        },
+        "The shrine takes 18 HP from standing allies. Two relic fragments crystallize.",
       );
     return done(s, "You turn from the reflection. It watches you leave.");
   }
@@ -2124,8 +2660,12 @@ function resolveEvent(s: Game, choice: string, roll: number): Game {
           choice === "seal"
             ? "Keeper of the Gate"
             : "Bearer of the Hollow Crown",
-        inventory: addLoot(s.inventory, "hollow-crown"),
-        essence: s.essence + (choice === "claim" ? 1 : 0),
+        inventory: addLoot(
+          addLoot(s.inventory, "hollow-crown"),
+          "relic-fragment",
+          choice === "claim" ? 2 : 0,
+        ),
+
         faction: {
           ...s.faction,
           stag: s.faction.stag + (choice === "seal" ? 8 : 0),

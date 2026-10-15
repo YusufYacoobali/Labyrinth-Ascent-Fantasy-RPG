@@ -1,5 +1,16 @@
 # Labyrinth Awaits
 
+## Gameplay redesign
+
+All four gameplay milestones are implemented: rewards and mastery, persistent relative navigation, queued tactical combat and sealed-month survival, then the companion and story deliveries. See [the delivery notes](docs/GAMEPLAY-REDESIGN.md) for current rules and verification.
+
+- Fourteen original species and twelve route variants have their own essence and a registered signature power. Each defeated monster, including bosses, rolls a 30% essence chance. Victory shows one saved receipt with gold, held companion shares, items and each character's XP.
+- Expedition spoils are unsecured until extraction. Defeat loses those spoils and powers bound from field-found essences; secured belongings, earlier skills and character experience remain.
+- Learn in town or shelter. Skills share two equipped slots initially, increasing at levels 3, 6, 9 and 12 to six. Learned powers stay in a library; swap loadouts only in town.
+- Meaningful combat use unlocks three mastery ranks at 0, 12 and 40 points. Duplicate essences teach other companions, substitute for materials in four forge recipes, or sell through existing vendors.
+- Version-1 development saves are backed up before starting a version-2 campaign. Combat results are saved before animation playback; reload restores the result rather than rerolling.
+
+
 A portrait fantasy RPG in TypeScript, React Native, Expo SDK 57 and Expo Router. `mock/onboarding.png` and `mock/gameplay.png` are the visual references.
 
 ## Run
@@ -12,22 +23,22 @@ npm install
 npm start
 ```
 
-Scan the QR code with a compatible Expo Go version. `npm run web` starts the browser version. The current development preview is [localhost:8083](http://localhost:8083).
+Scan the QR code with a compatible Expo Go version. `npm run web` starts the browser version. The current development preview is [localhost:8092](http://localhost:8092).
 
 ## Play
 
 - Choose Barbarian, Human, Elf or Dwarf. A human rolls once for a 5% Mage awakening; the result is saved.
-- Begin on Day 24 with 2,340 gold, 120 crystals, six rations and three potions. Choose from ten recruits for a party of four. Negotiate each companion’s percentage of expedition gold, rather than a signing fee. Conversation reveals strengths, hidden traits and route information. Agreed shares survive benching and are paid on each gold find, rounded down; town work, sales and guild rewards are excluded.
+- Begin on Day 24 with 2,340 gold, 120 crystals, six rations and three potions. Choose from ten recruits for a party of four. Negotiate each companion’s percentage of expedition gold, rather than a signing fee. Conversation reveals strengths, hidden traits and route information. Agreed shares survive benching and are reserved on each gold find, rounded down, then paid on successful extraction; town work, sales and guild rewards are excluded.
 - The labyrinth opens every 30 **in-game** days. Guild training costs 60 gold and grants 45 XP per companion; work earns 125 gold and one guild standing; rest restores HP, MP and ailments. Each takes one day. Preparation plans can advance directly to the next opening. Shopping, negotiation and forging consume no days.
-- Day-consuming town actions ask for confirmation when the gate is open. Once inside, the return gate stays shut for thirty days. Six travel watches make one day; resolved approaches, fights, events and ascents also consume watches. Safe shelter restores standing allies and can count down to the return gate, including when food runs out. Fallen companions remain fallen until an inn rest after returning.
-- Choose a survey, salvage or survivor mission at entry. Each floor is a seeded, saved graph of connected story rooms, with a six-turn main route, optional chambers, loops, traps and adjacent shelters. Follow clues, chart turns, backtrack and search branches for caches, edible roots, other teams or optional fights. Ascending requires standing in the discovered portal room. New expeditions traverse the same routes; discovered charts remain saved. Town rumours and recruits reveal only particular floors and route marks.
+- Day-consuming town actions ask for confirmation when the gate is open. Inside, the return gate stays sealed for thirty days. Six watches make a day; three combat rounds make a watch. Movement, substantial investigations, foraging and ascent cost one watch. The accepted round or decision finishes before day-thirty extraction.
+- Choose a survey, salvage or survivor mission. Explore persistent spatial graphs with loops, branches, landmarks and one sanctuary. Directions are relative to saved facing; the Skia map stays north-up. Pan, zoom, recenter and inspect rooms; travel remains a separate adjacent action. Geography and discoveries persist, while occupants and resolved rewards change each expedition. Portal defenders gate ascent. Guardian victories unlock checkpoint starts on Floors 4, 7 and 10.
 - Three shops stock common, fine and rare supplies and equipment. Purchase prices rise 15% on days 27–30 of each cycle. Matching buyers pay more for expedition spoils. The guild buys monster cores. Forge upgrades and elemental refinement remain permanent.
-- The item catalog contains 37 entries; ten crafting recipes consume real materials and gold. Nine contracts track kills, floors, deliveries, unique recruits, training and crafting. Torches, bandages, camp kits and labyrinth keys have distinct field uses. Equipment can change HP/MP capacity, speed, damage, defense and elemental resistance.
-- Entry uses three rations; each new floor uses one. Attack commands the standing party. Select an ally to cast a skill while others attack. Guard halves incoming damage, redirects a single hit to the selected tank, restores 4 party MP and earns momentum. Focus restores 20 MP to the selected ally while others strike at 55%. Burst costs two momentum for +35% party damage and 50 guard-break damage. Items use a turn. Flee returns to town and closes the gate.
-- Every floor first opens with an illustrated arrival, three approaches and a written outcome before combat. Floor 1 begins with goblin voices beyond a cave bend, including an original sound cue. Listen to study an enemy, attempt an ambush, rush into an opening exchange, or prepare with supplies where offered. Companions can guarantee some approaches. Choices affect enemy damage, opening hits, interruptions, health, mana and wards, and remain saved between the decision and the fight.
-- Skills include poison, paralysis, double strikes, healing, party attack bonuses and elemental wards. Bosses resist some interrupts. Enemies cycle through strike, charge, heavy attack and recovery. Their next targets and estimated damage are visible. Breaking their guard interrupts attacks and opens a +30% damage window; a temporary interrupt ward prevents repeated stun locks. Active skills have cooldowns. Resistance caps at 75%; antidotes clear ailments and briefly prevent reapplication.
-- Every floor has an encounter. Floor 1's stranger is a plunderer; Floor 3 introduces the White Stag clan; Floor 4 offers four routes that change Floors 5–7. Later encounters include shrines, remedies, a toll bridge, a trapped relic, missing scouts, a vault and a merchant before the final king.
-- Bosses on Floors 3, 6, 9 and 12 grant permanent skill essences. Learn immediately or save an essence for Party → Skills. Complete guild and clan contracts for rewards. Defeat the Hollow King on Floor 12 and choose an ending.
+- Species essences, equipment and materials use the existing shops and forge. Four essence recipes supplement ordinary recipes. Torches scout portal defenders, bandages treat one ally, camping kits supply wild camps, and keys open authored treasure. Equipment changes HP/MP capacity, speed, damage, defense and resistance.
+- One party ration is consumed per elapsed day. Buy thirty for full coverage. Fed daily rest restores 25% HP/MP and removes 35 exhaustion from standing companions; hunger grants no recovery, adds 15 exhaustion and removes 10% maximum HP. Sanctuary caches replenish between expeditions. Wild camps require a kit and have 20%, 30% or 40% interruption risk. Suitable rooms offer one saved forage attempt.
+- Arrival opens exploration. At the portal, study the defender and select an approach before combat. Companions can guarantee some approaches. Outcomes and preparation remain saved, including after retreat and re-entry.
+- Queue one action per standing, unimpeded companion and confirm the round after reading initiative and every enemy intent. Skills, Guard, Focus, Burst and items consume that actor’s action. Guard protects one ally; Focus restores only the actor’s MP; items select one ally. Enemy archetypes and guardian phases change their behavior. Break, resistance, statuses and interrupt protection apply individually. Retreat takes enemy responses before following a real passage and preserves remaining enemy HP.
+- The twelve principal encounters include the plunderer, White Stag, fourfold route choice, shrines, remedies, a bridge, relic, scouts, vault, merchant and final throne. Routed Floors 5–7 have separate maps and exclusive monster, elite and guardian families.
+- Every defeated monster rolls for a species essence. Bind from Party → Skills in town, or from the optional shelter binding panel. Field-found powers become permanent on successful extraction. Complete guild and clan contracts for rewards. Defeat the Hollow King on Floor 12 and choose an ending.
 
 Progress, including battles, saves locally. More contains profile editing, achievements, sound and haptics, local save backup text, contract rewards, the codex, help and a confirmed save reset.
 
@@ -50,13 +61,14 @@ npx expo-doctor
 npm run export
 ```
 
-102 checks cover creation, economy, percentage contracts, ailments, resistance, preparation, crafting, quests, arrivals, encounters, connected maps, fog, exhaustion and complaints, the thirty-day expedition window and save migration. `npm run playtest` runs 16 prepared expeditions across the four campaign routes with actual starting resources and traverses every required portal route. Browser checks cover town services, real crafting/equipping, the skip-opening prompt, missions, story choices, combat and saved progress. Physical device performance still needs verification. Export creates Android/iOS bundles and a static web build, rather than signed APK/IPA releases.
+The regression suites cover economy, rewards, mastery, provenance, relative navigation, 1,200 generated graphs, queued initiative, resource reservations, retreat, guardian phases, daily food, foraging, injury recovery, all thirty companion stages, twelve floor chains, four faction chains and twenty-four generic encounters. `npm run playtest` simulates 200 seeded repeat-expedition campaigns using discovered connections and player-visible information. Results are written under `verification/`. Physical-device testing was waived by the user. Exports create Android/iOS bundles and a static web build; they are not signed APK/IPA releases.
 
 ## Files
 
 - [`docs/FLOOR-MAPS.md`](docs/FLOOR-MAPS.md): plain-English guide to room connections, seeds, persistence, fog and exhaustion.
-- `src/game/floor-map.ts`: seeded graph templates; `exhaustion.ts`: damage penalties and companion complaints.
+- `src/game/floor-map.ts`: seeded spatial graphs; `exhaustion.ts`: damage penalties and companion complaints.
 - `src/game/engine.ts`: rules and reducer; `world.ts`: floors and encounters; `town-content.ts`: recruit builds, items, recipes and contracts; `story.ts`: arrival scenes; `exploration.ts`: routes, branches, missions and expedition time; `provider.tsx`: persistence and opening-skip confirmation.
+- `src/game/stories.ts`: stage eligibility, durable outcomes and relationships; `companion-stories*.ts`, `floor-stories*.ts`, `route-stories.ts`: authored chains; `generic-stories.ts` and `generic-encounters.ts`: saved reusable encounter pools.
 - `src/screens/`: game screens; `src/app/`: Expo Router routes.
 - `src/components/`: shared frames, typography, atlases, controls and combat motion.
 - `assets/story/`: dedicated arrival, encounter and side-room paintings; exact built-in image-generation prompts in `generation-manifest.json`.

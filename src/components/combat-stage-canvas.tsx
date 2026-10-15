@@ -424,6 +424,7 @@ function Pulse({
 }
 
 export default function CombatStage({
+  playbackDuration,
   state,
   selected,
   cue,
@@ -458,12 +459,12 @@ export default function CombatStage({
     time.set(0);
     time.set(
       withTiming(cueDuration(cue, reduced), {
-        duration: cueDuration(cue, reduced),
+        duration: playbackDuration ?? cueDuration(cue, reduced),
         easing: Easing.linear,
       }),
     );
     return () => cancelAnimation(time);
-  }, [cue, reduced, time]);
+  }, [cue, reduced, time, playbackDuration]);
   const camera = useDerivedValue(() => {
     if (reduced || !cue) return [{ translateX: 0 }, { translateY: 0 }];
     const p = time.get();

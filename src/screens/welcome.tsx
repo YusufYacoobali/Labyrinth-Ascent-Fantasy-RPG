@@ -6,7 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { router } from "expo-router";
+import { router, Redirect } from "expo-router";
 import {
   art,
   Atlas,
@@ -23,8 +23,10 @@ import { theme as t } from "@/theme";
 export function CreateScreen() {
   const [race, setRace] = useState<Race>("barbarian");
   const [name, setName] = useState("Bjorn");
-  const { dispatch } = useGame();
+  const { dispatch, state } = useGame();
   const r = RACES.find((r) => r.id === race)!;
+  if (state.started)
+    return <Redirect href={state.phase === "town" ? "/town" : "/expedition"} />;
   return (
     <Frame background={art.cover} title="Choose your origin" hideNav>
       <KeyboardAvoidingView

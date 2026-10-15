@@ -1,8 +1,10 @@
+import { serializeSave } from "./skill-ids";
 import React, {
   createContext,
   useContext,
   useEffect,
   useReducer,
+  useRef,
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -14,109 +16,152 @@ import {
   reducer,
   needsGateConfirmation,
 } from "./engine";
-const KEY = "labyrinth-awaits-save-v1";
+import { loadSave, saveWriter } from "./save-store";
 const Context = createContext<{
   state: Game;
   dispatch: React.Dispatch<Action>;
   ready: boolean;
+  saving: boolean;
   saveError: string;
   retrySave: () => void;
   pendingTownAction: Action | null;
   confirmTownAction: (skip: boolean) => void;
 } | null>(null);
 export function GameProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatchBase] = useReducer(
-    (s: Game, a: Action | { type: "HYDRATE"; save: Game }) =>
-      a.type === "HYDRATE" ? a.save : reducer(s, a),
-    undefined,
-    initialGame,
-  );
+  const [state, setState] = useState(initialGame);
+  const current = useRef(state);
   const [ready, setReady] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const working = useRef(false);
+  const canWrite = useRef(true);
+  const pendingCommit = useRef<Game | null>(null);
+  const alive = useRef(true);
+  const writer = useRef(saveWriter(AsyncStorage));
   const [pendingTownAction, setPendingTownAction] = useState<Action | null>(
     null,
   );
   const [saveError, setSaveError] = useState("");
-  const [retry, setRetry] = useState(0);
   useEffect(() => {
-    let live = true;
-    AsyncStorage.getItem(KEY)
-      .then((raw) => {
-        if (!live) return;
-        if (raw) {
-          try {
-            const g = JSON.parse(raw);
-            if (
-              g.version === 1 &&
-              Array.isArray(g.party) &&
-              typeof g.day === "number" &&
-              g.party.every((c: Game["party"][number]) =>
-                Array.isArray(c.skills),
-              )
-            )
-              dispatchBase({ type: "HYDRATE", save: normalizeSave(g) });
-            else
-              setSaveError(
-                "The saved journey could not be read. A fresh journey is ready.",
-              );
-          } catch {
-            setSaveError(
-              "The saved journey could not be read. A fresh journey is ready.",
-            );
-          }
+    alive.current = true;
+    loadSave(AsyncStorage)
+      .then(({ save, backedUp }) => {
+        if (!alive.current) return;
+        const next = save
+          ? { ...normalizeSave(save), playback: null, roundPlayback: null }
+          : initialGame();
+        current.current = next;
+        setState(next);
+        if (backedUp)
+          setSaveError(
+            "Your development save was backed up. This redesign starts a fresh campaign.",
+          );
+      })
+      .catch(() => {
+        if (!alive.current) return;
+        canWrite.current = false;
+        setSaveError(
+          "The existing save is retained. Storage could not be read; changes remain in this session.",
+        );
+      })
+      .finally(() => {
+        if (alive.current) setReady(true);
+      });
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+  const dispatch: React.Dispatch<Action> = (action) => {
+    if (!ready || working.current) return;
+    if (needsGateConfirmation(current.current, action)) {
+      setPendingTownAction(action);
+      return;
+    }
+    const next = reducer(current.current, action);
+    if (next === current.current) return;
+    current.current = next;
+    pendingCommit.current = next;
+    // Ordinary navigation stays immediate. Combat waits for its durable result before playback.
+    const waitForCommit =
+      (action.type === "BATTLE" || action.type === "ROUND") && action.animate;
+    if (!waitForCommit) setState(next);
+    working.current = true;
+    setSaving(true);
+    const persist = canWrite.current
+      ? writer.current.save(serializeSave(next))
+      : Promise.reject(new Error("Storage unreadable"));
+    persist
+      .then(() => {
+        pendingCommit.current = null;
+        working.current = false;
+        if (alive.current) {
+          setSaveError("");
+          if (waitForCommit) setState(next);
         }
       })
       .catch(() => {
-        if (live)
+        if (alive.current)
           setSaveError(
-            "Storage is unavailable. Your journey will last for this session.",
+            canWrite.current
+              ? "Progress could not be saved. Tap to retry."
+              : "Existing save retained; changes remain in this session.",
           );
       })
       .finally(() => {
-        if (live) setReady(true);
+        if (alive.current) setSaving(false);
       });
-    return () => {
-      live = false;
-    };
-  }, []);
-  useEffect(() => {
-    if (!ready) return;
-    let live = true;
-    AsyncStorage.setItem(KEY, JSON.stringify(state))
+  };
+  const retrySave = () => {
+    if (!canWrite.current) {
+      loadSave(AsyncStorage)
+        .then(({ save }) => {
+          canWrite.current = true;
+          const next = save
+            ? { ...normalizeSave(save), playback: null, roundPlayback: null }
+            : initialGame();
+          current.current = next;
+          setState(next);
+          pendingCommit.current = null;
+          working.current = false;
+          setSaveError("");
+        })
+        .catch(() =>
+          setSaveError(
+            "The existing save is retained. Storage still cannot be read.",
+          ),
+        );
+      return;
+    }
+    setSaving(true);
+    writer.current
+      .retry()
       .then(() => {
-        if (live) setSaveError("");
+        pendingCommit.current = null;
+        working.current = false;
+        setState(current.current);
+        setSaveError("");
       })
-      .catch(() => {
-        if (live) setSaveError("Progress could not be saved. Tap to retry.");
-      });
-    return () => {
-      live = false;
-    };
-  }, [state, ready, retry]);
+      .catch(() => setSaveError("Progress could not be saved. Tap to retry."))
+      .finally(() => setSaving(false));
+  };
   return (
     <Context.Provider
       value={{
         state,
-        dispatch: (action) => {
-          if (needsGateConfirmation(state, action))
-            setPendingTownAction(action);
-          else dispatchBase(action);
-        },
+        dispatch,
+        ready,
+        saving,
+        saveError,
+        retrySave,
         pendingTownAction,
         confirmTownAction: (skip) => {
           if (
             skip &&
             pendingTownAction &&
-            (pendingTownAction.type === "REST" ||
-              pendingTownAction.type === "WORK" ||
-              pendingTownAction.type === "TRAIN")
-          ) {
-            dispatchBase({ ...pendingTownAction, skipOpening: true });
-          }
+            ["REST", "WORK", "TRAIN"].includes(pendingTownAction.type)
+          )
+            dispatch({ ...pendingTownAction, skipOpening: true } as Action);
           setPendingTownAction(null);
         },
-        ready,
-        saveError,
-        retrySave: () => setRetry((x) => x + 1),
       }}
     >
       {children}
@@ -144,6 +189,7 @@ export function CombatTrialProvider({
         state,
         dispatch,
         ready: true,
+        saving: false,
         saveError: "",
         retrySave: () => {},
         pendingTownAction: null,

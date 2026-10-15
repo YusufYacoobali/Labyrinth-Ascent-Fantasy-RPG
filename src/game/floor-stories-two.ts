@@ -1,0 +1,19 @@
+import { floorChain } from "./floor-stories";
+export const FLOOR_STORIES_TWO = [
+  floorChain(5,
+    ["The reflection’s missing face", "In the shrine sanctuary, a polished shard reflects someone who is absent from the party. An old keeper’s note says the basin borrows memories to make its visitors feel understood. The face belongs to the keeper who tried to stop it.", "Record the keeper’s name without feeding the basin", "The shard clouds when you speak the keeper’s name. Your account gives the borrowed face a history outside the water."],
+    ["A basin that can be refused", "Beyond the defeated portal guardian, an empty plinth fits the keeper’s warning. Returning travellers could read the cost of the shrine’s offer before answering their own reflection.", "Set the warning beside the basin’s path", "The offer remains, but its price can no longer hide in a familiar voice. A keeper’s herb pouch rests beneath the warning."],
+    "The shrine remembers your answer. Its water reflects the consequences; the original offering is spent."),
+  floorChain(6,
+    ["The healer’s second recipe", "A distiller’s notebook survives in the sixth-floor shelter. Beside recipes for medicine are names of patients who paid with labour they never finished. The margins reveal which debts were invented after the patients died.", "Copy the medicine and strike out the false debts", "The surviving recipes remain useful. The fabricated debts are preserved separately as evidence of how healing became a trap."],
+    ["Medicine without a debt", "The guardian’s arch opens onto a dry cabinet built for emergency remedies. You can post the corrected recipe here so the next party need not bargain with a missing healer’s ledger.", "Leave the corrected recipe in the cabinet", "The cabinet becomes a common resource between expeditions. A loose distillery seal joins your collection of evidence."],
+    "The distillery’s first stores have been distributed. The corrected recipe and debt record show what you chose to preserve."),
+  floorChain(7,
+    ["The rope beneath the toll", "At the bridge shelter, a rescue rope has been cut and spliced into the toll collector’s barrier. Its knots count people helped across before the plunderers arrived. The bridge once charged nothing.", "Separate the rescue knots from the toll rope", "The rescue line is recognizable again. Its knots tell a history the toll collector’s threats could not entirely erase."],
+    ["A crossing with witnesses", "With the portal defender defeated, the bridge’s signal post can carry a public record of the rescue line and the toll. Passing companies will know who held this crossing and what they demanded.", "Raise the rescued line beside the signal post", "The bridge has witnesses again. A traveller leaves medicinal leaves in the shelter for whoever next needs a crossing."],
+    "The bridge carries the line and account you left behind. Its named toll encounter is over."),
+  floorChain(8,
+    ["The gardener’s empty scabbard", "The garden sanctuary holds a scabbard made for Dawnbringer. Its inscription says the blade was planted as a warning after a king tried to make every survivor his soldier. The garden grew around the refusal.", "Copy the refusal beside the blade’s history", "The empty scabbard explains why the garden guarded a weapon it did not want anyone to wield for a king."],
+    ["What the blade is for", "The upward arch is open. You can leave an account of Dawnbringer that names its old purpose, whether you took the weapon or left it among the roots.", "Record the gardener’s refusal of the king", "The garden’s story outlives possession of its blade. A fragment of the old scabbard clasp remains loose beneath the inscription."],
+    "Dawnbringer’s ward has resolved. The garden retains the decision and the history you uncovered."),
+];

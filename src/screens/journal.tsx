@@ -1,3 +1,4 @@
+import { StoryChronicle } from "@/components/story-journal";
 import React, { useState } from "react";
 import { View, Pressable, TextInput } from "react-native";
 import { Image } from "expo-image";
@@ -45,8 +46,10 @@ export function JournalScreen() {
     art.frost,
   ];
   return (
-    <Guard>
+    <Guard expedition>
       <Frame
+        hideNav={state.journey.startDay !== null}
+        expedition={state.journey.startDay !== null}
         active="Journal"
         title="Stormhold"
         portrait={state.party[0]?.portrait}
@@ -165,6 +168,7 @@ export function JournalScreen() {
                   </Pressable>
                 );
               })}
+              <StoryChronicle />
               <Ornament />
               <Copy title style={{ fontSize: 21 }}>
                 Your Chronicle
@@ -270,10 +274,17 @@ export function JournalScreen() {
                 </Copy>
               </Surface>
               <Surface style={{ padding: 13, gap: 9 }}>
-                <Copy title>Guardian Essences</Copy>
-                <Copy>{state.essence} unbound</Copy>
+                <Copy title>Monster Essences</Copy>
+                <Copy>
+                  {Object.entries(state.inventory)
+                    .filter(([id]) => id.startsWith("essence-"))
+                    .reduce((n, [, qty]) => n + qty, 0)}{" "}
+                  unbound
+                </Copy>
                 <Copy muted style={{ fontSize: 13 }}>
-                  Guardians on Floors 3, 6, 9, and 12 grant an essence.
+                  Every defeated monster has a 30% chance to drop its species
+                  essence. Bind in town or shelter; field-found skills are
+                  secured on extraction.
                 </Copy>
               </Surface>
               {SKILLS.filter((skill) =>
@@ -624,12 +635,13 @@ export function MoreScreen() {
               ) : (
                 <>
                   <Copy style={{ fontSize: 13 }}>
-                    Prepare in town. The gate opens every 30 days. Entry costs 3
-                    rations; each new floor uses one.
+                    Prepare in town. The gate opens every 30 days. Bring thirty
+                    party rations for the sealed month; one is used each day.
                   </Copy>
                   <Copy style={{ fontSize: 13 }}>
-                    Read enemy intent. Guard halves damage; Focus restores MP;
-                    Burst spends momentum. Break a guard to interrupt attacks.
+                    Read initiative and every enemy intent. Queue one action per
+                    available companion. Guard protects one ally, Focus restores
+                    only the actor’s MP, and Burst spends shared momentum.
                   </Copy>
                   <Button
                     label="Replay guided walkthrough"

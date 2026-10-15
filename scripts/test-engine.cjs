@@ -1,3 +1,4 @@
+const { portalArrival, toward, travel } = require("./map-helpers.cjs");
 const assert = require("node:assert/strict");
 const { e, w, exploration } = require("./engine-loader.cjs");
 let count = 0;
@@ -7,23 +8,38 @@ function test(name, fn) {
   console.log("PASS " + name);
 }
 const create = (race = "barbarian", roll = 0.5) =>
-  e.reducer(e.initialGame(), { type: "CREATE", race, name: "Bjorn", roll });
-const reduce = (s, a) => e.reducer(s, a);
+  e.reducer(e.initialGame(), {
+    type: "CREATE",
+    seed: 42,
+    race,
+    name: "Bjorn",
+    roll,
+  });
+const reduce = require("./round-helpers.cjs").act;
 const arrive = (s = create()) =>
   reduce(reduce({ ...s, day: 30 }, { type: "ENTER" }), {
     type: "MISSION",
     id: "survey",
   });
 function findPortal(s) {
-  s = reduce(s, { type: "SEARCH_PORTAL" });
-  for (const direction of exploration.floorMap(s).route)
-    s = reduce(s, { type: "MOVE", direction });
-  return s;
+  s = travel(s, "portal");
+  return {
+    ...s,
+    phase: "victory",
+    journey: { ...s.journey, portal: true, defender: false },
+  };
 }
 const enter = (s = create()) =>
-  reduce(reduce(arrive(s), { type: "APPROACH", choice: "sneak", roll: 0.99 }), {
-    type: "ENGAGE",
-  });
+  reduce(
+    reduce(portalArrival(arrive(s)), {
+      type: "APPROACH",
+      choice: "sneak",
+      roll: 0.99,
+    }),
+    {
+      type: "ENGAGE",
+    },
+  );
 function arena(race = "barbarian") {
   let s = enter(create(race));
   return { ...s, enemy: { ...s.enemy, hp: 1000, maxHp: 1000, guard: 0 } };
@@ -33,7 +49,13 @@ test("Mage creation is exactly one 5% roll", () => {
   assert.equal(e.makeCharacter("human", "h", "K", 0.05).job, "Knight");
   assert.equal(e.makeCharacter("elf", "h", "E", 0).job, "Ranger");
   let s = create("human", 0.01);
-  s = reduce(s, { type: "CREATE", race: "human", name: "Retry", roll: 0.9 });
+  s = reduce(s, {
+    type: "CREATE",
+    seed: 42,
+    race: "human",
+    name: "Retry",
+    roll: 0.9,
+  });
   assert.equal(s.party[0].job, "Mage");
   assert.equal(s.party[0].name, "Bjorn");
 });
@@ -147,58 +169,7 @@ test("Equipment swapping replaces bonuses rather than stacking forever", () => {
   assert.equal(s.party[0].atk, 39);
   assert.equal(s.inventory.dawnsteel, 1);
 });
-test("Twin Strike gives double caster damage and consumes exactly 16 MP", () => {
-  const s = arena();
-  const basic = reduce(s, { type: "BATTLE", kind: "attack", roll: 0.5 });
-  const double = reduce(s, {
-    type: "BATTLE",
-    kind: "skill",
-    skill: "Twin Strike",
-    roll: 0.5,
-  });
-  assert.equal(basic.effects.damage, 32);
-  assert.equal(
-    double.effects.damage,
-    Math.round(s.party[0].atk * 2 * (1 - (s.party[0].exhaustion || 0) * 0.003)),
-  );
-  assert.equal(double.party[0].mp, s.party[0].mp - 16);
-});
-test("Poison applies and ticks for three turns", () => {
-  let s = arena("elf");
-  s = reduce(s, {
-    type: "BATTLE",
-    kind: "skill",
-    skill: "Venom Fang",
-    roll: 0.5,
-  });
-  assert.equal(s.enemy.poison, 2);
-  assert.equal(s.effects.poisonDamage, 60);
-  s = reduce(s, { type: "BATTLE", kind: "attack", roll: 0.5 });
-  assert.equal(s.enemy.poison, 1);
-  s = reduce(s, { type: "BATTLE", kind: "attack", roll: 0.5 });
-  assert.equal(s.enemy.poison, 0);
-});
-test("Nerve Lock interrupts normal enemies; bosses can resist", () => {
-  let s = arena();
-  s.party[0].skills.push("Nerve Lock");
-  const lock = reduce(s, {
-    type: "BATTLE",
-    kind: "skill",
-    skill: "Nerve Lock",
-    roll: 0.6,
-  });
-  assert.equal(lock.effects.stunned, true);
-  assert.equal(lock.effects.enemyDamage, 0);
-  s.enemy.boss = true;
-  const resisted = reduce(s, {
-    type: "BATTLE",
-    kind: "skill",
-    skill: "Nerve Lock",
-    roll: 0.6,
-  });
-  assert.equal(resisted.effects.stunned, false);
-  assert.ok(resisted.effects.enemyDamage > 0);
-});
+
 test("Passive fire wards reduce matching damage, not other types", () => {
   const s = arena();
   s.enemy.element = "fire";
@@ -219,37 +190,7 @@ test("Resistance stacking caps at 75%", () => {
   c.equipment = ["venom-ring"];
   assert.equal(e.resist(c, "venom"), 75);
 });
-test("Guard halves a heavy strike and restores mana", () => {
-  let s = arena();
-  s.turn = 3;
-  s.party[0].mp = 0;
-  const attack = reduce(s, { type: "BATTLE", kind: "attack", roll: 0.5 });
-  const guard = reduce(s, { type: "BATTLE", kind: "guard", roll: 0.5 });
-  assert.equal(guard.party[0].mp, 4);
-  assert.ok(guard.effects.enemyDamage < attack.effects.enemyDamage);
-});
-test("Antidote clears ailments; ether restores mana", () => {
-  let s = arena();
-  s.party[0].ailments = { poison: 2, paralysis: 1 };
-  s.party[0].mp = 0;
-  const cure = reduce(s, {
-    type: "BATTLE",
-    kind: "item",
-    item: "antidote",
-    roll: 0.5,
-  });
-  assert.equal(cure.party[0].ailments.poison, 0);
-  assert.equal(cure.party[0].ailments.paralysis, 0);
-  assert.equal(cure.inventory.antidote, 0);
-  const mana = reduce(s, {
-    type: "BATTLE",
-    kind: "item",
-    item: "ether",
-    roll: 0.5,
-  });
-  assert.equal(mana.party[0].mp, 30);
-  assert.equal(mana.inventory.ether, 0);
-});
+
 test("No MP or supplies are consumed by an invalid action", () => {
   let s = arena();
   s.party[0].mp = 0;
@@ -372,7 +313,7 @@ test("Every campaign route reaches all twelve events and both final rewards", ()
         s = reduce(s, { type: "ENGAGE" });
       } else if (s.phase === "combat")
         s = reduce(s, { type: "BATTLE", kind: "attack", roll: 0.5 });
-      else if (s.phase === "essence") s = reduce(s, { type: "DEFER" });
+      else if (s.phase === "loot") s = reduce(s, { type: "COLLECT" });
       else if (s.phase === "event") {
         seen.add(s.floor);
         const choice =
@@ -382,11 +323,8 @@ test("Every campaign route reaches all twelve events and both final rewards", ()
               ? "take"
               : choices[s.floor];
         s = reduce(s, { type: "EVENT", choice, roll: 0.5 });
-      } else if (s.phase === "exploration") {
-        s = reduce(s, {
-          type: "MOVE",
-          direction: exploration.floorMap(s).route[s.journey.step],
-        });
+      } else if (["exploration", "branch"].includes(s.phase)) {
+        s = reduce(s, toward(s));
       } else if (s.phase === "nag")
         s = reduce(s, { type: "NAG_DECISION", rest: false });
       else if (s.phase === "camp")
@@ -417,9 +355,13 @@ test("Every campaign route reaches all twelve events and both final rewards", ()
     assert.equal(s.bestFloor, 12);
     assert.equal(s.ending, "Keeper of the Gate");
     assert.equal(s.inventory["hollow-crown"], 1);
-    assert.ok(s.inventory["beast-core"] > 12);
+    assert.ok(Object.values(s.inventory).reduce((n, qty) => n + qty, 0) > 12);
+    assert.ok(
+      Object.keys(s.inventory).filter((id) => !id.startsWith("essence-"))
+        .length >= 5,
+    );
     assert.equal(s.scoutsRescued, true);
-    s = reduce(s, { type: "SEEK_SHELTER" });
+    s = travel(s, "sanctuary");
     s = reduce(s, { type: "CAMP_REST", untilClose: true });
     s = reduce(s, { type: "RETURN" });
     assert.equal(s.day, 61);
@@ -434,6 +376,8 @@ test("Defeat, return, and inn rest recover every companion", () => {
   let s = enter();
   s.party[0].hp = 1;
   s.party[0].atk = 1;
+  s.combat.enemies[0].archetype = "skirmisher";
+  s.enemy = s.combat.enemies[0];
   s = reduce(s, { type: "BATTLE", kind: "attack", roll: 0 });
   assert.equal(s.phase, "defeat");
   assert.equal(reduce(s, { type: "RETURN" }).phase, "defeat");
@@ -458,16 +402,12 @@ test("Save migration preserves mage identity and adds campaign defaults", () => 
   assert.equal(loaded.party[0].ailments.poison, 0);
   assert.equal(loaded.effects.id, 0);
 });
-test("Refinement consumes crystals once and grants a resistance", () => {
-  let s = create();
-  s = reduce(s, { type: "ENCHANT", id: "hero", skill: "Ember Ward" });
-  assert.equal(s.gems, 90);
-  assert.equal(s.gold, 2240);
-  assert.equal(e.resist(s.party[0], "fire"), 30);
-  assert.equal(
-    reduce(s, { type: "ENCHANT", id: "hero", skill: "Ember Ward" }).gems,
-    90,
-  );
+test("Crystals cannot bypass monster essence learning", () => {
+  const s = create();
+  const next = reduce(s, { type: "ENCHANT", id: "hero", skill: "Ember Ward" });
+  assert.equal(next.gems, s.gems);
+  assert.equal(next.gold, s.gold);
+  assert.ok(!next.party[0].skills.includes("Ember Ward"));
 });
 test("Preparation plans stop at the next gate and cannot skip an open gate", () => {
   for (const mode of ["rest", "work", "train"]) {
@@ -491,23 +431,11 @@ test("Preparation plans stop at the next gate and cannot skip an open gate", () 
   assert.equal(blocked.gold, 0);
   assert.equal(reduce(s, { type: "PREPARE_CYCLE", mode: "rest" }).day, 60);
 });
-test("Antidote prevents reapplication on its turn and the following turn", () => {
-  let s = arena();
-  s.enemy = { ...s.enemy, element: "venom", attack: 1 };
-  s.party[0].ailments = { poison: 2, paralysis: 0 };
-  s = reduce(s, { type: "BATTLE", kind: "item", item: "antidote", roll: 0.5 });
-  assert.equal(s.party[0].ailments.poison, 0);
-  assert.equal(s.party[0].ailments.ward, 1);
-  s = reduce(s, { type: "BATTLE", kind: "guard", roll: 0.5 });
-  assert.equal(s.party[0].ailments.poison, 0);
-  assert.equal(s.party[0].ailments.ward, 0);
-  s = reduce(s, { type: "BATTLE", kind: "guard", roll: 0.5 });
-  assert.equal(s.party[0].ailments.poison, 1);
-});
+
 test("Entering a floor presents a story before any combat action", () => {
-  const s = arrive();
+  const s = portalArrival(arrive());
   assert.equal(s.phase, "arrival");
-  assert.equal(s.food, 3);
+  assert.equal(s.food, 6);
   assert.equal(reduce(s, { type: "ENGAGE" }).phase, "arrival");
   assert.equal(
     reduce(s, { type: "BATTLE", kind: "attack", roll: 0.5 }).enemy.hp,
@@ -525,10 +453,14 @@ test("Entering a floor presents a story before any combat action", () => {
   assert.equal(reduce(scouted, { type: "ENGAGE" }).phase, "combat");
 });
 test("Arrival ambushes respect companion strengths and keep boss resistance", () => {
-  const s = arrive();
+  const s = portalArrival(arrive());
   const failure = reduce(s, { type: "APPROACH", choice: "sneak", roll: 0.99 });
   assert.equal(failure.enemy.hp, s.enemy.hp);
-  const success = reduce(s, { type: "APPROACH", choice: "sneak", roll: 0 });
+  const success = reduce(portalArrival(s), {
+    type: "APPROACH",
+    choice: "sneak",
+    roll: 0,
+  });
   assert.ok(success.enemy.hp < s.enemy.hp);
   assert.equal(success.enemy.paralysis, 1);
   const elf = reduce(
@@ -544,7 +476,7 @@ test("Arrival ambushes respect companion strengths and keep boss resistance", ()
   assert.ok(rushed.enemy.hp < s.enemy.hp);
 });
 test("Story preparation costs supplies, preserves fallen allies and survives reload", () => {
-  let s = { ...arrive(), floor: 5, food: 1 };
+  let s = { ...portalArrival(arrive()), floor: 5, food: 1 };
   s.party[0].hp = 50;
   s.party[0].mp = 0;
   s.party.push({ ...e.makeCharacter("human", "kael", "Kael"), hp: 0 });
@@ -581,7 +513,7 @@ test("Every floor has three distinct arrival choices and each resolves once", ()
     const scene = story.ARRIVALS[floor - 1];
     assert.equal(new Set(scene.choices.map((c) => c.id)).size, 3);
     for (const choice of scene.choices) {
-      const s = { ...arrive(), floor, food: 20 };
+      const s = { ...portalArrival(arrive()), floor, food: 20 };
       const resolved = reduce(s, {
         type: "APPROACH",
         choice: choice.id,
@@ -606,7 +538,13 @@ test("Introduction completion persists separately from the town guide", () => {
   s = e.normalizeSave(JSON.parse(JSON.stringify(s)));
   assert.equal(s.introSeen, true);
   assert.equal(s.started, false);
-  s = reduce(s, { type: "CREATE", race: "elf", name: "Sylva", roll: 0.5 });
+  s = reduce(s, {
+    type: "CREATE",
+    seed: 42,
+    race: "elf",
+    name: "Sylva",
+    roll: 0.5,
+  });
   assert.equal(s.introSeen, true);
   assert.equal(s.guideSeen, false);
 });

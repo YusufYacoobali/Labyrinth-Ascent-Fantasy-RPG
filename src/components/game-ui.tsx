@@ -578,50 +578,9 @@ export function ExpeditionHeader({
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <View style={{ flex: 1, gap: 4 }}>
-            <View
-              accessibilityLabel={`${state.journey.chart[state.floor]?.length || 0} of six route marks known`}
-              style={{ flexDirection: "row", alignItems: "center", width: 135 }}
-            >
-              {[0, 1, 2, 3, 4, 5].map((i) => (
-                <React.Fragment key={i}>
-                  {i > 0 && (
-                    <View
-                      style={{
-                        width: 10,
-                        height: 2,
-                        backgroundColor: "#384d62",
-                      }}
-                    />
-                  )}
-                  <View
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: 6,
-                      borderWidth: 1,
-                      borderColor:
-                        i < (state.journey.chart[state.floor]?.length || 0)
-                          ? "#9be8ff"
-                          : "#61758a",
-                      backgroundColor:
-                        i < (state.journey.chart[state.floor]?.length || 0)
-                          ? "#1688ce"
-                          : "#31404f",
-                    }}
-                  />
-                </React.Fragment>
-              ))}
-              <Copy
-                style={{
-                  marginLeft: 7,
-                  color: t.color.gold,
-                  fontSize: 15,
-                  lineHeight: 16,
-                }}
-              >
-                ♜
-              </Copy>
-            </View>
+            <Copy style={{ color: t.color.gold, fontSize: 12 }}>
+              Floor {state.floor} · Facing {state.journey.facing}
+            </Copy>
             {!!subtitle && (
               <Copy muted style={{ fontSize: 11, lineHeight: 14 }}>
                 {subtitle}

@@ -9,6 +9,7 @@ const test = (name, fn) => {
 const create = () =>
   e.reducer(e.initialGame(), {
     type: "CREATE",
+    seed: 42,
     race: "barbarian",
     name: "Guide",
     roll: 0.5,
@@ -18,6 +19,7 @@ function arena() {
   let s = create();
   s = act({ ...s, day: 30 }, { type: "ENTER" });
   s = act(s, { type: "MISSION", id: "survey" });
+  s = { ...s, journey: { ...s.journey, defender: true, room: "portal" } };
   s = act(s, { type: "APPROACH", choice: "sneak", roll: 0.99 });
   s = act(s, { type: "ENGAGE" });
   return {
@@ -45,8 +47,8 @@ test("Recruiting and packing advance only when the real action succeeds", () => 
   assert.equal(wt.walkthroughTip(s).id, "supplies");
   const failed = act({ ...s, gold: 0 }, { type: "BUY", item: "food" });
   assert.equal(failed.walkthrough.done.includes("supplies"), false);
-  for (let i = 0; i < 6; i++) s = act(s, { type: "BUY", item: "food" });
-  assert.equal(s.food >= 12, true);
+  for (let i = 0; i < 8; i++) s = act(s, { type: "BUY", item: "food" });
+  assert.equal(s.food >= 30, true);
   assert.equal(wt.walkthroughTip(s).id, "train");
   s = act(s, { type: "TRAIN" });
   assert.equal(wt.walkthroughTip(s).id, "equipment");
@@ -70,34 +72,13 @@ test("Mission and arrival guidance follow actual expedition phases", () => {
   assert.equal(wt.walkthroughTip(s).id, "mission");
   s = act(s, { type: "MISSION", id: "survey" });
   assert.equal(wt.walkthroughTip(s).id, "approach");
-  assert.equal(s.food, 3);
+  assert.equal(s.food, 6);
 });
-test("Combat advice prioritizes heavy intent and never records rejected commands", () => {
-  let s = arena();
-  assert.equal(wt.walkthroughTip(s).id, "attack");
-  s = act(s, {
-    type: "BATTLE",
-    kind: "skill",
-    actor: "hero",
-    skill: "Arcane Bolt",
-    roll: 0.5,
-  });
-  assert.equal(s.walkthrough.done.includes("skill"), false);
-  s = act(s, { type: "BATTLE", kind: "attack", actor: "hero", roll: 0.5 });
-  assert.equal(s.walkthrough.done.includes("attack"), true);
-  s = { ...s, turn: 3 };
-  assert.equal(wt.walkthroughTip(s).id, "guard");
-  s = act(s, { type: "BATTLE", kind: "guard", actor: "hero", roll: 0.5 });
-  assert.equal(s.walkthrough.done.includes("guard"), true);
-});
-test("Skill guidance requires a living available caster, then teaches MP recovery", () => {
-  let s = arena();
-  s.walkthrough.done = ["attack"];
-  assert.equal(wt.walkthroughTip(s).id, "skill");
-  s = { ...s, turn: 2, party: s.party.map((c) => ({ ...c, mp: 0 })) };
-  assert.equal(wt.walkthroughTip(s).id, "focus");
-  s = act(s, { type: "BATTLE", kind: "focus", actor: "hero", roll: 0.5 });
-  assert.equal(s.walkthrough.done.includes("focus"), true);
+test("Campaign advice explains one queued action and single-target supplies", () => {
+  const s = arena();
+  const tip = wt.walkthroughTip(s);
+  assert.equal(tip.id, "round");
+  assert.ok(tip.body.includes("one action"));
 });
 test("Overview, map and portal lessons finish without resetting the expedition", () => {
   let s = { ...arena(), phase: "exploration" };

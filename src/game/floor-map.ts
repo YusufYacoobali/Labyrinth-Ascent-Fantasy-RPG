@@ -1,5 +1,7 @@
-/** Persistent room graphs. See docs/FLOOR-MAPS.md for the rules in English. */
-export type Passage = "left" | "straight" | "right" | "back" | "shelter";
+/** North-up persistent geography. Occupants belong to the current expedition. */
+export type Heading = "north" | "east" | "south" | "west";
+export type RelativeDirection = "left" | "straight" | "right" | "back";
+export type Passage = Heading;
 export type RoomKind =
   | "monster"
   | "story"
@@ -10,46 +12,72 @@ export type RoomKind =
   | "trap"
   | "portal"
   | "camp"
-  | "dead-end";
+  | "dead-end"
+  | "landmark";
 export interface Room {
   id: string;
   kind: RoomKind;
   x: number;
   y: number;
   depth: number;
-  exits: Partial<Record<Passage, string>>;
+  exits: Partial<Record<Heading, string>>;
 }
 export interface FloorMap {
-  version: 1;
+  version: 2;
   seed: number;
   floor: number;
+  routeId: string;
   entrance: string;
   portal: string;
-  route: ("left" | "straight" | "right")[];
+  sanctuary: string;
+  route: Heading[];
   nodes: Record<string, Room>;
   explored: string[];
   known: string[];
 }
-export const PATH_TEMPLATES = [
-  ["left", "right", "straight", "right", "left", "straight"],
-  ["right", "straight", "left", "straight", "right", "left"],
-  ["straight", "left", "right", "right", "straight", "left"],
-  ["left", "straight", "right", "left", "straight", "right"],
-  ["right", "left", "left", "straight", "right", "straight"],
-  ["straight", "right", "left", "right", "left", "straight"],
-  ["left", "left", "straight", "right", "straight", "right"],
-  ["right", "straight", "right", "left", "left", "straight"],
-  ["straight", "left", "straight", "right", "right", "left"],
-  ["left", "right", "left", "straight", "straight", "right"],
-  ["right", "right", "straight", "left", "straight", "left"],
-  ["straight", "right", "left", "straight", "left", "right"],
-] as const;
+export interface RouteNote {
+  from: string;
+  to: string;
+  heading: Heading;
+  approach: Heading;
+  source: string;
+  confidence: "observed" | "reported";
+}
+export type Occupant =
+  "cache" | "company" | "spring" | "beast" | "hazard" | "quiet";
+export const HEADINGS: Heading[] = ["north", "east", "south", "west"];
+export const DELTA: Record<Heading, [number, number]> = {
+  north: [0, -1],
+  east: [1, 0],
+  south: [0, 1],
+  west: [-1, 0],
+};
+export const opposite = (h: Heading): Heading =>
+  HEADINGS[(HEADINGS.indexOf(h) + 2) % 4];
+export const absoluteHeading = (
+  facing: Heading,
+  direction: RelativeDirection,
+): Heading =>
+  HEADINGS[
+    (HEADINGS.indexOf(facing) +
+      { straight: 0, right: 1, back: 2, left: 3 }[direction]) %
+      4
+  ];
+export const relativeDirection = (
+  facing: Heading,
+  heading: Heading,
+): RelativeDirection =>
+  (["straight", "right", "back", "left"] as const)[
+    (HEADINGS.indexOf(heading) - HEADINGS.indexOf(facing) + 4) % 4
+  ];
+export const mapKey = (floor: number, route: string | null = null) =>
+  floor >= 5 && floor <= 7 ? `${floor}:${route || "roots"}` : String(floor);
 export function seedFor(text: string) {
   let n = 2166136261;
   for (const c of text) n = Math.imul(n ^ c.charCodeAt(0), 16777619);
   return n >>> 0;
 }
-function random(seed: number) {
+export function random(seed: number) {
   let n = seed >>> 0;
   return () => {
     n += 0x6d2b79f5;
@@ -58,111 +86,189 @@ function random(seed: number) {
     return ((v ^ (v >>> 14)) >>> 0) / 4294967296;
   };
 }
-export function generateFloor(floor: number, seed = 1): FloorMap {
-  const rng = random(seedFor(`${seed}:${floor}`));
-  // Templates guarantee a six-turn route. The seed chooses a template and side-room content.
-  const template =
-    seed === 1 ? floor - 1 : Math.floor(rng() * PATH_TEMPLATES.length);
-  const route = [...PATH_TEMPLATES[template]];
-  const nodes: Record<string, Room> = {};
-  const add = (
-    id: string,
-    kind: RoomKind,
-    x: number,
-    y: number,
-    depth: number,
-  ) => (nodes[id] = { id, kind, x, y, depth, exits: {} });
-  const link = (
-    from: string,
-    passage: Passage,
-    to: string,
-    reverse: Passage = "back",
-  ) => {
-    nodes[from].exits[passage] = to;
-    nodes[to].exits[reverse] = from;
-  };
-  add("entrance", "monster", 3, 0, 0);
-  add("aftermath", "story", 3, 1, 0);
-  link("entrance", "straight", "aftermath");
-  for (let i = 0; i <= 6; i++)
-    add(`cross-${i}`, i === 6 ? "portal" : "crossroads", 3, i + 2, i);
-  link("aftermath", "straight", "cross-0");
-  const firstKinds: RoomKind[] = [
-    "treasure",
-    "npc",
-    "spring",
-    "monster",
-    "trap",
-    "dead-end",
-  ];
-  for (let i = firstKinds.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [firstKinds[i], firstKinds[j]] = [firstKinds[j], firstKinds[i]];
-  }
-  for (let i = 0; i < 6; i++) {
-    link(`cross-${i}`, route[i], `cross-${i + 1}`);
-    const other = (["left", "straight", "right"] as const).filter(
-      (d) => d !== route[i],
-    );
-    other.forEach((direction, j) => {
-      const id = `side-${i}-${direction}`;
-      const kinds: RoomKind[] = [
-        "treasure",
-        "npc",
-        "spring",
-        "monster",
-        "trap",
-        "dead-end",
-      ];
-      const kind =
-        i * 2 + j < 6
-          ? firstKinds[i * 2 + j]
-          : kinds[Math.floor(rng() * kinds.length)];
-      add(id, kind, j === 0 ? 1 : 5, i + 2, i);
-      link(`cross-${i}`, direction, id);
-      if (kind === "trap") {
-        const inner = `${id}-inner`;
-        add(inner, "treasure", j === 0 ? 0 : 6, i + 2.45, i);
-        link(id, "straight", inner);
+export function shortestPath(
+  map: FloorMap,
+  from: string,
+  to: string,
+): string[] {
+  const queue = [[from]],
+    seen = new Set([from]);
+  while (queue.length) {
+    const path = queue.shift()!,
+      id = path[path.length - 1];
+    if (id === to) return path;
+    for (const next of Object.values(map.nodes[id]?.exits || {}))
+      if (!seen.has(next)) {
+        seen.add(next);
+        queue.push([...path, next]);
       }
-    });
   }
-  // A real loop: two side rooms at successive crossings connect both ways.
-  const loopStep = Math.floor(rng() * 4) + 1;
-  const a = Object.values(nodes).find(
-    (n) => n.id.startsWith(`side-${loopStep}-`) && !n.id.endsWith("inner"),
-  )!;
-  const b = Object.values(nodes).find(
-    (n) => n.id.startsWith(`side-${loopStep + 1}-`) && !n.id.endsWith("inner"),
-  )!;
-  if (a.kind === "dead-end") a.kind = "npc";
-  if (b.kind === "dead-end") b.kind = "npc";
-  link(a.id, "right", b.id, "left");
-  // Each defensible room has an adjacent watch alcove, drawn as a separate map node.
-  for (const room of [...Object.values(nodes)]) {
-    const camp = `camp-${room.id}`;
-    add(camp, "camp", room.x + 0.38, room.y + 0.35, room.depth);
-    link(room.id, "shelter", camp);
+  return [];
+}
+export function generateFloor(floor: number, seed = 1, routeId = ""): FloorMap {
+  const rng = random(seedFor(`${seed}:geography:${floor}:${routeId}`));
+  const min = floor <= 4 ? 5 : floor <= 8 ? 7 : 9,
+    distance = min + Math.floor(rng() * 4);
+  const nodes: Record<string, Room> = {},
+    coordinates = new Map<string, string>();
+  const add = (id: string, kind: RoomKind, x: number, y: number) => {
+    nodes[id] = { id, kind, x, y, depth: 0, exits: {} };
+    coordinates.set(`${x},${y}`, id);
+  };
+  const link = (a: string, h: Heading, b: string) => {
+    nodes[a].exits[h] = b;
+    nodes[b].exits[opposite(h)] = a;
+  };
+  add("entrance", "landmark", 0, 0);
+  let previous = "entrance",
+    x = 0,
+    y = 0;
+  // A seed-grown spine guarantees the band distance without assigning relative labels to coordinates.
+  for (let i = 1; i <= distance; i++) {
+    const h: Heading = rng() < 0.5 ? "north" : "east";
+    x += DELTA[h][0];
+    y += DELTA[h][1];
+    const id = i === distance ? "portal" : i === 1 ? "aftermath" : `room-${i}`;
+    add(
+      id,
+      i === distance
+        ? "portal"
+        : i === 1
+          ? "story"
+          : i === Math.floor(distance / 2)
+            ? "landmark"
+            : "crossroads",
+      x,
+      y,
+    );
+    link(previous, h, id);
+    previous = id;
   }
-  return {
-    version: 1,
+  // An equal-length loop beside the entrance and one permanent sanctuary.
+  add("loop-west", "crossroads", -1, 0);
+  add("loop-southwest", "crossroads", -1, 1);
+  add("loop-south", "crossroads", 0, 1);
+  link("entrance", "west", "loop-west");
+  link("loop-west", "south", "loop-southwest");
+  link("loop-southwest", "east", "loop-south");
+  link("loop-south", "north", "entrance");
+  add("sanctuary", "camp", -2, 0);
+  link("loop-west", "west", "sanctuary");
+  // Branches grow out of any free compass edge; optional connections create further loops.
+  const anchors = Object.values(nodes).filter(
+    (n) => n.id !== "portal" && n.kind !== "camp",
+  );
+  for (const anchor of anchors) {
+    if (rng() < 0.22) continue;
+    const headings = [...HEADINGS];
+    for (let i = headings.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [headings[i], headings[j]] = [headings[j], headings[i]];
+    }
+    const heading = headings.find(
+      (h) =>
+        !anchor.exits[h] &&
+        !coordinates.has(`${anchor.x + DELTA[h][0]},${anchor.y + DELTA[h][1]}`),
+    );
+    if (!heading) continue;
+    let parent = anchor;
+    const length = 1 + Math.floor(rng() * 3);
+    for (let j = 0; j < length; j++) {
+      const px = parent.x + DELTA[heading][0],
+        py = parent.y + DELTA[heading][1];
+      if (coordinates.has(`${px},${py}`)) break;
+      const id = `branch-${anchor.id}-${j}`;
+      add(id, j === length - 1 ? "dead-end" : "crossroads", px, py);
+      link(parent.id, heading, id);
+      parent = nodes[id];
+    }
+  }
+  const map: FloorMap = {
+    version: 2,
     seed,
     floor,
+    routeId,
     entrance: "entrance",
-    portal: "cross-6",
-    route,
+    portal: "portal",
+    sanctuary: "sanctuary",
+    route: [],
     nodes,
     explored: ["entrance"],
     known: [],
   };
+  // Only join neighbouring coordinates. Reject shortcuts outside the agreed distance band.
+  for (const a of Object.values(nodes))
+    for (const h of ["east", "south"] as Heading[]) {
+      const id = coordinates.get(`${a.x + DELTA[h][0]},${a.y + DELTA[h][1]}`);
+      if (
+        !id ||
+        a.exits[h] ||
+        a.kind === "camp" ||
+        nodes[id].kind === "camp" ||
+        rng() > 0.4
+      )
+        continue;
+      link(a.id, h, id);
+      if (shortestPath(map, map.entrance, map.portal).length - 1 < min) {
+        delete a.exits[h];
+        delete nodes[id].exits[opposite(h)];
+      }
+    }
+  for (const n of Object.values(nodes)) {
+    n.depth = shortestPath(map, "entrance", n.id).length - 1;
+    if (n.kind === "dead-end" && Object.keys(n.exits).length > 1)
+      n.kind = "crossroads";
+  }
+  const path = shortestPath(map, "entrance", "portal");
+  map.route = path
+    .slice(1)
+    .map((id, i) => HEADINGS.find((h) => nodes[path[i]].exits[h] === id)!);
+  return map;
 }
-export function reveal(map: FloorMap, id: string): FloorMap {
-  return { ...map, explored: [...new Set([...map.explored, id])] };
+export function populateFloor(
+  map: FloorMap,
+  expedition: number,
+): Record<string, Occupant> {
+  const rng = random(
+    seedFor(`${map.seed}:encounters:${map.floor}:${map.routeId}:${expedition}`),
+  );
+  const pool: Occupant[] = [
+    "cache",
+    "company",
+    "spring",
+    "beast",
+    "hazard",
+    "quiet",
+  ];
+  return Object.fromEntries(
+    Object.values(map.nodes)
+      .filter((n) => ["crossroads", "dead-end"].includes(n.kind))
+      .map((n) => [n.id, pool[Math.floor(rng() * pool.length)]]),
+  );
 }
+export const reveal = (map: FloorMap, id: string): FloorMap => ({
+  ...map,
+  explored: [...new Set([...map.explored, id])],
+});
 export function visibleRooms(map: FloorMap) {
   const named = new Set([...map.explored, ...map.known]);
   const visible = new Set(named);
   for (const id of named)
     for (const to of Object.values(map.nodes[id]?.exits || {})) visible.add(to);
   return { named, visible };
+}
+
+export function roomName(map: FloorMap, id: string) {
+  const room = map.nodes[id];
+  return id === map.entrance
+    ? "Entry lantern"
+    : room?.kind === "camp"
+      ? "Sanctuary"
+      : room?.kind === "portal"
+        ? "Upward arch"
+        : room?.kind === "story"
+          ? "Marked chamber"
+          : room?.kind === "landmark"
+            ? "Carved waystone"
+            : `Chamber ${Object.keys(map.nodes).indexOf(id) + 1}`;
 }

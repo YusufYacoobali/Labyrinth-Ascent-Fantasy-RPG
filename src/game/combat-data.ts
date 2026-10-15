@@ -1,6 +1,9 @@
+import { SKILL_IDS, type SkillId } from "./skill-ids";
 import type { Character, Skill } from "./engine";
 import { ITEMS, type Element } from "./world";
+import { skillRank } from "./progression";
 export const SKILLS: {
+  id: SkillId;
   name: Skill;
   icon: string;
   description: string;
@@ -10,6 +13,7 @@ export const SKILLS: {
   color: string;
 }[] = [
   {
+    id: SKILL_IDS["Arcane Bolt"],
     name: "Arcane Bolt",
     icon: "creation",
     description: "1.65× damage, ignoring armor. 18 break damage.",
@@ -18,6 +22,7 @@ export const SKILLS: {
     color: "#70b3ff",
   },
   {
+    id: SKILL_IDS["Shield Bash"],
     name: "Shield Bash",
     icon: "shield",
     description: "1.4× damage; 38 break. 55% interrupt chance (bosses: 30%).",
@@ -26,6 +31,7 @@ export const SKILLS: {
     color: "#e4bc6b",
   },
   {
+    id: SKILL_IDS["Venom Fang"],
     name: "Venom Fang",
     icon: "snake",
     description:
@@ -35,6 +41,7 @@ export const SKILLS: {
     color: "#91cc74",
   },
   {
+    id: SKILL_IDS["Nerve Lock"],
     name: "Nerve Lock",
     icon: "lightning-bolt",
     description: "1.1× damage; 45 break. Interrupt chance: 100% (bosses: 50%).",
@@ -43,6 +50,7 @@ export const SKILLS: {
     color: "#ccabef",
   },
   {
+    id: SKILL_IDS["Twin Strike"],
     name: "Twin Strike",
     icon: "sword-cross",
     description: "Double caster damage; 22 break.",
@@ -51,6 +59,7 @@ export const SKILLS: {
     color: "#ed8e72",
   },
   {
+    id: SKILL_IDS["Second Wind"],
     name: "Second Wind",
     icon: "heart",
     description:
@@ -60,6 +69,7 @@ export const SKILLS: {
     color: "#78c997",
   },
   {
+    id: SKILL_IDS["Inspiring Presence"],
     name: "Inspiring Presence",
     icon: "sun",
     description: "Passive: your presence increases party attack by 15%.",
@@ -68,6 +78,7 @@ export const SKILLS: {
     color: "#70b3ff",
   },
   {
+    id: SKILL_IDS["Ember Ward"],
     name: "Ember Ward",
     icon: "fire",
     description:
@@ -77,6 +88,7 @@ export const SKILLS: {
     color: "#ed8e72",
   },
   {
+    id: SKILL_IDS["Winter Veil"],
     name: "Winter Veil",
     icon: "snowflake",
     description:
@@ -86,6 +98,7 @@ export const SKILLS: {
     color: "#70b3ff",
   },
   {
+    id: SKILL_IDS["Toxic Adaptation"],
     name: "Toxic Adaptation",
     icon: "leaf",
     description: "Passive: 30% venom resistance and immunity to poison.",
@@ -93,16 +106,105 @@ export const SKILLS: {
     passive: true,
     color: "#91cc74",
   },
+  {
+    id: SKILL_IDS["Grave Guard"],
+    name: "Grave Guard",
+    icon: "shield",
+    description: "Passive: 15% physical resistance.",
+    cost: 0,
+    passive: true,
+    color: "#bba9da",
+  },
+  {
+    id: SKILL_IDS["Sunder"],
+    name: "Sunder",
+    icon: "sword-cross",
+    description: "1.45× damage and 35 break; weakens the next enemy strike.",
+    cost: 16,
+    cooldown: 2,
+    color: "#ed8e72",
+  },
+  {
+    id: SKILL_IDS["Crown Pulse"],
+    name: "Crown Pulse",
+    icon: "crown",
+    description: "1.35× damage; restore 10% maximum HP to standing allies.",
+    cost: 24,
+    cooldown: 3,
+    color: "#ccabef",
+  },
+  {
+    id: SKILL_IDS["Scavenge"],
+    name: "Scavenge",
+    icon: "heart",
+    description: "0.85× damage; restore 12% of the caster's maximum HP.",
+    cost: 12,
+    cooldown: 2,
+    color: "#78c997",
+  },
 ];
+export const skillId = (skill: Skill) =>
+  skill.toLowerCase().replaceAll(" ", "-");
+export const SKILL_RANKS = Object.fromEntries(
+  SKILLS.map((s) => [
+    s.name,
+    [
+      s.description,
+      s.passive
+        ? s.name === "Inspiring Presence"
+          ? "Party attack +17%; restore 1 MP to each attacker."
+          : s.name === "Winter Veil"
+            ? "35% frost resistance and freeze immunity; recover 5 HP after a frost hit."
+            : s.name === "Ember Ward"
+              ? "35% fire resistance and heat-shock immunity; recover 5 HP after a fire hit."
+              : s.name === "Grave Guard"
+                ? "20% physical resistance and stagger immunity; recover 5 HP after a physical hit."
+                : "Resistance +5 points; recover 5 HP after a matching hit."
+        : s.name === "Second Wind" || s.name === "Crown Pulse"
+          ? "10% greater potency; cleanse party poison."
+          : s.name === "Scavenge"
+            ? "10% greater damage and healing; cleanse the caster's poison."
+            : s.name === "Shield Bash" || s.name === "Nerve Lock"
+              ? "10% greater damage; weaken the next enemy strike by 10% and slow by 2 speed for two rounds."
+              : s.name === "Venom Fang"
+                ? "10% greater damage and poison; +10 break damage."
+                : "10% greater damage; +10 break damage.",
+      s.passive
+        ? s.name === "Inspiring Presence"
+          ? "Party attack +19%; restore 2 MP and 2 HP to each attacker."
+          : s.name === "Winter Veil"
+            ? "40% frost resistance and freeze immunity; recover 5 HP and 3 MP after a frost hit."
+            : s.name === "Ember Ward"
+              ? "40% fire resistance and heat-shock immunity; recover 5 HP and 3 MP after a fire hit."
+              : s.name === "Grave Guard"
+                ? "25% physical resistance and stagger immunity; recover 5 HP and 3 MP after a physical hit."
+                : "Resistance +10 points; recover 5 HP and 3 MP after a matching hit."
+        : s.name === "Second Wind" || s.name === "Crown Pulse"
+          ? "20% greater potency; cleanse poison and grant a 10% max-HP barrier."
+          : s.name === "Scavenge"
+            ? "20% greater damage and healing; cleanse poison and grant a 10% max-HP barrier."
+            : s.name === "Shield Bash" || s.name === "Nerve Lock"
+              ? "20% greater damage; weaken the next strike by 20%, slow by 3 speed for two rounds and add 10 break."
+              : s.name === "Venom Fang"
+                ? "20% greater damage and poison; +20 break and expose the enemy for +10% damage for two turns."
+                : "20% greater damage; +20 break and expose the enemy for +10% damage for two turns.",
+    ],
+  ]),
+) as Record<Skill, [string, string, string]>;
 export function resist(c: Character, element: Element): number {
-  let n = 0;
+  let n = c.refinements?.[element] ? 10 : 0;
   for (const id of c.equipment) {
     const r = ITEMS.find((x) => x.id === id)?.resist;
     if (r?.element === element) n += r.amount;
   }
-  if (element === "fire" && c.skills.includes("Ember Ward")) n += 30;
-  if (element === "frost" && c.skills.includes("Winter Veil")) n += 30;
-  if (element === "venom" && c.skills.includes("Toxic Adaptation")) n += 30;
+  if (element === "fire" && c.skills.includes("Ember Ward"))
+    n += 30 + (skillRank(c, "Ember Ward") - 1) * 5;
+  if (element === "frost" && c.skills.includes("Winter Veil"))
+    n += 30 + (skillRank(c, "Winter Veil") - 1) * 5;
+  if (element === "venom" && c.skills.includes("Toxic Adaptation"))
+    n += 30 + (skillRank(c, "Toxic Adaptation") - 1) * 5;
+  if (element === "physical" && c.skills.includes("Grave Guard"))
+    n += 15 + (skillRank(c, "Grave Guard") - 1) * 5;
   if (element === "venom" && c.traitRevealed && c.trait === "Stoneblood")
     n += 25;
   return Math.min(75, n);

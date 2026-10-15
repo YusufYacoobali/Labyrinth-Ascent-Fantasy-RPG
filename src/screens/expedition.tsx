@@ -1,3 +1,5 @@
+import { StoryLeads, StoryScene } from "@/components/story-journal";
+import TacticalCombat from "@/components/tactical-combat";
 import { EventArt } from "@/components/story-art";
 import CombatStage from "@/components/combat-stage";
 import {
@@ -7,10 +9,15 @@ import {
   cueContact,
   cueResponse,
   cueDuration,
-  type CombatCue,
 } from "@/game/combat-animation";
 import { StoryCard } from "@/components/story-card";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useReducedMotion } from "react-native-reanimated";
 import {
   View,
@@ -23,7 +30,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Redirect, router } from "expo-router";
 import {
   art,
-  Atlas,
   Bar,
   Button,
   Choice,
@@ -45,8 +51,6 @@ import {
   Skill,
   SKILLS,
   Action,
-  Game,
-  reducer,
   battleIntent,
   battleForecast,
   daysRemaining,
@@ -63,6 +67,8 @@ import {
 } from "./exploration-scenes";
 import { EVENTS, FLOORS, ITEMS, ROUTES } from "@/game/world";
 import { useGame } from "@/game/provider";
+import { SKILL_RANKS } from "@/game/combat-data";
+import { skillRank } from "@/game/progression";
 import { Guard } from "./town";
 import { FieldSupplies } from "@/components/field-supplies";
 import { Arrival } from "./arrival";
@@ -192,7 +198,7 @@ export function LabyrinthScreen() {
               {[
                 ["account-group", "Recommended party", "3–4 companions"],
                 ["stairs-up", "Highest floor", String(state.bestFloor)],
-                ["sack", "Rations", `${state.food} · 3 for entry`],
+                ["sack", "Rations", `${state.food} days of party food`],
                 ["bottle-tonic-plus", "Healing potions", String(state.potions)],
               ].map(([icon, label, n]) => (
                 <View
@@ -204,6 +210,53 @@ export function LabyrinthScreen() {
                   <Copy style={{ fontSize: 12 }}>{n}</Copy>
                 </View>
               ))}
+            </Panel>
+            <Panel style={{ gap: 8 }}>
+              <Copy title style={{ fontSize: 18 }}>
+                Expedition start
+              </Copy>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                {state.checkpoints.map((floor) => (
+                  <Button
+                    key={floor}
+                    small
+                    tone={state.startFloor === floor ? "gold" : "dark"}
+                    label={`Floor ${floor}`}
+                    onPress={() =>
+                      dispatch({
+                        type: "SELECT_START",
+                        floor,
+                        route:
+                          floor === 7
+                            ? state.startRoute || state.discoveredRoutes[0]
+                            : undefined,
+                      })
+                    }
+                  />
+                ))}
+              </View>
+              {state.startFloor === 7 &&
+                ROUTES.filter((r) => state.discoveredRoutes.includes(r.id)).map(
+                  (r) => (
+                    <Button
+                      key={r.id}
+                      small
+                      label={`${state.startRoute === r.id ? "✓ " : ""}${r.name}`}
+                      tone="dark"
+                      onPress={() =>
+                        dispatch({
+                          type: "SELECT_START",
+                          floor: 7,
+                          route: r.id,
+                        })
+                      }
+                    />
+                  ),
+                )}
+              <Copy muted style={{ fontSize: 12 }}>
+                Defeat the major guardians on Floors 3, 6 and 9 to unlock the
+                next start. Floor 7 follows a route you discovered.
+              </Copy>
             </Panel>
             <Panel
               style={{
@@ -218,6 +271,12 @@ export function LabyrinthScreen() {
                   : `OPENS IN ${daysToGate(state.day)} DAYS`}
               </Eyebrow>
             </Panel>
+            <Copy style={{ fontSize: 13 }}>
+              Food coverage: {state.food}/30 days.{" "}
+              {state.food >= 30
+                ? "Prepared for the sealed month."
+                : `${30 - state.food} more party rations cover the full month; forage and trade can help inside.`}
+            </Copy>
             <Button
               label={open ? "Begin expedition" : "Prepare for expedition"}
               icon="gate"
@@ -227,7 +286,7 @@ export function LabyrinthScreen() {
                   return;
                 }
                 dispatch({ type: "ENTER" });
-                if (state.food >= 3 && state.party.some((c) => c.hp > 0))
+                if (state.party.some((c) => c.hp > 0))
                   router.replace("/expedition");
               }}
             />
@@ -250,9 +309,17 @@ export function Combat({
 }: {
   feedback: ReturnType<typeof useCombatFeedback>;
 }) {
-  const { state: savedState, dispatch } = useGame();
-  const [preview, setPreview] = useState<Game | null>(null);
-  const [cue, setCue] = useState<CombatCue | null>(null);
+  const { state: committedState, dispatch, saving } = useGame();
+  const savedState = committedState.playback?.before || committedState;
+  const playback = committedState.playback;
+  const preview = playback ? committedState : null;
+  const cue = useMemo(
+    () =>
+      playback
+        ? battleCue(playback.before, committedState, playback.action)
+        : null,
+    [playback, committedState],
+  );
   const [impactShown, setImpactShown] = useState(false);
   const [elapsed, setElapsed] = useState(-1);
   const [responseShown, setResponseShown] = useState(false);
@@ -264,14 +331,14 @@ export function Combat({
   const onSceneReady = useCallback(() => setSceneReady(true), []);
   const state = preview || savedState;
   const pending = !!preview;
-  const blocked = pending || !sceneReady;
+  const blocked = pending || saving || !sceneReady;
   const reduced = useReducedMotion();
   const viewport = useWindowDimensions();
   const safeArea = useSafeAreaInsets();
   const usableHeight = viewport.height - safeArea.top - safeArea.bottom;
   const compactBattle = usableHeight < 900;
   const smallBattle = usableHeight < 760;
-  const [pendingAction, setPendingAction] = useState<Action | null>(null);
+  const pendingAction = playback?.action || null;
   useEffect(() => {
     if (!pendingAction) return;
     const sounds =
@@ -313,10 +380,7 @@ export function Combat({
     );
     const timer = setTimeout(
       () => {
-        dispatch(pendingAction);
-        setPreview(null);
-        setPendingAction(null);
-        setCue(null);
+        dispatch({ type: "FINISH_PLAYBACK" });
       },
       cue ? cueDuration(cue, reduced) : 280,
     );
@@ -336,7 +400,7 @@ export function Combat({
     savedState.floor,
   ]);
   const [selected, setSelected] = useState(
-    state.party.find((c) => c.hp > 0)?.id,
+    playback?.action.actor || state.party.find((c) => c.hp > 0)?.id,
   );
   const [menu, setMenu] = useState<"skill" | "item" | null>(null);
   const [retreat, setRetreat] = useState(false);
@@ -389,20 +453,12 @@ export function Combat({
         actor: actor.id,
         skill,
         item,
-        roll: Math.random(),
+        roll: -1,
       };
-      const result = reducer(savedState, action);
-      if (result.effects.id !== savedState.effects.id) {
-        setPreview({ ...result, phase: "combat" });
-        setCue(battleCue(savedState, result, action));
-        setImpactShown(false);
-        setElapsed(-1);
-        setResponseShown(false);
-        setPendingAction(action);
-      } else dispatch(action);
+      dispatch({ ...action, animate: true });
       setMenu(null);
     },
-    [blocked, actor.id, savedState, dispatch],
+    [blocked, actor.id, dispatch],
   );
   return (
     <View
@@ -687,7 +743,9 @@ export function Combat({
                               <Choice
                                 key={name}
                                 label={name}
-                                detail={skill.description}
+                                detail={
+                                  SKILL_RANKS[name][skillRank(actor, name) - 1]
+                                }
                                 icon={skill.icon}
                                 tone="blue"
                                 trailing={
@@ -894,7 +952,7 @@ function FloorEvent({
                 dispatch({
                   type: "EVENT",
                   choice: choice.id,
-                  roll: Math.random(),
+                  roll: -1,
                 });
               }}
             />
@@ -904,87 +962,55 @@ function FloorEvent({
     </View>
   );
 }
-function Essence({
-  feedback,
-}: {
-  feedback: ReturnType<typeof useCombatFeedback>;
-}) {
+function Loot() {
   const { state, dispatch } = useGame();
-  const [selected, setSelected] = useState(state.party[0]?.id);
-  const offers: Skill[] =
-    state.floor === 3
-      ? ["Venom Fang", "Nerve Lock", "Twin Strike"]
-      : state.floor === 6
-        ? ["Toxic Adaptation", "Second Wind", "Winter Veil"]
-        : state.floor === 9
-          ? ["Ember Ward", "Inspiring Presence", "Second Wind"]
-          : ["Nerve Lock", "Inspiring Presence", "Ember Ward"];
+  const loot = state.lootReceipt;
+  if (!loot) return null;
   return (
-    <View
-      style={{
-        padding: 20,
-        gap: 13,
-        minHeight: 555,
-        justifyContent: "flex-end",
-      }}
-    >
-      <View style={{ alignItems: "center", gap: 5 }}>
-        <Icon name="creation" size={43} />
-        <Eyebrow>GUARDIAN DEFEATED</Eyebrow>
-        <Copy title style={{ fontSize: 27, color: t.color.goldLight }}>
-          Inherit its essence
-        </Copy>
-        <Copy style={{ fontSize: 13, textAlign: "center" }}>
-          Choose a companion and one permanent skill.
-        </Copy>
-      </View>
-      <View style={{ flexDirection: "row", gap: 6, justifyContent: "center" }}>
-        {state.party.map((c) => (
-          <Pressable
-            key={c.id}
-            accessibilityRole="button"
-            accessibilityLabel={`Give essence to ${c.name}`}
-            accessibilityState={{ selected: selected === c.id }}
-            onPress={() => setSelected(c.id)}
-            style={{
-              borderWidth: 1,
-              borderColor: selected === c.id ? t.color.gold : t.color.line,
-              borderRadius: 4,
-              padding: 4,
-              alignItems: "center",
-            }}
-          >
-            <Atlas index={c.portrait} size={61} />
-            <Copy style={{ fontSize: 11 }}>{c.name}</Copy>
-          </Pressable>
+    <View style={{ padding: 20, gap: 12 }}>
+      <Eyebrow>VICTORY</Eyebrow>
+      <Copy title style={{ fontSize: 27 }}>
+        {loot.name} defeated
+      </Copy>
+      <Panel style={{ gap: 8 }}>
+        <Copy>Gold found: {loot.gross}</Copy>
+        {Object.entries(loot.shares).map(([id, amount]) => (
+          <Copy key={id} muted>
+            {state.party.find((c) => c.id === id)?.name || id}: {amount} gold
+            held for extraction
+          </Copy>
         ))}
-      </View>
-      {offers.map((name) => {
-        const skill = SKILLS.find((x) => x.name === name)!;
-        const known = state.party
-          .find((c) => c.id === selected)
-          ?.skills.includes(name);
-        return (
-          <Choice
-            key={name}
-            label={name + (known ? " · Learned" : "")}
-            detail={skill.description}
-            icon={skill.icon}
-            tone="gold"
-            disabled={known}
-            onPress={() => {
-              feedback("reward");
-              dispatch({ type: "LEARN", id: selected, skill: name });
-            }}
-          />
-        );
-      })}
-      <Button
-        label="Store essence for later"
-        tone="dark"
-        small
-        onPress={() => dispatch({ type: "DEFER" })}
-      />
+        <Copy>Your gold: {loot.net}</Copy>
+      </Panel>
+      <Panel style={{ gap: 8 }}>
+        <Eyebrow>ENEMIES DEFEATED</Eyebrow>
+        {(loot.enemies || [{ id: loot.id, name: loot.name }]).map((enemy) => (
+          <Copy key={enemy.id}>{enemy.name}</Copy>
+        ))}
+        <Eyebrow>RECOVERED</Eyebrow>
+        {Object.entries(loot.items).map(([id, amount]) => (
+          <Copy key={id}>
+            {amount} × {ITEMS.find((i) => i.id === id)?.name || id}
+          </Copy>
+        ))}
+        {!Object.keys(loot.items).some((id) => id.startsWith("essence-")) && (
+          <Copy muted>No essence this time · 30% chance per monster</Copy>
+        )}
+      </Panel>
+      <Panel style={{ gap: 8 }}>
+        <Eyebrow>PARTY EXPERIENCE</Eyebrow>
+        {loot.xp.map((p) => (
+          <Copy key={p.id}>
+            {p.name} · +{p.amount} XP
+            {p.after > p.before ? ` · Level ${p.before} → ${p.after}` : ""}
+          </Copy>
+        ))}
+      </Panel>
+      <Copy muted>
+        Spoils are unsecured until extraction. Bind essences in town or shelter;
+        field-found powers are lost on defeat.
+      </Copy>
+      <Button label="Continue" onPress={() => dispatch({ type: "COLLECT" })} />
     </View>
   );
 }
@@ -1033,9 +1059,11 @@ function Victory() {
       <MissionTracker />
       <Copy style={{ fontSize: 14, lineHeight: 20 }}>
         {extracted
-          ? state.party.some((c) => c.hp <= 0)
-            ? "Thirty days inside. You gather the fallen, pack the spoils, and step toward Stormhold."
-            : "Thirty days inside. Your companions pack the spoils and check the final headcount. Stormhold is waiting."
+          ? state.expedition.lost
+            ? "The party is brought home after defeat. Unsecured spoils and provisional skills were lost; earlier progress remains."
+            : state.party.some((c) => c.hp <= 0)
+              ? "Thirty days inside. You gather the fallen, pack the spoils, and step toward Stormhold."
+              : "Thirty days inside. Your companions pack the spoils and check the final headcount. Stormhold is waiting."
           : final
             ? "The crown is yours. Find shelter while the last days pass, then take your story home."
             : state.journey.portal
@@ -1045,18 +1073,27 @@ function Victory() {
       <Panel style={{ padding: 13, gap: 8 }}>
         {[
           ["Enemies defeated", state.runKills],
-          ["Gold recovered", state.runGold],
+          ["Gold earned after shares", state.runGold],
           ["Gold found before shares", state.runGross],
           [
-            "Companion shares paid",
-            Object.values(state.runPaid).reduce((n, gold) => n + gold, 0),
+            "Companion shares held for extraction",
+            Object.values(
+              state.phase === "town"
+                ? state.runPaid
+                : state.expedition.accruedShares,
+            ).reduce((n, gold) => n + gold, 0),
           ],
           [
             "Party standing",
             `${state.party.filter((c) => c.hp > 0).length}/${state.party.length}`,
           ],
           ["Rations left", state.food],
-          ["Boss essences", state.essence],
+          [
+            "Unbound essences",
+            Object.entries(state.inventory)
+              .filter(([id]) => id.startsWith("essence-"))
+              .reduce((n, [, qty]) => n + qty, 0),
+          ],
           [
             "Your path",
             state.route
@@ -1105,7 +1142,7 @@ function Victory() {
           {!final && !state.journey.portal && (
             <Choice
               label="Search for the upward portal"
-              detail="Choose passages; mark six crossings on your chart"
+              detail="Follow connected rooms; discoveries remain on your chart"
               icon="map-outline"
               tone="blue"
               onPress={() => dispatch({ type: "SEARCH_PORTAL" })}
@@ -1116,7 +1153,6 @@ function Victory() {
               <Button
                 label="Step through the upward portal"
                 small
-                disabled={state.food < 1}
                 onPress={() => dispatch({ type: "CONTINUE" })}
               />
               <Button
@@ -1193,7 +1229,23 @@ export function ExpeditionScreen() {
         expedition
         hideNav
       >
-        {state.phase === "nag" ? (
+        {!["combat", "loot", "story", "arrival"].includes(state.phase) && (
+          <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>
+            <Button
+              small
+              tone="dark"
+              label="Read the expedition journal"
+              onPress={() => router.push("/journal")}
+            />
+          </View>
+        )}
+        {state.phase === "story" ? (
+          <StoryScene />
+        ) : state.roundPlayback ? (
+          <TacticalCombat key={`${state.combat?.id}:${state.combat?.round}`} />
+        ) : state.playback ? (
+          <Combat key={state.effects.id} feedback={feedback} />
+        ) : state.phase === "nag" ? (
           <NagScene />
         ) : state.phase === "mission" ? (
           <MissionScene />
@@ -1205,12 +1257,18 @@ export function ExpeditionScreen() {
           <CampScene />
         ) : state.phase === "arrival" ? (
           <Arrival key={state.floor} />
-        ) : state.phase === "combat" ? (
-          <Combat feedback={feedback} />
+        ) : state.phase === "combat" || state.playback ? (
+          state.trial ? (
+            <Combat key={state.effects.id} feedback={feedback} />
+          ) : (
+            <TacticalCombat
+              key={`${state.combat?.id}:${state.combat?.round}`}
+            />
+          )
         ) : state.phase === "event" ? (
           <FloorEvent feedback={feedback} />
-        ) : state.phase === "essence" ? (
-          <Essence feedback={feedback} />
+        ) : state.phase === "loot" ? (
+          <Loot />
         ) : state.phase === "victory" || state.phase === "extraction" ? (
           <Victory />
         ) : state.phase === "defeat" ? (
@@ -1228,7 +1286,8 @@ export function ExpeditionScreen() {
             </Copy>
             <Copy>
               Your party cannot keep fighting. Shelter the fallen and wait for
-              the return gate. The expedition’s spoils and skills are kept.
+              the return gate. Unsecured spoils and provisional essence skills
+              are lost. Earlier skills and earned experience remain.
             </Copy>
             <Button
               label="Wait for the return gate"
@@ -1256,6 +1315,11 @@ export function ExpeditionScreen() {
                 )
               }
             />
+          </View>
+        )}
+        {["exploration", "camp", "victory"].includes(state.phase) && (
+          <View style={{ padding: 12 }}>
+            <StoryLeads />
           </View>
         )}
       </Frame>

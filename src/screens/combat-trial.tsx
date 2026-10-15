@@ -55,8 +55,8 @@ function TrialFight({
           onPress={customize}
         />
       </View>
-      {state.phase === "combat" ? (
-        <Combat feedback={feedback} />
+      {state.phase === "combat" || state.playback ? (
+        <Combat key={state.effects.id} feedback={feedback} />
       ) : (
         <View
           style={{ flex: 1, padding: 24, gap: 18, justifyContent: "center" }}

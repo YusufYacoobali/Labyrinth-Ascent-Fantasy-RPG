@@ -39,11 +39,11 @@ export function walkthroughTip(s: Game): Guidance | null {
         "Visit the Tavern. Talk to a recruit, then agree on a share of expedition gold. No fee is paid up front.",
         { destination: "/tavern", button: "Visit Tavern" },
       );
-    if (s.food < 12 && !done("supplies"))
+    if (s.food < 30 && !done("supplies"))
       return tip(
         "supplies",
         "Pack for the month",
-        "Buy rations at the Shop: aim for 12. Entry uses 3; climbing and fed rests use more. Bring healing potions too.",
+        "Buy 30 party rations for the sealed month. One is used per elapsed day. Bring healing potions and camping kits too.",
         { destination: "/shop", button: "Visit Shop" },
       );
     if (!s.townProgress.trained && !done("train"))
@@ -82,6 +82,12 @@ export function walkthroughTip(s: Game): Guidance | null {
       s.arrivalChoice
         ? "Your choice changed the opening of the fight. Face the enemy when ready, or find shelter first."
         : "Study the scene and choose an approach. Observing reveals the enemy; a companion advantage can secure an opening hit.",
+    );
+  if (s.phase === "combat" && !s.trial)
+    return tip(
+      "round",
+      "Plan the whole round",
+      "Select each standing companion, queue one action and choose its target. Check initiative and every enemy intent, then Confirm round. Guard, Focus and items use that companion's action; potions affect one ally. Retreat spends the round before following a connected passage.",
     );
   if (s.phase === "combat") {
     const living = s.party.filter((c) => c.hp > 0);
@@ -162,20 +168,20 @@ export function walkthroughTip(s: Game): Guidance | null {
     return tip(
       "return",
       "The return gate",
-      "Town stays sealed until the 30 days end. Waiting safely brings the return gate closer; your recovered spoils are kept.",
+      "Town stays sealed until the 30 days end. Successful extraction secures spoils. Defeat loses unsecured rewards and provisional skills.",
       { acknowledge: true },
     );
-  if (s.phase === "essence")
+  if (s.phase === "loot")
     return tip(
       "essence",
-      "A boss left an essence",
-      "Choose who learns the new skill. Each companion keeps their own skills; consider which role your party needs.",
+      "Victory rewards are recorded",
+      "Review gold, items and individual XP, then continue. Bind any monster essence later in town or shelter.",
     );
   if (s.phase === "event" || s.phase === "encounter")
     return tip(
       "story",
       "Choose what comes next",
-      "Victory opens a story choice. Read the situation, check Party for health and exhaustion, and decide whether to risk more or rest.",
+      "Read the situation, check the party and decide whether to risk more or rest. The map records connected passages; stories need no routine mandatory dialogue.",
     );
   if (!done("party"))
     return tip(
@@ -213,7 +219,7 @@ export function advanceWalkthrough(
   if (!after.walkthrough.active || action.type === "CREATE") return after;
   const learned: string[] = [];
   if (after.party.length > before.party.length) learned.push("recruit");
-  if (after.food >= 12 && after.food > before.food) learned.push("supplies");
+  if (after.food >= 30 && after.food > before.food) learned.push("supplies");
   if (after.townProgress.trained > before.townProgress.trained)
     learned.push("train");
   if (
@@ -223,6 +229,11 @@ export function advanceWalkthrough(
     )
   )
     learned.push("equipment");
+  if (
+    action.type === "ROUND" &&
+    after.expedition.rounds > before.expedition.rounds
+  )
+    learned.push(...action.actions.map((q) => q.kind));
   if (action.type === "BATTLE" && after.effects.id !== before.effects.id)
     learned.push(action.kind);
   if (

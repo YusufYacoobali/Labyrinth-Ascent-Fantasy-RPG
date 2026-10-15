@@ -8,9 +8,9 @@ import { theme as t } from "@/theme";
 
 export function FieldSupplies() {
   const { state, dispatch } = useGame();
-  const ids: ("torch" | "camp-kit" | "labyrinth-key")[] = [];
+  const ids: ("torch" | "labyrinth-key")[] = [];
   if (state.phase === "arrival" && !state.arrivalChoice) ids.push("torch");
-  if (["arrival", "victory"].includes(state.phase)) ids.push("camp-kit");
+
   if (
     state.phase === "event" &&
     !state.eventResolved &&
@@ -39,9 +39,7 @@ export function FieldSupplies() {
             <Copy muted style={{ fontSize: 11, lineHeight: 15 }}>
               {id === "torch"
                 ? "Reveal enemy · −8% enemy ATK"
-                : id === "camp-kit"
-                  ? "+30% HP/MP · −1 ration"
-                  : "Safe treasure · extra gold and relic fragment"}
+                : "Safe treasure · extra gold and relic fragment"}
             </Copy>
           </View>
           <Button
@@ -50,23 +48,13 @@ export function FieldSupplies() {
                 ? state.usedSupplies.includes(id)
                   ? "Torch lit"
                   : "Light torch"
-                : id === "camp-kit"
-                  ? state.usedSupplies.includes(id)
-                    ? "Camped"
-                    : "Make camp"
-                  : "Unlock"
+                : "Unlock"
             }
             small
             compact
             tone="blue"
             disabled={
-              state.usedSupplies.includes(id) ||
-              !(state.inventory[id] > 0) ||
-              (id === "camp-kit" &&
-                (!state.food ||
-                  !state.party.some(
-                    (c) => c.hp > 0 && (c.hp < c.maxHp || c.mp < c.maxMp),
-                  )))
+              state.usedSupplies.includes(id) || !(state.inventory[id] > 0)
             }
             onPress={() => dispatch({ type: "USE_SUPPLY", id })}
           />
