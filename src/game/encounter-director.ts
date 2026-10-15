@@ -1,3 +1,4 @@
+import { gearFloor } from "./build-equipment";
 import { BALANCE } from "./balance";
 import type { Game } from "./engine";
 import {
@@ -140,7 +141,8 @@ export function establishExpedition(s: Game): Game {
           (i) =>
             ["weapon", "armor", "helmet", "boots", "charm"].includes(i.kind) &&
             i.quality === (floor >= 8 ? "rare" : "fine") &&
-            !i.faction,
+            !i.faction &&
+            gearFloor(i) <= floor,
         );
         encounters[key][room.id] = {
           kind,

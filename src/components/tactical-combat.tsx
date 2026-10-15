@@ -9,6 +9,7 @@ import {
 } from "@/game/combat-commands";
 import { conditionText, impeded } from "@/game/combat-status";
 import { battleCue, type CombatCue } from "@/game/combat-animation";
+import { skillCost } from "@/game/build-equipment";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { View } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
@@ -366,9 +367,10 @@ export default function TacticalCombat() {
                     key={skill.name}
                     small
                     tone={q?.skill === skill.name ? "gold" : "blue"}
-                    label={`${skill.name} · ${skill.cost} MP${actor.cooldowns[skill.name] ? ` · ${actor.cooldowns[skill.name]} round cooldown` : ""}`}
+                    label={`${skill.name} · ${skillCost(actor, skill.name, skill.cost)} MP${actor.cooldowns[skill.name] ? ` · ${actor.cooldowns[skill.name]} round cooldown` : ""}`}
                     disabled={
-                      actor.mp < skill.cost || !!actor.cooldowns[skill.name]
+                      actor.mp < skillCost(actor, skill.name, skill.cost) ||
+                      !!actor.cooldowns[skill.name]
                     }
                     onPress={() => assign("skill", { skill: skill.name })}
                   />

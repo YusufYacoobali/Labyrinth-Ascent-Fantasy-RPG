@@ -1,3 +1,4 @@
+import { skillCost } from "./build-equipment";
 import type { Character, Game } from "./engine";
 import type { QueuedAction } from "./round-combat";
 import { SKILLS } from "./combat-data";
@@ -19,7 +20,7 @@ export function repeatCommands(s: Game): QueuedAction[] {
         old.kind === "skill" &&
         (!spec ||
           !c.skills.includes(spec.name) ||
-          c.mp < spec.cost ||
+          c.mp < skillCost(c, spec.name, spec.cost) ||
           c.cooldowns[spec.name])
       )
         return { actor: c.id, kind: "attack", target: enemy?.id };

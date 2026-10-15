@@ -2,6 +2,7 @@ import type { Enemy, Skill } from "./engine";
 import { ECOLOGY } from "./ecology";
 
 export interface MonsterSpec {
+  trophy?: string;
   id: string;
   name: string;
   visual: string;
@@ -318,12 +319,32 @@ for (const [id, name, visual, skill, material] of [
     essenceValue: 35 + ECOLOGY[id].floors[0] * 4,
   });
 for (const [id, skill] of [
+  ["roots-roamer", "Briar Lash"],
+  ["roots-elite", "Thorn Shelter"],
+  ["frost-roamer", "Rime Fang"],
+  ["frost-elite", "Glacier Aegis"],
+  ["forge-roamer", "Cinder Rush"],
+  ["forge-elite", "Furnace Brace"],
+  ["crypt-roamer", "Shade Tithe"],
+  ["crypt-elite", "Marshal Edict"],
   ["roots-guardian", "Heartroot Covenant"],
   ["frost-guardian", "Winter Reckoning"],
   ["forge-guardian", "Crucible Mantle"],
   ["crypt-guardian", "Oath Return"],
 ] as const)
   MONSTERS.find((m) => m.id === id)!.skill = skill;
+for (const [id, trophy] of [
+  ["guardian", "runestone-plate"],
+  ["broodmother", "venom-sac"],
+  ["frostfang", "frostfang-fang"],
+  ["ashen", "ember-heart"],
+  ["hollow-king", "throne-sigil"],
+  ["roots-guardian", "heartroot-knot"],
+  ["frost-guardian", "winter-heart"],
+  ["forge-guardian", "crucible-seal"],
+  ["crypt-guardian", "oath-clasp"],
+])
+  MONSTERS.find((m) => m.id === id)!.trophy = trophy;
 export const monsterFor = (enemy: Enemy, floor: number): MonsterSpec =>
   MONSTERS.find((m) => m.id === enemy.species) ||
   MONSTERS.find(
@@ -344,6 +365,7 @@ export function monsterDrops(spec: MonsterSpec, seed: number) {
     seed: material.seed,
     items: {
       [spec.material]: spec.quantity,
+      ...(spec.trophy ? { [spec.trophy]: 1 } : {}),
       ...(material.roll < 0.25
         ? {
             "beast-core":

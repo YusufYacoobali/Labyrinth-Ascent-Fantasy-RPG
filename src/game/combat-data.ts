@@ -18,6 +18,8 @@ export const SKILLS: {
   status?: StatusId;
   barrier?: number;
   mpGain?: number;
+  bonusVsStatus?: StatusId;
+  bonus?: number;
 }[] = [
   {
     id: SKILL_IDS["Candle Ward"],
@@ -100,7 +102,8 @@ export const SKILLS: {
     id: SKILL_IDS["Inspiring Presence"],
     name: "Inspiring Presence",
     icon: "sun",
-    description: "Passive: your presence increases party attack by 15%.",
+    description:
+      "Passive: party attack +15%. Guard also grants an 8 HP rune barrier.",
     cost: 0,
     passive: true,
     color: "#70b3ff",
@@ -110,7 +113,7 @@ export const SKILLS: {
     name: "Ember Ward",
     icon: "fire",
     description:
-      "Passive: take 30% less fire damage. Stacks with equipment to 75%.",
+      "Passive: 30% fire resistance; retaliate with fire after a damaging hit. Stacks with equipment to 75%.",
     cost: 0,
     passive: true,
     color: "#ed8e72",
@@ -120,7 +123,7 @@ export const SKILLS: {
     name: "Winter Veil",
     icon: "snowflake",
     description:
-      "Passive: take 30% less frost damage. Stacks with equipment to 75%.",
+      "Passive: 30% frost resistance; +15% damage against chilled or frozen prey.",
     cost: 0,
     passive: true,
     color: "#70b3ff",
@@ -156,8 +159,9 @@ export const SKILLS: {
     id: SKILL_IDS["Crown Pulse"],
     name: "Crown Pulse",
     icon: "crown",
-    description: "1.35× damage; restore 10% maximum HP to standing allies.",
-    cost: 24,
+    description:
+      "1.35× fire damage to every enemy; restore 10% maximum HP to standing allies once.",
+    cost: 36,
     cooldown: 3,
     color: "#ccabef",
   },
@@ -193,7 +197,7 @@ export const SKILL_RANKS = Object.fromEntries(
           ? "10% greater damage, 26 break and 15% weakening."
           : s.passive
             ? s.name === "Inspiring Presence"
-              ? "Party attack +17%; restore 1 MP to each attacker."
+              ? "Party attack +17%; restore 1 MP to each attacker. Guard grants a 10 HP rune barrier."
               : s.name === "Winter Veil"
                 ? "35% frost resistance and freeze immunity; recover 5 HP after a frost hit."
                 : s.name === "Ember Ward"
@@ -216,7 +220,7 @@ export const SKILL_RANKS = Object.fromEntries(
           ? "20% greater damage, 36 break, 20% weakening and two-turn vulnerability."
           : s.passive
             ? s.name === "Inspiring Presence"
-              ? "Party attack +19%; restore 2 MP and 2 HP to each attacker."
+              ? "Party attack +19%; restore 2 MP and 2 HP to each attacker. Guard grants a 12 HP rune barrier."
               : s.name === "Winter Veil"
                 ? "40% frost resistance and freeze immunity; recover 5 HP and 3 MP after a frost hit."
                 : s.name === "Ember Ward"
@@ -241,6 +245,11 @@ for (const p of ESSENCE_POWERS)
     SKILL_RANKS[p.name][rank - 1] =
       `${SKILL_RANKS[p.family][rank - 1]} ${p.status ? `Also applies ${p.status}. ` : ""}${p.barrier ? `Signature barrier: ${Math.round(p.barrier * (1 + (rank - 1) * 0.1))} HP. ` : ""}${p.mpGain ? `Returns ${p.mpGain} MP on hit.` : ""}`;
   }
+for (const rank of [2, 3] as const) {
+  SKILL_RANKS["Ember Ward"][rank - 1] += " Fire retaliation grows with rank.";
+  SKILL_RANKS["Winter Veil"][rank - 1] +=
+    " Chilled/frozen prey take 15% extra damage.";
+}
 export function resist(c: Character, element: Element): number {
   let n = c.refinements?.[element] ? 10 : 0;
   for (const id of c.equipment) {

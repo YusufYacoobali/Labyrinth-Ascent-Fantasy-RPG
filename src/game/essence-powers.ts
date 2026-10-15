@@ -7,12 +7,96 @@ export interface EssencePower {
   element: Element;
   status?: StatusId;
   barrier?: number;
+  bonusVsStatus?: StatusId;
+  bonus?: number;
   mpGain?: number;
   cost: number;
   cooldown: number;
   detail: string;
 }
 export const ESSENCE_POWERS: EssencePower[] = [
+  {
+    name: "Briar Lash",
+    family: "Venom Fang",
+    element: "venom",
+    status: "entangled",
+    cost: 16,
+    cooldown: 2,
+    detail:
+      "Venom lash poisons and entangles the target, slowing initiative by four.",
+  },
+  {
+    name: "Thorn Shelter",
+    family: "Second Wind",
+    element: "venom",
+    barrier: 8,
+    cost: 22,
+    cooldown: 3,
+    detail: "Heal standing allies and wrap each in an 8 HP thorn barrier.",
+  },
+  {
+    name: "Rime Fang",
+    family: "Twin Strike",
+    element: "frost",
+    bonusVsStatus: "chilled",
+    bonus: 0.25,
+    cost: 20,
+    cooldown: 2,
+    detail:
+      "Fast double frost strike deals 25% extra damage against chilled or frozen prey.",
+  },
+  {
+    name: "Glacier Aegis",
+    family: "Shield Bash",
+    element: "frost",
+    status: "chilled",
+    barrier: 10,
+    cost: 20,
+    cooldown: 3,
+    detail: "A chilling interrupt with a 10 HP personal glacier barrier.",
+  },
+  {
+    name: "Cinder Rush",
+    family: "Twin Strike",
+    element: "fire",
+    status: "burning",
+    cost: 22,
+    cooldown: 2,
+    detail: "Fast double fire strike leaves a stacking burn.",
+  },
+  {
+    name: "Furnace Brace",
+    family: "Shield Bash",
+    element: "fire",
+    status: "weakened",
+    barrier: 10,
+    cost: 20,
+    cooldown: 3,
+    detail:
+      "An interrupting fire bash weakens its target and grants a 10 HP barrier.",
+  },
+  {
+    name: "Shade Tithe",
+    family: "Scavenge",
+    element: "physical",
+    status: "weakened",
+    mpGain: 8,
+    cost: 14,
+    cooldown: 3,
+    detail: "A weakening life siphon returns 8 MP after hitting.",
+  },
+  {
+    name: "Marshal Edict",
+    family: "Nerve Lock",
+    element: "physical",
+    status: "fractured",
+    barrier: 6,
+    cost: 22,
+    cooldown: 3,
+    detail:
+      "Interrupt and fracture an enemy's armor; gain a 6 HP personal barrier.",
+  },
+
   {
     name: "Ossuary Mend",
     family: "Scavenge",

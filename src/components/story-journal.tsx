@@ -1,3 +1,4 @@
+import { optionalGoals } from "@/game/expedition-report";
 import { StoryArt, EventArt } from "./story-art";
 import { WORLD_NPCS, type WorldNpcId } from "@/game/world-npcs";
 import { reconciliationStage } from "@/game/reconciliation";
@@ -146,6 +147,16 @@ export function StoryChronicle() {
           </Copy>
         ))}
       </Panel>
+      {state.ending && (
+        <Panel style={{ gap: 6 }}>
+          <Copy title>Optional journeys</Copy>
+          {optionalGoals(state).map((g) => (
+            <Copy key={g.label}>
+              {g.label}: {g.value}/{g.target}
+            </Copy>
+          ))}
+        </Panel>
+      )}
       {Object.entries(state.npcs || {}).map(([id, memory]) => (
         <Panel key={id} style={{ gap: 5, padding: 12 }}>
           <Copy title>{WORLD_NPCS[id as WorldNpcId]?.name || id}</Copy>

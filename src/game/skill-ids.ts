@@ -1,5 +1,13 @@
 /** Persist these identities independently of their current display names. */
 export const SKILL_IDS = {
+  "Briar Lash": "briar-lash",
+  "Thorn Shelter": "thorn-shelter",
+  "Rime Fang": "rime-fang",
+  "Glacier Aegis": "glacier-aegis",
+  "Cinder Rush": "cinder-rush",
+  "Furnace Brace": "furnace-brace",
+  "Shade Tithe": "shade-tithe",
+  "Marshal Edict": "marshal-edict",
   "Ossuary Mend": "ossuary-mend",
   "Pike Thrust": "pike-thrust",
   "Shard Ward": "shard-ward",

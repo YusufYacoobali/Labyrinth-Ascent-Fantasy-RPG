@@ -27,6 +27,8 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  builds: load("src/game/build-equipment.ts"),
+  reports: load("src/game/expedition-report.ts"),
   factionOpportunities: load("src/game/faction-opportunities.ts"),
   reconciliation: load("src/game/reconciliation.ts"),
   storyContext: load("src/game/story-context.ts"),

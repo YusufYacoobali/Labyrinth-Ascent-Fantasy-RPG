@@ -323,6 +323,47 @@ function campaign(seed = 1, maxExpeditions = 12) {
         )
           act({ type: "LEARN", id: c.id, species: spec.id, skill: spec.skill });
       }
+    // Earned faction commissions and trophy recipes use real secured materials.
+    const factions = require("./engine-loader.cjs").factionOpportunities;
+    for (const offer of factions.FACTION_OPPORTUNITIES)
+      if (
+        s.bestFloor >= offer.floor &&
+        factions.factionStanding(s, offer.id) >= 5 &&
+        !s.factionClaims?.includes(offer.id) &&
+        (s.inventory[offer.material] || 0) >= offer.quantity
+      )
+        act({ type: "FACTION_DELIVER", id: offer.id });
+    for (const recipe of require("./engine-loader.cjs").town.RECIPES) {
+      const item = w.ITEMS.find((i) => i.id === recipe.id);
+      if (
+        s.bestFloor >= (recipe.floor || 0) &&
+        s.gold >= recipe.gold + 600 &&
+        recipe.materials.every((m) => (s.inventory[m.id] || 0) >= m.quantity) &&
+        !s.party.some((c) => c.equipment.includes(item.id)) &&
+        !(s.inventory[item.id] > 0)
+      )
+        act({ type: "CRAFT", id: recipe.id });
+    }
+    const preferred = seed % 3;
+    for (const c of [...s.party])
+      for (const kind of ["weapon", "armor", "helmet", "boots", "charm"]) {
+        const current = s.party.find((p) => p.id === c.id),
+          old = w.ITEMS.find(
+            (i) => current.equipment.includes(i.id) && i.kind === kind,
+          );
+        const score = (i) =>
+          (i.atk || 0) +
+          (i.def || 0) * 1.5 +
+          (i.speed || 0) * 2 +
+          (i.resist?.amount || 0) * 0.35 +
+          (preferred === 0 && i.id === "moon-robe" ? 8 : 0) +
+          (preferred === 1 && i.id === "scout-dagger" ? 8 : 0);
+        const owned = w.ITEMS.filter(
+          (i) => i.kind === kind && (s.inventory[i.id] || 0) > 0,
+        ).sort((a, b) => score(b) - score(a))[0];
+        if (owned && score(owned) > (old ? score(old) : 0))
+          act({ type: "EQUIP", character: c.id, item: owned.id });
+      }
     for (const [id, qty] of Object.entries(s.inventory)) {
       const item = w.ITEMS.find((i) => i.id === id);
       if (qty > 0 && item?.kind === "loot" && !id.startsWith("essence-"))
@@ -350,6 +391,38 @@ function campaign(seed = 1, maxExpeditions = 12) {
           act({ type: "EQUIP", character: c.id, item: id });
         }
       }
+    if (expedition > 1) {
+      const builds = require("./engine-loader.cjs").builds;
+      for (const c of [...s.party]) {
+        for (const id of s.bestFloor >= 9
+          ? ["ember-focus", "ember-mail", "iron-helm", "scout-boots"]
+          : s.bestFloor >= 6
+            ? ["glacier-blade", "root-mantle", "iron-helm", "scout-boots"]
+            : ["iron-pike", "chainmail", "iron-helm", "scout-boots"]) {
+          const item = w.ITEMS.find((i) => i.id === id),
+            current = s.party.find((p) => p.id === c.id),
+            old = w.ITEMS.find(
+              (i) => current.equipment.includes(i.id) && i.kind === item.kind,
+            );
+          if (
+            item &&
+            s.bestFloor >= builds.gearFloor(item) &&
+            (item.atk || 0) + (item.def || 0) >
+              (old?.atk || 0) + (old?.def || 0) &&
+            s.gold > e.buyPrice(item, s.day, s) + 600
+          ) {
+            act({ type: "BUY_ITEM", id });
+            act({ type: "EQUIP", character: c.id, item: id });
+          }
+        }
+        const offer = tp.temperingOffer(
+          s,
+          s.party.find((p) => p.id === c.id),
+        );
+        if (offer.available && s.gold > offer.gold + 600)
+          act({ type: "FORGE", id: c.id });
+      }
+    }
     while (
       s.food < 30 &&
       s.gold >=

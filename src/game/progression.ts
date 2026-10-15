@@ -51,6 +51,10 @@ export interface Spoils {
   inventory: Record<string, number>;
 }
 export interface Expedition {
+  departure?: import("./expedition-report").DepartureSnapshot;
+  lostSpoils?: Spoils;
+  lostShares?: Record<string, number>;
+  lostSkills?: Record<string, Skill[]>;
   director?: import("./encounter-director").ExpeditionDirector;
   trail?: Record<string, string[]>;
   roomVisits?: Record<string, string[]>;
@@ -179,6 +183,9 @@ export function loseSpoils(s: Game): Game {
       provisionalSkills: {},
       accruedShares: {},
       lost: true,
+      lostSpoils: bag,
+      lostShares: s.expedition.accruedShares,
+      lostSkills: s.expedition.provisionalSkills,
     },
   };
 }
@@ -214,25 +221,36 @@ export function earnMastery(
       }
       if (old.hp > 0)
         for (const key of old.skills) {
-          if (key === "Candle Ward" && (s.effects.protection?.[c.id] || 0) > 0)
+          if (
+            key === "Candle Ward" &&
+            (s.effects.protection?.[c.id] || 0) > 0 &&
+            (s.effects.protectionSkill?.[c.id] || "Candle Ward") ===
+              "Candle Ward"
+          )
             add(key, 1);
           if (
             key === "Inspiring Presence" &&
-            Object.values(s.effects.strikes || {}).some(
+            (Object.values(s.effects.strikes || {}).some(
               (damage) => damage > 0,
-            ) &&
+            ) ||
+              ((s.effects.protection?.[c.id] || 0) > 0 &&
+                s.effects.protectionSkill?.[c.id] === key)) &&
             before.party.find((p) => p.hp > 0 && p.skills.includes(key))?.id ===
               c.id
           )
             add(key, 1);
           if (
-            ((key === "Ember Ward" && before.enemy?.element === "fire") ||
+            ((key === "Ember Ward" &&
+              (before.enemy?.element === "fire" ||
+                (s.effects.retaliation?.[c.id] || 0) > 0)) ||
               (key === "Winter Veil" && before.enemy?.element === "frost") ||
               (key === "Toxic Adaptation" &&
                 before.enemy?.element === "venom") ||
               (key === "Grave Guard" &&
                 before.enemy?.element === "physical")) &&
-            s.effects.targets[c.id] > 0
+            (s.effects.targets[c.id] > 0 ||
+              (key === "Ember Ward" &&
+                (s.effects.retaliation?.[c.id] || 0) > 0))
           )
             add(key, 1);
         }

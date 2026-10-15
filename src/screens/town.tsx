@@ -2,7 +2,7 @@ import React from "react";
 import { Pressable } from "react-native";
 import { Image } from "expo-image";
 import { router, Redirect } from "expo-router";
-import { art, Frame } from "@/components/game-ui";
+import { art, Frame, Button } from "@/components/game-ui";
 import { useGame } from "@/game/provider";
 import { daysToGate, gateOpen } from "@/game/engine";
 import { SceneMotion } from "@/components/scene-motion";
@@ -32,6 +32,8 @@ const places = [
 ] as const;
 export function TownScreen() {
   const { state, dispatch } = useGame();
+  if (state.phase === "town" && state.lastReport && !state.lastReport.reviewed)
+    return <Redirect href="/report" />;
   const showGuide = !state.guideSeen && !state.walkthrough.active;
   return (
     <Guard>
@@ -43,6 +45,14 @@ export function TownScreen() {
         back={false}
         scroll={false}
       >
+        {state.lastReport && (
+          <Button
+            small
+            tone="dark"
+            label="Last expedition report"
+            onPress={() => router.push("/report")}
+          />
+        )}
         <SceneMotion subtle style={{ flex: 1 }}>
           <Image
             source={showGuide ? art.townGuide : art.townPlay}

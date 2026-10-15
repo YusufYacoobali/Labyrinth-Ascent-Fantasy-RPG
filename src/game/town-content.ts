@@ -1,3 +1,4 @@
+import { HUNT_RECIPES } from "./build-equipment";
 import type { Race, Skill } from "./engine";
 import type { Item, QuestId } from "./world";
 
@@ -426,6 +427,7 @@ export interface Recipe {
   essence?: string;
 }
 export const RECIPES: Recipe[] = [
+  ...HUNT_RECIPES,
   {
     id: "candle-buckler",
     gold: 70,

@@ -1,3 +1,4 @@
+import { HUNT_ITEMS, GEAR_TRAITS } from "./build-equipment";
 import { FACTION_ITEMS, type FactionId } from "./faction-opportunities";
 import { MONSTERS, essenceId } from "./monsters";
 import { TOWN_ITEMS, TOWN_QUESTS } from "./town-content";
@@ -455,6 +456,7 @@ export const ITEMS: Item[] = [
   },
   ...TOWN_ITEMS,
   ...FACTION_ITEMS,
+  ...HUNT_ITEMS,
   ...MONSTERS.map((m): Item => ({
     id: essenceId(m.id),
     name: `${m.name} essence`,
@@ -519,6 +521,10 @@ export const ITEMS: Item[] = [
     description: "+4 SPD · 20% frost resistance.",
   },
 ];
+for (const [id, detail] of Object.entries(GEAR_TRAITS)) {
+  const item = ITEMS.find((i) => i.id === id);
+  if (item) item.description += ` ${detail}`;
+}
 export const QUESTS = [
   ...TOWN_QUESTS,
   {

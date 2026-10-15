@@ -21,7 +21,7 @@ function fresh() {
     roll: 0.5,
   });
 }
-const variants = m.MONSTERS.filter((s) => s.skill === "Venom Fang");
+const variants = m.MONSTERS.filter((s) => s.skill === "Briar Lash");
 const {
   behavior,
   rounds: r,
@@ -268,49 +268,62 @@ test("Binding offers every held compatible species, including a route essence wi
   let s = fresh();
   const variant = variants.find((v) => v.id === "roots-roamer");
   s.inventory[m.essenceId(variant.id)] = 2;
-  let options = p.essenceBindingOptions(s, "Venom Fang");
+  let options = p.essenceBindingOptions(s, "Briar Lash");
   assert.equal(options.length, 1);
   assert.equal(options[0].species, variant.id);
   s = e.reducer(s, {
     type: "LEARN",
     id: "hero",
-    skill: "Venom Fang",
+    skill: "Briar Lash",
     species: options[0].species,
   });
-  assert.ok(s.party[0].learnedSkills.includes("Venom Fang"));
+  assert.ok(s.party[0].learnedSkills.includes("Briar Lash"));
   assert.equal(s.inventory[m.essenceId(variant.id)], 1);
 });
 test("An ambiguous binding requires a species and consumes precisely the selected essence", () => {
-  let s = fresh();
-  for (const v of variants) s.inventory[m.essenceId(v.id)] = 2;
-  const before = JSON.stringify(s.inventory);
-  const ambiguous = e.reducer(s, {
-    type: "LEARN",
-    id: "hero",
-    skill: "Venom Fang",
-  });
-  assert.equal(JSON.stringify(ambiguous.inventory), before);
-  assert.ok(!ambiguous.party[0].learnedSkills.includes("Venom Fang"));
-  assert.equal(
-    p.essenceBindingOptions(s, "Venom Fang").length,
-    variants.length,
-  );
-  const selected = variants.at(-1);
-  s = e.reducer(s, {
-    type: "LEARN",
-    id: "hero",
-    skill: "Venom Fang",
-    species: selected.id,
-  });
-  for (const v of variants)
-    assert.equal(s.inventory[m.essenceId(v.id)], v === selected ? 1 : 2);
-  const repeated = e.reducer(s, {
-    type: "LEARN",
-    id: "hero",
-    skill: "Venom Fang",
-    species: selected.id,
-  });
-  assert.equal(JSON.stringify(repeated.inventory), JSON.stringify(s.inventory));
+  // A temporary compatible source keeps the selection regression meaningful now that shipped route powers are unique.
+  const alias = m.MONSTERS.find((m) => m.id === "roots-elite"),
+    oldSkill = alias.skill;
+  alias.skill = "Briar Lash";
+  variants.push(alias);
+  try {
+    let s = fresh();
+    for (const v of variants) s.inventory[m.essenceId(v.id)] = 2;
+    const before = JSON.stringify(s.inventory);
+    const ambiguous = e.reducer(s, {
+      type: "LEARN",
+      id: "hero",
+      skill: "Briar Lash",
+    });
+    assert.equal(JSON.stringify(ambiguous.inventory), before);
+    assert.ok(!ambiguous.party[0].learnedSkills.includes("Briar Lash"));
+    assert.equal(
+      p.essenceBindingOptions(s, "Briar Lash").length,
+      variants.length,
+    );
+    const selected = variants.at(-1);
+    s = e.reducer(s, {
+      type: "LEARN",
+      id: "hero",
+      skill: "Briar Lash",
+      species: selected.id,
+    });
+    for (const v of variants)
+      assert.equal(s.inventory[m.essenceId(v.id)], v === selected ? 1 : 2);
+    const repeated = e.reducer(s, {
+      type: "LEARN",
+      id: "hero",
+      skill: "Briar Lash",
+      species: selected.id,
+    });
+    assert.equal(
+      JSON.stringify(repeated.inventory),
+      JSON.stringify(s.inventory),
+    );
+  } finally {
+    variants.pop();
+    alias.skill = oldSkill;
+  }
 });
 test("Selected field and secured essences keep their own provenance across binding and defeat", () => {
   for (const unsecured of [true, false]) {
@@ -320,21 +333,21 @@ test("Selected field and secured essences keep their own provenance across bindi
     s = { ...s, phase: "camp", journey: { ...s.journey, startDay: 30 } };
     s.inventory[id] = 2;
     if (unsecured) s.expedition.unsecured.inventory[id] = 1;
-    const option = p.essenceBindingOptions(s, "Venom Fang")[0];
+    const option = p.essenceBindingOptions(s, "Briar Lash")[0];
     assert.equal(option.unsecured, unsecured ? 1 : 0);
     assert.equal(option.secured, unsecured ? 1 : 2);
     s = e.reducer(s, {
       type: "LEARN",
       id: "hero",
-      skill: "Venom Fang",
+      skill: "Briar Lash",
       species: selected.id,
     });
     assert.equal(
-      Boolean(s.expedition.provisionalSkills.hero?.includes("Venom Fang")),
+      Boolean(s.expedition.provisionalSkills.hero?.includes("Briar Lash")),
       unsecured,
     );
     s = e.reducer({ ...s, phase: "defeat" }, { type: "DISMISS" });
-    assert.equal(s.party[0].learnedSkills.includes("Venom Fang"), !unsecured);
+    assert.equal(s.party[0].learnedSkills.includes("Briar Lash"), !unsecured);
     assert.equal(s.inventory[id], 1);
   }
 });
@@ -345,17 +358,17 @@ test("Wrong, absent and wild-camp essences cannot consume another species", () =
     const n = e.reducer(s, {
       type: "LEARN",
       id: "hero",
-      skill: "Venom Fang",
+      skill: "Briar Lash",
       species,
     });
     assert.equal(n.inventory["essence-roots-roamer"], 1);
-    assert.ok(!n.party[0].learnedSkills.includes("Venom Fang"));
+    assert.ok(!n.party[0].learnedSkills.includes("Briar Lash"));
   }
   s = { ...s, phase: "camp", journey: { ...s.journey, wildCamp: true } };
   const n = e.reducer(s, {
     type: "LEARN",
     id: "hero",
-    skill: "Venom Fang",
+    skill: "Briar Lash",
     species: "roots-roamer",
   });
   assert.equal(n.inventory["essence-roots-roamer"], 1);
@@ -366,7 +379,7 @@ async function persistence() {
   s = e.reducer(s, {
     type: "LEARN",
     id: "hero",
-    skill: "Venom Fang",
+    skill: "Briar Lash",
     species: "roots-roamer",
   });
   const snapshot = skillIds.serializeSave(s),
@@ -379,7 +392,7 @@ async function persistence() {
   assert.equal(loaded.backedUp, false);
   assert.equal(map.get(saves.SAVE_KEY), snapshot);
   const resumed = e.normalizeSave(loaded.save);
-  assert.ok(resumed.party[0].learnedSkills.includes("Venom Fang"));
+  assert.ok(resumed.party[0].learnedSkills.includes("Briar Lash"));
   assert.equal(resumed.inventory["essence-roots-roamer"], 0);
   assert.equal(resumed.journey.seed, s.journey.seed);
   assert.equal(resumed.party[0].xp, s.party[0].xp);

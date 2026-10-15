@@ -1,3 +1,4 @@
+import { buildDamage, healingBuild, skillCost } from "./build-equipment";
 import { fatigueMultiplier } from "./exhaustion";
 import { applyCondition, cleanse, stacks } from "./combat-status";
 import { SKILLS, resist } from "./combat-data";
@@ -150,7 +151,7 @@ export function resolveBattle(
       !spec ||
       !actor.skills.includes(skill) ||
       spec.passive ||
-      actor.mp < spec.cost)
+      actor.mp < skillCost(actor, spec.name, spec.cost))
   )
     return reject("Choose a learned active skill with enough MP.");
   if (a.kind === "skill" && (actor.cooldowns[skill!] || 0) > 0)
@@ -286,6 +287,27 @@ export function resolveBattle(
             ? 0.55
             : 1;
       if (cast) mult *= power;
+      if (
+        cast &&
+        family === "Venom Fang" &&
+        (enemy.poison || stacks(enemy.conditions, "venom"))
+      )
+        mult *= 1.2;
+      if (
+        cast &&
+        spec?.bonusVsStatus &&
+        (stacks(enemy.conditions, spec.bonusVsStatus) ||
+          (spec.bonusVsStatus === "chilled" &&
+            stacks(enemy.conditions, "frozen")))
+      )
+        mult *= 1 + (spec.bonus || 0);
+      if (
+        c.skills.includes("Winter Veil") &&
+        (stacks(enemy.conditions, "chilled") ||
+          stacks(enemy.conditions, "frozen"))
+      )
+        mult *= 1.15;
+
       mult *=
         (1 - stacks(c.ailments.conditions, "weakened") * 0.2) *
         (1 + stacks(enemy.conditions, "exposed") * 0.15);
@@ -331,6 +353,7 @@ export function resolveBattle(
                 (c.atk * fatigueMultiplier(c) * mult * inspire * opening -
                   armor) *
                   elementPower *
+                  buildDamage(c, cast ? skill : undefined, element, enemy) *
                   (enemy.concealed &&
                   !enemy.broken &&
                   !enemy.vulnerable &&
@@ -407,8 +430,11 @@ export function resolveBattle(
       return {
         ...c,
         mp: spec?.mpGain
-          ? Math.min(c.maxMp, c.mp - spec.cost + spec.mpGain)
-          : c.mp - spec!.cost,
+          ? Math.min(
+              c.maxMp,
+              c.mp - skillCost(c, spec.name, spec.cost) + spec.mpGain,
+            )
+          : c.mp - skillCost(c, spec!.name, spec!.cost),
         cooldowns: { ...c.cooldowns, [skill!]: spec!.cooldown || 0 },
         ailments:
           family === "Second Wind" ? { poison: 0, paralysis: 0 } : c.ailments,
@@ -426,7 +452,10 @@ export function resolveBattle(
                 c.maxHp,
                 c.hp +
                   Math.round(
-                    c.maxHp * (family === "Second Wind" ? 0.22 : 0.1) * power,
+                    c.maxHp *
+                      (family === "Second Wind" ? 0.22 : 0.1) *
+                      power *
+                      healingBuild(actor),
                   ),
               ),
               ailments: {
@@ -514,6 +543,12 @@ export function resolveBattle(
           ? 10
           : 0
         : (rank - 1) * 10;
+    if (
+      a.kind === "skill" &&
+      family === "Sunder" &&
+      actor.equipment.includes("iron-pike")
+    )
+      poiseDamage += 10;
     if (
       enemy.broken === 0 &&
       (!singleActor || enemy.controlWard === 0) &&

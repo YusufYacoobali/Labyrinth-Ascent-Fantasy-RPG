@@ -1,3 +1,9 @@
+import {
+  departureSnapshot,
+  expeditionReport,
+  type ExpeditionReport,
+} from "./expedition-report";
+import { gearFloor } from "./build-equipment";
 import { trainingLimit, trainingXp, temperingOffer } from "./town-progression";
 import { canAutoResolve } from "./combat-commands";
 import {
@@ -128,6 +134,7 @@ export interface Ailments {
   ward?: number;
   barrier?: number;
   candleOwner?: string;
+  guardPower?: Skill;
 }
 export interface Character {
   formation?: "front" | "back";
@@ -204,6 +211,8 @@ export interface Rapport {
 export interface BattleEffect {
   absorbed?: number;
   protection?: Record<string, number>;
+  protectionSkill?: Record<string, Skill>;
+  retaliation?: Record<string, number>;
   id: number;
   damage: number;
   enemyDamage: number;
@@ -218,6 +227,8 @@ export interface BattleEffect {
   broken: boolean;
 }
 export interface Game {
+  lastReport?: ExpeditionReport;
+  challengeCompletions?: number;
   npcs?: Partial<Record<WorldNpcId, NpcMemory>>;
   bestiary?: Bestiary;
   combatSpeed?: "normal" | "fast";
@@ -824,6 +835,7 @@ export type Action =
   | { type: "CLOSE_STORY" }
   | { type: "STORY_CHOICE"; stage: string; choice: string }
   | { type: "FACTION_DELIVER"; id: string }
+  | { type: "ACK_REPORT" }
   | { type: "RECONCILE"; id: string }
   | RoundRequest
   | { type: "CREATE"; race: Race; name: string; roll: number; seed?: number }
@@ -1034,7 +1046,14 @@ export function needsGateConfirmation(s: Game, a: Action) {
       a.type === "WORK" ||
       (a.type === "TRAIN" &&
         s.gold >= 60 &&
-        s.party.some((c) => trainingXp(c, s.bestFloor) > 0))) &&
+        s.party.some(
+          (c) =>
+            trainingXp(
+              c,
+              s.bestFloor,
+              Math.max(...s.party.map((p) => p.level)),
+            ) > 0,
+        ))) &&
     !a.skipOpening
   );
 }
@@ -1072,6 +1091,10 @@ export function reducer(s: Game, a: Action): Game {
     }
     return next;
   }
+  if (a.type === "ACK_REPORT")
+    return s.lastReport
+      ? { ...s, lastReport: { ...s.lastReport, reviewed: true } }
+      : s;
   if (a.type === "COMBAT_SPEED") return { ...s, combatSpeed: a.speed };
   if (a.type === "SET_FORMATION") {
     if (
@@ -1240,6 +1263,20 @@ export function reducer(s: Game, a: Action): Game {
   )
     next = loseSpoils(next);
   next = storyConsequences(s, next, a);
+  if (
+    a.type === "RETURN" &&
+    s.journey.startDay !== null &&
+    next.phase === "town" &&
+    s.phase !== "town"
+  ) {
+    const report = expeditionReport(s, next);
+    next = {
+      ...next,
+      lastReport: report,
+      challengeCompletions:
+        (s.challengeCompletions || 0) + (report.challenge ? 1 : 0),
+    };
+  }
   next = advanceWalkthrough(s, next, a);
   if (a.type === "BATTLE" && a.animate && next.effects.id !== s.effects.id)
     next = {
@@ -1255,8 +1292,13 @@ function resolveGameAction(s: Game, a: Action): Game {
       "The labyrinth is open. Confirm skipping this opening before spending a day in town.",
     );
   let next = reduceGame(s, a);
-  if (a.type === "ENTER" && s.phase === "town" && next.phase === "mission")
+  if (a.type === "ENTER" && s.phase === "town" && next.phase === "mission") {
     next = establishExpedition(next);
+    next = {
+      ...next,
+      expedition: { ...next.expedition, departure: departureSnapshot(s) },
+    };
+  }
   if (
     !next.trial &&
     ((next.phase === "arrival" &&
@@ -1491,7 +1533,8 @@ function reduceGame(s: Game, a: Action): Game {
           (item) =>
             item.id === entry.id &&
             item.kind !== "loot" &&
-            !factionAccess(s, item),
+            !factionAccess(s, item) &&
+            s.bestFloor >= gearFloor(item),
         ),
     );
     if (!valid) return s;
@@ -2028,7 +2071,16 @@ function reduceGame(s: Game, a: Action): Game {
         `Completed a town contract. +125 gold${s.faction.guild < B.townWorkStandingCap ? " and +1 Guild standing" : "; further standing comes from expeditions"}.`,
       );
     if (a.type === "TRAIN") {
-      if (!s.party.some((c) => trainingXp(c, s.bestFloor) > 0))
+      if (
+        !s.party.some(
+          (c) =>
+            trainingXp(
+              c,
+              s.bestFloor,
+              Math.max(...s.party.map((p) => p.level)),
+            ) > 0,
+        )
+      )
         return note(
           s,
           `Town training prepares characters up to level ${trainingLimit(s.bestFloor)}. Explore deeper or help a weaker companion catch up.`,
@@ -2039,13 +2091,22 @@ function reduceGame(s: Game, a: Action): Game {
           ...s,
           day: s.day + 1,
           gold: s.gold - 60,
-          party: s.party.map((c) => gainXp(c, trainingXp(c, s.bestFloor))),
+          party: s.party.map((c) =>
+            gainXp(
+              c,
+              trainingXp(
+                c,
+                s.bestFloor,
+                Math.max(...s.party.map((p) => p.level)),
+              ),
+            ),
+          ),
           townProgress: {
             ...s.townProgress,
             trained: s.townProgress.trained + 1,
           },
         },
-        `The party trained. Eligible companions gained up to 45 XP; the current training ceiling is level ${trainingLimit(s.bestFloor)}.`,
+        `The party trained. Eligible companions gained up to 45 XP, or 90 XP when at least two levels behind their party; the current training ceiling is level ${trainingLimit(s.bestFloor)}.`,
       );
     }
     if (a.type === "BUY" || a.type === "BUY_ITEM") {
@@ -2059,6 +2120,11 @@ function reduceGame(s: Game, a: Action): Game {
             : a.id),
       );
       if (!item || item.kind === "loot") return s;
+      if (s.bestFloor < gearFloor(item))
+        return note(
+          s,
+          `Reach Floor ${gearFloor(item)} to unlock this equipment.`,
+        );
       if (factionAccess(s, item)) return note(s, factionAccess(s, item));
       const price = buyPrice(item, s.day, s);
       if (s.gold < price)

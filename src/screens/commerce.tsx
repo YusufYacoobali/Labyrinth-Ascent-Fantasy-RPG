@@ -1,4 +1,5 @@
 import { FactionOpportunities } from "@/components/faction-opportunities";
+import { gearFloor } from "@/game/build-equipment";
 import { factionAccess } from "@/game/faction-opportunities";
 import React, { useState } from "react";
 import { View, Pressable, TextInput } from "react-native";
@@ -589,8 +590,10 @@ export function ShopScreen() {
                       style={{ fontSize: 11, lineHeight: 15, color: "#725335" }}
                     >
                       Owned {owned} · {price}g
-                      {!sell && factionAccess(state, item)
-                        ? ` · ${factionAccess(state, item)}`
+                      {!sell &&
+                      (factionAccess(state, item) ||
+                        state.bestFloor < gearFloor(item))
+                        ? ` · ${factionAccess(state, item) || `Reach Floor ${gearFloor(item)}`}`
                         : ""}
                     </Copy>
                   </View>
@@ -632,7 +635,10 @@ export function ShopScreen() {
                       </Copy>
                       <Pressable
                         accessibilityRole="button"
-                        disabled={!!factionAccess(state, item)}
+                        disabled={
+                          !!factionAccess(state, item) ||
+                          state.bestFloor < gearFloor(item)
+                        }
                         accessibilityLabel={"Add " + item.name + " to cart"}
                         onPress={() =>
                           quantity(item.id, (cart[item.id] || 0) + 1)
@@ -922,7 +928,7 @@ export function GuildScreen() {
               {[
                 {
                   title: "Train together",
-                  detail: `Up to 45 XP each, through level ${trainingLimit(state.bestFloor)} · 60 gold · +1 day`,
+                  detail: `Up to 45 XP each; 90 for companions two levels behind, through level ${trainingLimit(state.bestFloor)} · 60 gold · +1 day`,
                   action: "TRAIN" as const,
                   disabled:
                     state.gold < 60 ||

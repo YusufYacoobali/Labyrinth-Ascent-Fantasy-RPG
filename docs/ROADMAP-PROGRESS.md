@@ -121,9 +121,22 @@ Verification: 229 grouped checks pass, including eight world-consequence groups 
 
 The existing 200-seed policy continues to choose the original authored options; results remain 178 completions, zero stalls, first-floor median 4, completed-campaign median 7, mean 6.73 rounds, 3,197 fallen-character events, no starvation or repetition violations. Recovery cost remains 477,300 gold and 7,530 injured-character days. The new optional faction/NPC alternatives are verified deterministically, rather than represented as sampled by that unchanged campaign policy. Report: `verification/master-m5-campaign.json`.
 
+## Milestone 6 — builds, economy and expedition reports
+
+All 44 species now grant different shipped powers. Eight route roamer/elite signatures extend existing families with entanglement, healing barriers, chilled-target finishing damage, frost protection, burning rushes, weakening fire bashes, MP siphons and armor-fracturing edicts. Earlier learned powers remain valid. Poisoned-target venom bonuses, frost finishing bonuses, guarding rune barriers and real Ember Ward retaliation give the original signatures additional tactical identity.
+
+Crown Pulse hits every living enemy through the existing damage/status resolver while spending one action, one MP cost, one cooldown, one mastery use and one party heal. Secondary targets retain individual wards, cover, break, defenses and durable identities. The Uncrowned scepter's cost reduction is shared by displayed costs, repeat-command validation, full-queue validation and actual spending.
+
+Equipment now complements twin attacks, arcane powers, venom/frost/fire builds, group healing, armor break and Guard. Reliable guardian trophies supplement ordinary material drops; their appearance never forces an essence. Five advanced recipes have earned floor gates, real trophy/material costs and matching stock gates. Earlier recipes, alternate essence ingredients, finite tempering and existing improvements remain intact. Catch-up training grants up to 90 XP to companions at least two levels behind the party while preserving the same earned level ceiling.
+
+A durable consolidated return report records actual defeated species, essence finds, secured or forfeited belongings and shares, individual XP/levels/mastery/secured powers, injuries, loyalty, relationships, quest/faction consequences, unresolved leads and recommended preparation. Defeat retains a loss receipt while revoking provisional powers. Generated but unvisited floors do not inflate discoveries. One Continue action returns to town; the last report remains accessible. Optional completion goals track routes, personal arcs, powers, full surveys and repeating the throne with every companion standing, without adding a separate campaign.
+
+Verification: 241 grouped checks pass, including twelve build/progression groups covering all unique powers, real route effects, area resource/mastery/healing limits, discounted command validation, retaliation and Guard contribution, gear and status synergies, guaranteed trophies without guaranteed essences, earned crafting/stock gates, catch-up caps and durable extraction/loss reports. Typecheck, lint and Android/iOS/web exports pass. Actual UI/device checks and human playtesting remain deferred by the user.
+
+The 200-seed benchmark now prepares earned recipes, faction deliveries, found gear and affordable upgraded equipment through ordinary town actions. It grants no resources and still navigates using visible information. It completes 199 campaigns within twelve expeditions, with zero stalls, first-expedition median Floor 4 and completed-campaign median five expeditions. Mean battle length 6.03 rounds; fallen-character events 1,446; unfed checks 0; median mastery 173.5; loot Continue actions 4,362; binding actions 2,169; story choices 6,905; generic appearances 2,930; repetition violations 0; treatment cost 156,200 gold and 3,558 injured-character recovery days. One campaign remains incomplete at the cap. This comparison includes a stronger preparation policy, so the improvement cannot be attributed entirely to changed powers. Report: `verification/master-m6-campaign.json`.
+
 ## Remaining sequence
 
-6. Build/equipment synergy, crafting progression, extraction reports and modest optional goals.
 7. Production art, audio, accessibility, performance and platform verification.
 
 Each milestone requires its own automated, simulation, UI and persistence gate and a reviewable checkpoint. No later milestone is represented as implemented by the critical-fix foundation.

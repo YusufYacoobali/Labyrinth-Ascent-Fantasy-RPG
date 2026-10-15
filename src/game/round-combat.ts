@@ -1,3 +1,4 @@
+import { guardBuild, skillCost } from "./build-equipment";
 import { resolveEnemySupport } from "./enemy-support";
 import { directedEncounter } from "./encounter-director";
 import { ECOSYSTEMS, ECOSYSTEM_GROUPS } from "./ecosystem-moves";
@@ -127,7 +128,9 @@ export function initiative(s: Game, actions: QueuedAction[] = []) {
             (q) =>
               q.actor === c.id &&
               q.kind === "skill" &&
-              ["Twin Strike", "Sling Shot"].includes(q.skill || ""),
+              ["Twin Strike", "Sling Shot"].includes(
+                skillFamily(q.skill) || "",
+              ),
           )
             ? B.goblins.fastSkillSpeed
             : 0),
@@ -463,7 +466,7 @@ export function validateQueue(s: Game, a: RoundRequest): string {
         !spec ||
         spec.passive ||
         !actor.skills.includes(spec.name) ||
-        actor.mp < spec.cost ||
+        actor.mp < skillCost(actor, spec.name, spec.cost) ||
         (actor.cooldowns[spec.name] || 0) > 0
       )
         return "A queued skill is unavailable.";
@@ -546,6 +549,56 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
       enemies: next.combat!.enemies.map((e) => ({ ...e })),
       effects: { ...next.effects },
     });
+  };
+  const emberReturn = (targetId: string, enemyId: string, hit: number) => {
+    const target = next.party.find((c) => c.id === targetId),
+      foe = next.combat!.enemies.find((e) => e.id === enemyId);
+    if (
+      !target ||
+      !foe ||
+      target.hp <= 0 ||
+      foe.hp <= 0 ||
+      hit <= 0 ||
+      !target.skills.includes("Ember Ward")
+    )
+      return;
+    const prior = next,
+      rank = skillRank(target, "Ember Ward"),
+      amount = Math.max(
+        1,
+        Math.round(
+          (6 + target.level * 2) *
+            (1 + (rank - 1) * 0.1) *
+            (target.equipment.includes("ember-focus") ? 1.2 : 1) *
+            (1 - (foe.resistances?.fire || 0) / 100),
+        ),
+      );
+    const reflected = { ...foe, hp: Math.max(0, foe.hp - amount) };
+    next = {
+      ...next,
+      enemy: reflected,
+      combat: {
+        ...next.combat!,
+        enemies: next.combat!.enemies.map((e) =>
+          e.id === enemyId ? reflected : e,
+        ),
+      },
+      effects: {
+        ...next.effects,
+        damage: amount,
+        enemyDamage: 0,
+        targets: {},
+        strikes: {},
+        retaliation: { [targetId]: amount },
+      },
+    };
+    next = earnMastery(next, { ...prior, enemy: foe }, foe.id);
+    emit(
+      targetId,
+      enemyId,
+      `${target.name}'s Ember Ward returns ${amount} fire damage to ${foe.name}.`,
+      "retaliate",
+    );
   };
   const intents = Object.fromEntries(
     combat.enemies
@@ -767,6 +820,12 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
             ...next.effects,
             id: next.effects.id + 1,
             enemyDamage: hit,
+            protectionSkill: target.ailments.candleOwner
+              ? {
+                  [target.ailments.candleOwner]:
+                    target.ailments.guardPower || "Candle Ward",
+                }
+              : {},
             protection:
               barrier > 0 && target.ailments.candleOwner
                 ? {
@@ -788,14 +847,25 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
           `${enemy.name} → ${target.name}: ${hit} ${enemy.element} damage${guards.has(id) ? " (guarded)" : ""}${protector ? ` (${protector.name} offers bonded protection)` : ""}.`,
           "strike",
         );
+        emberReturn(target.id, enemy.id, hit);
       }
       enemy.charged = false;
       enemy.weakened = 0;
-      if (intent.move)
-        enemy.usedMoves = {
-          ...enemy.usedMoves,
-          [intent.move]: (enemy.usedMoves?.[intent.move] || 0) + 1,
-        };
+      next.combat!.enemies = next.combat!.enemies.map((e) =>
+        e.id === enemy.id
+          ? {
+              ...e,
+              charged: false,
+              weakened: 0,
+              usedMoves: intent.move
+                ? {
+                    ...e.usedMoves,
+                    [intent.move]: (e.usedMoves?.[intent.move] || 0) + 1,
+                  }
+                : e.usedMoves,
+            }
+          : e,
+      );
       continue;
     }
     const actor = next.party.find((c) => c.id === entry.id)!;
@@ -828,6 +898,25 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
           target.ailments.barrier =
             B.goblins.wardBarrier[skillRank(actor, "Candle Ward") - 1];
           target.ailments.candleOwner = actor.id;
+          target.ailments.guardPower = "Candle Ward";
+        }
+        if (actor.skills.includes("Inspiring Presence")) {
+          const barrier =
+            8 +
+            (skillRank(actor, "Inspiring Presence") - 1) * 2 +
+            guardBuild(actor);
+          if (barrier > (target.ailments.barrier || 0)) {
+            target.ailments.barrier = barrier;
+            target.ailments.candleOwner = actor.id;
+            target.ailments.guardPower = "Inspiring Presence";
+          }
+        } else if (
+          guardBuild(actor) > 0 &&
+          (target.ailments.barrier || 0) < guardBuild(actor)
+        ) {
+          target.ailments.barrier = guardBuild(actor);
+          target.ailments.candleOwner = undefined;
+          target.ailments.guardPower = undefined;
         }
         guards.add(target.id);
         next.momentum = Math.min(3, next.momentum + 1);
@@ -936,6 +1025,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
     }
     const draw = nextRandom(next.rng.combat);
     next = { ...next, rng: { ...next.rng, combat: draw.seed }, enemy: foe };
+    const strikeState = next;
     next = resolveBattle(
       next,
       {
@@ -977,6 +1067,74 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
         e.id === foe.id ? { ...e, ...next.enemy } : e,
       ),
     };
+    if (q.kind === "skill" && q.skill === "Crown Pulse") {
+      for (const other of next.combat!.enemies.filter(
+        (e) => e.hp > 0 && e.id !== foe.id,
+      )) {
+        const result = resolveBattle(
+          {
+            ...next,
+            trial: true,
+            enemy: other,
+            party: strikeState.party.map((c) =>
+              c.id === actor.id
+                ? {
+                    ...c,
+                    mp: actor.mp,
+                    cooldowns: { ...c.cooldowns, [q.skill!]: 0 },
+                  }
+                : c,
+            ),
+          },
+          {
+            type: "BATTLE",
+            kind: "skill",
+            actor: actor.id,
+            skill: q.skill,
+            roll: draw.roll,
+          },
+          (state) => state,
+          true,
+        );
+        const link = covers.get(other.id),
+          standing: CombatEnemy | undefined =
+            link &&
+            next.combat!.enemies.find(
+              (e) =>
+                e.id === link.protector &&
+                e.hp > 0 &&
+                !e.broken &&
+                !e.paralysis,
+            ),
+          hpDamage = result.effects.damage - (result.effects.absorbed || 0),
+          prevented: number =
+            link && standing ? Math.round(hpDamage * link.fraction) : 0;
+        const resolved: CombatEnemy = {
+          ...other,
+          ...result.enemy!,
+          hp: Math.max(0, result.enemy!.hp + prevented),
+        };
+        next.combat = {
+          ...next.combat!,
+          enemies: next.combat!.enemies.map((e) =>
+            e.id === other.id ? resolved : e,
+          ),
+        };
+        const effects = next.effects;
+        next.effects = {
+          ...result.effects,
+          damage: result.effects.damage - prevented,
+        };
+        emit(
+          actor.id,
+          other.id,
+          `${actor.name}: Crown Pulse → ${other.name}, ${next.effects.damage} damage.`,
+          "skill",
+          q,
+        );
+        next.effects = effects;
+      }
+    }
     const used = next.party.find((c) => c.id === actor.id)!;
     used.exhaustion = Math.min(
       100,
@@ -1086,6 +1244,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
         `${reacting.name} retaliates: ${hit} ${reacting.counter.element} damage to ${victim.name}.`,
         "strike",
       );
+      emberReturn(victim.id, reacting.id, hit);
     }
   }
   // Status durations and cooldowns advance exactly once after the complete initiative queue.

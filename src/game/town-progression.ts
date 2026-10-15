@@ -2,12 +2,15 @@ import type { Character, Game } from "./engine";
 import { BALANCE as B } from "./balance";
 export const trainingLimit = (bestFloor: number) =>
   Math.max(B.trainingInitialCap, bestFloor + B.trainingFloorAllowance);
-export function trainingXp(c: Character, bestFloor: number) {
+export function trainingXp(c: Character, bestFloor: number, partyLevel = 0) {
   const cap = trainingLimit(bestFloor);
   if (c.level >= cap) return 0;
   let needed = -c.xp;
   for (let level = c.level; level < cap; level++) needed += level * 70;
-  return Math.max(0, Math.min(B.trainingXp, needed));
+  return Math.max(
+    0,
+    Math.min(B.trainingXp * (partyLevel - c.level >= 2 ? 2 : 1), needed),
+  );
 }
 export function temperingOffer(s: Game, c: Character) {
   const tier = B.tempering[c.gear];
