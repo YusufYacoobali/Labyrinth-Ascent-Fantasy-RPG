@@ -55,7 +55,7 @@ export const FLOORS = [
     intent: "Quick slash",
     event: "camp",
     intro:
-      "The first floor still smells of the world above. After battle, find somewhere to sleep.",
+      "Goblin scouts signal with horns; interrupt their call before reinforcements arrive. Shieldbearers protect weaker goblins, while slingers hunt the wounded. Find a sanctuary before fatigue builds.",
   },
   {
     id: 2,

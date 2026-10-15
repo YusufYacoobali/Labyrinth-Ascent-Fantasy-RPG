@@ -110,6 +110,8 @@ export type Skill =
   | "Venom Fang"
   | "Nerve Lock"
   | "Twin Strike"
+  | "Candle Ward"
+  | "Sling Shot"
   | "Ember Ward"
   | "Winter Veil"
   | "Toxic Adaptation"
@@ -122,6 +124,7 @@ export interface Ailments {
   paralysis: number;
   ward?: number;
   barrier?: number;
+  candleOwner?: string;
 }
 export interface Character {
   id: string;
@@ -187,6 +190,7 @@ export interface Rapport {
   reply: string;
 }
 export interface BattleEffect {
+  protection?: Record<string, number>;
   id: number;
   damage: number;
   enemyDamage: number;
@@ -894,7 +898,15 @@ function battleWon(
   potions: number,
   inventory: Record<string, number>,
 ): Game {
-  const defeated = s.combat?.enemies || [enemy];
+  const defeated = s.combat
+    ? [
+        ...new Map(
+          [...(s.combat.defeated || []), ...s.combat.enemies]
+            .filter((foe) => foe.hp <= 0)
+            .map((foe) => [foe.id, foe]),
+        ).values(),
+      ]
+    : [enemy];
   const spec = monsterFor(enemy, s.floor);
   let seed = s.rng.loot,
     gold = 0,
@@ -960,7 +972,9 @@ function battleWon(
         net,
         items,
         enemies: defeated.map((foe, i) => ({
-          id: `${s.combat?.id || "battle"}:${i}`,
+          id:
+            (foe as import("./round-combat").CombatEnemy).id ||
+            `${s.combat?.id || "battle"}:${i}`,
           species: foe.species || spec.id,
           name: foe.name,
         })),

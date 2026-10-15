@@ -51,9 +51,15 @@ export default function TacticalCombat() {
     if (
       !frame ||
       !playback ||
-      ["round", "phase", "cancel", "charge", "interrupt", "recover"].includes(
-        frame.kind,
-      )
+      [
+        "round",
+        "phase",
+        "cancel",
+        "charge",
+        "interrupt",
+        "recover",
+        "summon",
+      ].includes(frame.kind)
     )
       return null;
     const previous = playback.events[cursor - 1],
@@ -151,7 +157,7 @@ export default function TacticalCombat() {
       </Eyebrow>
       <Copy muted style={{ fontSize: 12 }}>
         Initiative:{" "}
-        {initiative(source)
+        {initiative(source, Object.values(queue))
           .map((c) => `${c.name} (${Math.round(c.speed)})`)
           .join(" → ")}
       </Copy>
@@ -199,7 +205,9 @@ export default function TacticalCombat() {
                   ? " → " +
                     enemyIntent(source, enemy)
                       .targets.map(
-                        (id) => source.party.find((c) => c.id === id)?.name,
+                        (id) =>
+                          source.party.find((c) => c.id === id)?.name ||
+                          enemies.find((e) => e.id === id)?.name,
                       )
                       .join(", ")
                   : ""}

@@ -213,6 +213,8 @@ export function earnMastery(
       }
       if (old.hp > 0)
         for (const key of old.skills) {
+          if (key === "Candle Ward" && (s.effects.protection?.[c.id] || 0) > 0)
+            add(key, 1);
           if (
             key === "Inspiring Presence" &&
             Object.values(s.effects.strikes || {}).some(

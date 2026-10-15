@@ -13,6 +13,26 @@ export const SKILLS: {
   color: string;
 }[] = [
   {
+    id: SKILL_IDS["Candle Ward"],
+    name: "Candle Ward",
+    icon: "shield",
+    description:
+      "Passive: Guard adds a 6 HP barrier to the guarded ally. Earn mastery when its barrier absorbs a hit.",
+    cost: 0,
+    passive: true,
+    color: "#e4bc6b",
+  },
+  {
+    id: SKILL_IDS["Sling Shot"],
+    name: "Sling Shot",
+    icon: "bullseye-arrow",
+    description:
+      "Fast shot (+4 initiative): 1.1× damage, ignoring half armor; 16 break; weakens the next strike by 10%.",
+    cost: 10,
+    cooldown: 1,
+    color: "#ed8e72",
+  },
+  {
     id: SKILL_IDS["Arcane Bolt"],
     name: "Arcane Bolt",
     icon: "creation",
@@ -53,7 +73,8 @@ export const SKILLS: {
     id: SKILL_IDS["Twin Strike"],
     name: "Twin Strike",
     icon: "sword-cross",
-    description: "Double caster damage; 22 break.",
+    description:
+      "Fast follow-up (+4 initiative): double caster damage, 22 break and 25% interrupt chance (bosses: 10%).",
     cost: 16,
     cooldown: 1,
     color: "#ed8e72",
@@ -150,44 +171,52 @@ export const SKILL_RANKS = Object.fromEntries(
     s.name,
     [
       s.description,
-      s.passive
-        ? s.name === "Inspiring Presence"
-          ? "Party attack +17%; restore 1 MP to each attacker."
-          : s.name === "Winter Veil"
-            ? "35% frost resistance and freeze immunity; recover 5 HP after a frost hit."
-            : s.name === "Ember Ward"
-              ? "35% fire resistance and heat-shock immunity; recover 5 HP after a fire hit."
-              : s.name === "Grave Guard"
-                ? "20% physical resistance and stagger immunity; recover 5 HP after a physical hit."
-                : "Resistance +5 points; recover 5 HP after a matching hit."
-        : s.name === "Second Wind" || s.name === "Crown Pulse"
-          ? "10% greater potency; cleanse party poison."
-          : s.name === "Scavenge"
-            ? "10% greater damage and healing; cleanse the caster's poison."
-            : s.name === "Shield Bash" || s.name === "Nerve Lock"
-              ? "10% greater damage; weaken the next enemy strike by 10% and slow by 2 speed for two rounds."
-              : s.name === "Venom Fang"
-                ? "10% greater damage and poison; +10 break damage."
-                : "10% greater damage; +10 break damage.",
-      s.passive
-        ? s.name === "Inspiring Presence"
-          ? "Party attack +19%; restore 2 MP and 2 HP to each attacker."
-          : s.name === "Winter Veil"
-            ? "40% frost resistance and freeze immunity; recover 5 HP and 3 MP after a frost hit."
-            : s.name === "Ember Ward"
-              ? "40% fire resistance and heat-shock immunity; recover 5 HP and 3 MP after a fire hit."
-              : s.name === "Grave Guard"
-                ? "25% physical resistance and stagger immunity; recover 5 HP and 3 MP after a physical hit."
-                : "Resistance +10 points; recover 5 HP and 3 MP after a matching hit."
-        : s.name === "Second Wind" || s.name === "Crown Pulse"
-          ? "20% greater potency; cleanse poison and grant a 10% max-HP barrier."
-          : s.name === "Scavenge"
-            ? "20% greater damage and healing; cleanse poison and grant a 10% max-HP barrier."
-            : s.name === "Shield Bash" || s.name === "Nerve Lock"
-              ? "20% greater damage; weaken the next strike by 20%, slow by 3 speed for two rounds and add 10 break."
-              : s.name === "Venom Fang"
-                ? "20% greater damage and poison; +20 break and expose the enemy for +10% damage for two turns."
-                : "20% greater damage; +20 break and expose the enemy for +10% damage for two turns.",
+      s.name === "Candle Ward"
+        ? "Guard grants a 10 HP barrier and protects against physical stagger for the round."
+        : s.name === "Sling Shot"
+          ? "10% greater damage, 26 break and 15% weakening."
+          : s.passive
+            ? s.name === "Inspiring Presence"
+              ? "Party attack +17%; restore 1 MP to each attacker."
+              : s.name === "Winter Veil"
+                ? "35% frost resistance and freeze immunity; recover 5 HP after a frost hit."
+                : s.name === "Ember Ward"
+                  ? "35% fire resistance and heat-shock immunity; recover 5 HP after a fire hit."
+                  : s.name === "Grave Guard"
+                    ? "20% physical resistance and stagger immunity; recover 5 HP after a physical hit."
+                    : "Resistance +5 points; recover 5 HP after a matching hit."
+            : s.name === "Second Wind" || s.name === "Crown Pulse"
+              ? "10% greater potency; cleanse party poison."
+              : s.name === "Scavenge"
+                ? "10% greater damage and healing; cleanse the caster's poison."
+                : s.name === "Shield Bash" || s.name === "Nerve Lock"
+                  ? "10% greater damage; weaken the next enemy strike by 10% and slow by 2 speed for two rounds."
+                  : s.name === "Venom Fang"
+                    ? "10% greater damage and poison; +10 break damage."
+                    : "10% greater damage; +10 break damage.",
+      s.name === "Candle Ward"
+        ? "Guard grants a 14 HP barrier and protects against physical stagger for the round."
+        : s.name === "Sling Shot"
+          ? "20% greater damage, 36 break, 20% weakening and two-turn vulnerability."
+          : s.passive
+            ? s.name === "Inspiring Presence"
+              ? "Party attack +19%; restore 2 MP and 2 HP to each attacker."
+              : s.name === "Winter Veil"
+                ? "40% frost resistance and freeze immunity; recover 5 HP and 3 MP after a frost hit."
+                : s.name === "Ember Ward"
+                  ? "40% fire resistance and heat-shock immunity; recover 5 HP and 3 MP after a fire hit."
+                  : s.name === "Grave Guard"
+                    ? "25% physical resistance and stagger immunity; recover 5 HP and 3 MP after a physical hit."
+                    : "Resistance +10 points; recover 5 HP and 3 MP after a matching hit."
+            : s.name === "Second Wind" || s.name === "Crown Pulse"
+              ? "20% greater potency; cleanse poison and grant a 10% max-HP barrier."
+              : s.name === "Scavenge"
+                ? "20% greater damage and healing; cleanse poison and grant a 10% max-HP barrier."
+                : s.name === "Shield Bash" || s.name === "Nerve Lock"
+                  ? "20% greater damage; weaken the next strike by 20%, slow by 3 speed for two rounds and add 10 break."
+                  : s.name === "Venom Fang"
+                    ? "20% greater damage and poison; +20 break and expose the enemy for +10% damage for two turns."
+                    : "20% greater damage; +20 break and expose the enemy for +10% damage for two turns.",
     ],
   ]),
 ) as Record<Skill, [string, string, string]>;

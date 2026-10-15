@@ -169,6 +169,45 @@ export const RECRUITS: Recruit[] = [
 
 export const TOWN_ITEMS: Item[] = [
   {
+    id: "goblin-trophy",
+    name: "Goblin trophy",
+    icon: "shield",
+    kind: "loot",
+    quality: "common",
+    price: 0,
+    sell: 18,
+    vendor: "guild",
+    description:
+      "A verified goblin token. Craft lightweight Candle Hollows equipment or sell it to the Guild.",
+  },
+  {
+    id: "candle-buckler",
+    name: "Candle buckler",
+    icon: "shield",
+    kind: "charm",
+    quality: "fine",
+    price: 160,
+    sell: 40,
+    vendor: "emporium",
+    def: 4,
+    hp: 12,
+    description:
+      "A lightweight goblin shield reworked for a companion. +4 DEF and +12 HP.",
+  },
+  {
+    id: "candle-sling",
+    name: "Candle sling",
+    icon: "bullseye-arrow",
+    kind: "weapon",
+    quality: "fine",
+    price: 170,
+    sell: 45,
+    vendor: "emporium",
+    atk: 5,
+    speed: 2,
+    description: "Balanced goblin cord and stone. +5 ATK and +2 speed.",
+  },
+  {
     id: "scout-dagger",
     name: "Scout’s dagger",
     icon: "sword",
@@ -387,6 +426,18 @@ export interface Recipe {
   essence?: string;
 }
 export const RECIPES: Recipe[] = [
+  {
+    id: "candle-buckler",
+    gold: 70,
+    materials: [{ id: "goblin-trophy", quantity: 2 }],
+    essence: "goblin-shieldbearer",
+  },
+  {
+    id: "candle-sling",
+    gold: 80,
+    materials: [{ id: "goblin-trophy", quantity: 2 }],
+    essence: "goblin-slinger",
+  },
   {
     id: "iron-helm",
     gold: 60,

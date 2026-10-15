@@ -167,6 +167,30 @@ export const MONSTERS: MonsterSpec[] = [
     essenceValue: 40,
   },
 ];
+MONSTERS.push(
+  {
+    id: "goblin-shieldbearer",
+    name: "Goblin Shieldbearer",
+    visual: "roadkeeper",
+    skill: "Candle Ward",
+    gold: 30,
+    xp: 14,
+    material: "goblin-trophy",
+    quantity: 1,
+    essenceValue: 35,
+  },
+  {
+    id: "goblin-slinger",
+    name: "Goblin Slinger",
+    visual: "plunderer",
+    skill: "Sling Shot",
+    gold: 25,
+    xp: 12,
+    material: "goblin-trophy",
+    quantity: 1,
+    essenceValue: 35,
+  },
+);
 // Route families reuse the established artwork while owning rewards and signature essences.
 for (const [route, regular, elite, guardian, visual, skill, material] of [
   [

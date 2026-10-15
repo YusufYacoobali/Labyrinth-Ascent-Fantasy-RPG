@@ -48,7 +48,7 @@ function fight(floor = 1, species = "goblin") {
 test("Every registered species has an authored profile independent of floor and group index", () => {
   for (const species of m.MONSTERS)
     assert.ok(behavior.SPECIES_BEHAVIOR[species.id], species.id);
-  const low = fight(1).combat.enemies[0],
+  const low = fight(1).combat.enemies.find((e) => e.species === "goblin"),
     high = fight(8).combat.enemies[0];
   assert.equal(low.speed, high.speed);
   assert.equal(low.archetype, high.archetype);

@@ -272,9 +272,11 @@ export function resolveBattle(
                     ? 1.45
                     : skill === "Crown Pulse"
                       ? 1.35
-                      : skill === "Scavenge"
-                        ? 0.85
-                        : 1
+                      : skill === "Sling Shot"
+                        ? 1.1
+                        : skill === "Scavenge"
+                          ? 0.85
+                          : 1
         : a.kind === "burst"
           ? 1.35
           : a.kind === "focus"
@@ -301,6 +303,7 @@ export function resolveBattle(
         enemy.broken > 0 || (cast && skill === "Arcane Bolt")
           ? 0
           : enemy.guard *
+            (cast && skill === "Sling Shot" ? 0.5 : 1) *
             (c.traitRevealed && c.trait === "Moon Sight" ? 0.5 : 1);
       const hit =
         mult > 0
@@ -336,6 +339,7 @@ export function resolveBattle(
         enemy.slowTurns = 3;
       }
       if (skill === "Sunder") enemy.weakened = 0.1 + (rank - 1) * 0.05;
+      if (skill === "Sling Shot") enemy.weakened = 0.1 + (rank - 1) * 0.05;
       if (
         rank === 3 &&
         ![
@@ -350,7 +354,8 @@ export function resolveBattle(
       const interrupt =
         enemy.controlWard === 0 &&
         ((skill === "Nerve Lock" && (enemy.boss ? roll < 0.5 : true)) ||
-          (skill === "Shield Bash" && roll < (enemy.boss ? 0.3 : 0.55)));
+          (skill === "Shield Bash" && roll < (enemy.boss ? 0.3 : 0.55)) ||
+          (skill === "Twin Strike" && roll < (enemy.boss ? 0.1 : 0.25)));
       if (interrupt) enemy.paralysis = 1;
       return {
         ...c,
@@ -380,6 +385,7 @@ export function resolveBattle(
                 poison: rank >= 2 ? 0 : c.ailments.poison,
                 barrier:
                   rank === 3 ? Math.round(c.maxHp * 0.1) : c.ailments.barrier,
+                candleOwner: rank === 3 ? undefined : c.ailments.candleOwner,
               },
             }
           : c,
@@ -396,6 +402,7 @@ export function resolveBattle(
                 poison: rank >= 2 ? 0 : c.ailments.poison,
                 barrier:
                   rank === 3 ? Math.round(c.maxHp * 0.1) : c.ailments.barrier,
+                candleOwner: rank === 3 ? undefined : c.ailments.candleOwner,
               },
             },
       );
@@ -420,9 +427,11 @@ export function resolveBattle(
                         ? 35
                         : skill === "Crown Pulse"
                           ? 15
-                          : skill === "Scavenge"
-                            ? 8
-                            : 0;
+                          : skill === "Sling Shot"
+                            ? 16
+                            : skill === "Scavenge"
+                              ? 8
+                              : 0;
     if (
       a.kind === "skill" &&
       !["Second Wind", "Crown Pulse", "Scavenge"].includes(skill!)

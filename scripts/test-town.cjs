@@ -281,6 +281,7 @@ test("Negotiated loot shares pay actual gold finds and never charge town work or
   });
   s = reduce(s, { type: "ENGAGE" });
   s = { ...s, enemy: { ...s.enemy, hp: 1 } };
+  s.enemy.species = "goblin";
   const before = s.gold;
   s = reduce(s, { type: "BATTLE", kind: "attack", roll: 0.5 });
   assert.equal(s.runGross, 65);

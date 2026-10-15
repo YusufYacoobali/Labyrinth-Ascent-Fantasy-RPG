@@ -7,6 +7,8 @@ export const SKILL_IDS = {
   "Venom Fang": "venom-fang",
   "Nerve Lock": "nerve-lock",
   "Twin Strike": "twin-strike",
+  "Candle Ward": "candle-ward",
+  "Sling Shot": "sling-shot",
   "Ember Ward": "ember-ward",
   "Winter Veil": "winter-veil",
   "Toxic Adaptation": "toxic-adaptation",

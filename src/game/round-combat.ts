@@ -1,4 +1,6 @@
 import { bondedProtector } from "./relationships";
+import { goblinGroup } from "./goblin-ecosystem";
+import type { EnemyIntent } from "./monster-behavior";
 import {
   MIXED_GROUPS,
   SPECIES_BEHAVIOR,
@@ -26,6 +28,7 @@ export interface CombatEnemy extends Enemy {
   speed: number;
   archetype: Archetype;
   stage: number;
+  waves?: number;
 }
 export interface CombatState {
   id: string;
@@ -35,6 +38,8 @@ export interface CombatState {
   defender: boolean;
   resume: "exploration" | "camp";
   complete: boolean;
+  defeated?: CombatEnemy[];
+  spawned?: number;
   preparation?: {
     choice: string;
     outcome: string;
@@ -72,14 +77,23 @@ export const effectiveSpeed = (c: Character) =>
   Math.max(1, c.speed * fatigueMultiplier(c));
 export const enemySpeed = (e: CombatEnemy) =>
   Math.max(1, e.speed - (e.slowed || 0));
-export function initiative(s: Game) {
+export function initiative(s: Game, actions: QueuedAction[] = []) {
   return [
     ...s.party
       .filter((c) => c.hp > 0)
       .map((c) => ({
         id: c.id,
         name: c.name,
-        speed: effectiveSpeed(c),
+        speed:
+          effectiveSpeed(c) +
+          (actions.some(
+            (q) =>
+              q.actor === c.id &&
+              q.kind === "skill" &&
+              ["Twin Strike", "Sling Shot"].includes(q.skill || ""),
+          )
+            ? B.goblins.fastSkillSpeed
+            : 0),
         enemy: false,
       })),
     ...(s.combat?.enemies || [])
@@ -146,54 +160,70 @@ export function beginCombat(
         : s.floor <= 7
           ? 2
           : 3;
-  const enemies = Array.from({ length: count }, (_, index): CombatEnemy => {
-    const original = s.enemy!,
-      primary = monsterFor(original, s.floor);
-    const group = MIXED_GROUPS[primary.id] || [primary.id];
-    const species =
-      original.boss || index === 0
-        ? primary
-        : MONSTERS.find((m) => m.id === group[index % group.length]) || primary;
-    const profile = SPECIES_BEHAVIOR[species.id];
-    const base =
-      index === 0
-        ? original
-        : {
-            ...original,
-            species: species.id,
-            name: species.name,
-            element: profile?.element || original.element,
-          };
-    const hp = Math.round(
-      (base.boss
-        ? B.bossHp[0] + s.floor * B.bossHp[1]
-        : B.normalHp[0] + s.floor * B.normalHp[1]) *
-        (1 + B.partyHpScale * (s.party.length - 1)) *
-        (s.journey.defender && !base.boss ? 1.2 : 1),
-    );
-    return {
-      ...base,
-      id: `${id}:enemy-${index + 1}`,
-      name: base.name,
-      behaviorId: species.id,
-      hp,
-      maxHp: hp,
-      atk: Math.round(
-        base.boss
-          ? B.bossAttack[0] + s.floor * B.bossAttack[1]
-          : B.enemyAttack[0] + s.floor * B.enemyAttack[1],
-      ),
-      level: s.floor,
-      speed: profile?.speed || 10,
-      archetype: profile?.role || "skirmisher",
-      stage: 0,
-      poison: 0,
-      paralysis: 0,
-      broken: 0,
-      controlWard: 0,
-      charged: false,
-    };
-  });
+  const goblins =
+    s.floor === 1 && monsterFor(s.enemy, s.floor).id === "goblin"
+      ? goblinGroup(draw.roll, s.journey.defender)
+      : null;
+  const enemies = Array.from(
+    { length: goblins?.length || count },
+    (_, index): CombatEnemy => {
+      const original = s.enemy!,
+        primary = monsterFor(original, s.floor);
+      const group = MIXED_GROUPS[primary.id] || [primary.id];
+      const species = goblins
+        ? MONSTERS.find((m) => m.id === goblins[index])!
+        : original.boss || index === 0
+          ? primary
+          : MONSTERS.find((m) => m.id === group[index % group.length]) ||
+            primary;
+      const profile = SPECIES_BEHAVIOR[species.id];
+      const base =
+        index === 0 && !goblins
+          ? original
+          : {
+              ...original,
+              species: species.id,
+              name: species.name,
+              element: profile?.element || original.element,
+            };
+      const hp = Math.round(
+        (base.boss
+          ? B.bossHp[0] + s.floor * B.bossHp[1]
+          : B.normalHp[0] + s.floor * B.normalHp[1]) *
+          (1 + B.partyHpScale * (s.party.length - 1)) *
+          (s.journey.defender && !base.boss ? 1.2 : 1),
+      );
+      return {
+        ...base,
+        id: `${id}:enemy-${index + 1}`,
+        name: base.name,
+        behaviorId: species.id,
+        hp: Math.round(
+          hp * (goblins && species.id !== "goblin" ? B.goblins.minionHp : 1),
+        ),
+        maxHp: Math.round(
+          hp * (goblins && species.id !== "goblin" ? B.goblins.minionHp : 1),
+        ),
+        atk: Math.round(
+          base.boss
+            ? B.bossAttack[0] + s.floor * B.bossAttack[1]
+            : (B.enemyAttack[0] + s.floor * B.enemyAttack[1]) *
+                (goblins && species.id !== "goblin"
+                  ? B.goblins.minionAttack
+                  : 1),
+        ),
+        level: s.floor,
+        speed: profile?.speed || 10,
+        archetype: profile?.role || "skirmisher",
+        stage: 0,
+        poison: 0,
+        paralysis: 0,
+        broken: 0,
+        controlWard: 0,
+        charged: false,
+      };
+    },
+  );
   const combat: CombatState = {
     id,
     enemies,
@@ -217,7 +247,7 @@ export function beginCombat(
     },
   };
 }
-export function enemyIntent(s: Game, e: CombatEnemy) {
+export function enemyIntent(s: Game, e: CombatEnemy): EnemyIntent {
   const authored = speciesIntent(s, e);
   if (authored) return authored;
   const alive = s.party.filter((c) => c.hp > 0),
@@ -411,7 +441,8 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
       .filter((e) => e.hp > 0)
       .map((e) => [e.id, enemyIntent(s, e)]),
   );
-  for (const entry of initiative(s)) {
+  const covers = new Map<string, { protector: string; fraction: number }>();
+  for (const entry of initiative(s, a.actions)) {
     if (
       next.party.every((c) => c.hp <= 0) ||
       next.combat!.enemies.every((e) => e.hp <= 0)
@@ -436,7 +467,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
     };
     if (entry.enemy) {
       const enemy = next.combat!.enemies.find((e) => e.id === entry.id)!;
-      if (enemy.hp <= 0) continue;
+      if (!enemy || enemy.hp <= 0) continue;
       if (enemy.broken || enemy.paralysis) {
         enemySkipped.add(enemy.id);
         enemy.controlWard = 3;
@@ -445,6 +476,88 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
         continue;
       }
       const intent = intents[enemy.id];
+      if (intent.kind === "summon") {
+        const species = MONSTERS.find((m) => m.id === intent.summon);
+        if (
+          species &&
+          (enemy.waves || 0) < (intent.limit || 0) &&
+          next.combat!.enemies.filter((e) => e.hp > 0).length < 3
+        ) {
+          const profile = SPECIES_BEHAVIOR[species.id],
+            spawned = (next.combat!.spawned || 0) + 1;
+          const hp = Math.round(
+            (B.normalHp[0] + s.floor * B.normalHp[1]) *
+              (1 + B.partyHpScale * (s.party.length - 1)) *
+              B.goblins.minionHp,
+          );
+          const reinforcement: CombatEnemy = {
+            ...enemy,
+            id: `${combat.id}:summon-${spawned}`,
+            species: species.id,
+            behaviorId: species.id,
+            name: species.name,
+            boss: false,
+            hp,
+            maxHp: hp,
+            atk: Math.round(
+              (B.enemyAttack[0] + s.floor * B.enemyAttack[1]) *
+                B.goblins.minionAttack,
+            ),
+            speed: profile.speed,
+            archetype: profile.role,
+            stage: 0,
+            poison: 0,
+            paralysis: 0,
+            broken: 0,
+            controlWard: 0,
+            charged: false,
+            guard: 0,
+            poise: 50,
+            maxPoise: 50,
+            waves: 0,
+          };
+          enemy.waves = (enemy.waves || 0) + 1;
+          const empty = next.combat!.enemies.findIndex((e) => e.hp <= 0);
+          if (empty >= 0) {
+            next.combat!.defeated = [
+              ...(next.combat!.defeated || []),
+              next.combat!.enemies[empty],
+            ];
+            next.combat!.enemies[empty] = reinforcement;
+          } else next.combat!.enemies.push(reinforcement);
+          next.combat!.spawned = spawned;
+          emit(
+            enemy.id,
+            reinforcement.id,
+            `${enemy.name} calls ${species.name}. This scout has no waves left. Reinforcements act next round.`,
+            "summon",
+          );
+        } else
+          emit(
+            enemy.id,
+            "",
+            `${enemy.name}'s call finds no room for reinforcements.`,
+            "cancel",
+          );
+        continue;
+      }
+      if (intent.kind === "cover") {
+        const ally = next.combat!.enemies.find(
+          (e) => e.id === intent.targets[0] && e.hp > 0,
+        );
+        if (ally)
+          covers.set(ally.id, {
+            protector: enemy.id,
+            fraction: intent.cover || 0,
+          });
+        emit(
+          enemy.id,
+          ally?.id || "",
+          `${enemy.name} protects ${ally?.name || "the empty passage"}.`,
+          "guard",
+        );
+        continue;
+      }
       if (intent.kind === "heal") {
         const target = [...next.combat!.enemies]
           .filter((e) => e.hp > 0)
@@ -525,6 +638,8 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
             barrier: Math.max(0, barrier - Math.round(raw)),
           },
         };
+        if (intent.slow && !guards.has(id) && !target.ailments.ward)
+          target.exhaustion = Math.min(100, target.exhaustion + intent.slow);
         const ward: Skill =
           enemy.element === "fire"
             ? "Ember Ward"
@@ -563,6 +678,16 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
             !(
               target.skills.includes(protection) &&
               skillRank(target, protection) >= 2
+            ) &&
+            !(
+              enemy.element === "physical" &&
+              guards.has(id) &&
+              next.party.some(
+                (c) =>
+                  c.id === target.ailments.candleOwner &&
+                  c.skills.includes("Candle Ward") &&
+                  skillRank(c, "Candle Ward") >= 2,
+              )
             )
           )
             target.ailments.paralysis = 1;
@@ -575,6 +700,15 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
             ...next.effects,
             id: next.effects.id + 1,
             enemyDamage: hit,
+            protection:
+              barrier > 0 && target.ailments.candleOwner
+                ? {
+                    [target.ailments.candleOwner]: Math.min(
+                      barrier,
+                      Math.round(raw),
+                    ),
+                  }
+                : {},
             damage: 0,
             targets: { [id]: hit },
             strikes: {},
@@ -612,6 +746,15 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
     const target = next.party.find((c) => c.id === q.target && c.hp > 0);
     if (q.kind === "guard") {
       if (target) {
+        if (
+          actor.skills.includes("Candle Ward") &&
+          (target.ailments.barrier || 0) <=
+            B.goblins.wardBarrier[skillRank(actor, "Candle Ward") - 1]
+        ) {
+          target.ailments.barrier =
+            B.goblins.wardBarrier[skillRank(actor, "Candle Ward") - 1];
+          target.ailments.candleOwner = actor.id;
+        }
         guards.add(target.id);
         next.momentum = Math.min(3, next.momentum + 1);
         emit(
@@ -726,6 +869,28 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
       (state) => state,
       true,
     );
+    const cover = covers.get(foe.id),
+      protector =
+        cover &&
+        next.combat!.enemies.find(
+          (e) =>
+            e.id === cover.protector && e.hp > 0 && !e.broken && !e.paralysis,
+        );
+    if (cover && protector && next.effects.damage > 0) {
+      const prevented = Math.min(
+        next.effects.damage,
+        Math.round(next.effects.damage * cover.fraction),
+      );
+      next.enemy = {
+        ...next.enemy!,
+        hp: Math.max(0, foe.hp - (next.effects.damage - prevented)),
+      };
+      next.effects = {
+        ...next.effects,
+        damage: next.effects.damage - prevented,
+        strikes: { [actor.id]: next.effects.damage - prevented },
+      };
+    }
     next.combat = {
       ...next.combat!,
       enemies: next.combat!.enemies.map((e) =>
@@ -778,7 +943,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
     };
   });
   next.combat!.enemies = next.combat!.enemies.map((e) => {
-    const original = combat.enemies.find((o) => o.id === e.id)!;
+    const original = combat.enemies.find((o) => o.id === e.id) || e;
     let hp = e.hp;
     if (hp > 0 && e.poison)
       hp = Math.max(

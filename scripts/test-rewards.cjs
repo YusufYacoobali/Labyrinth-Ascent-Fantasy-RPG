@@ -29,7 +29,11 @@ function battle(seed = 42) {
   s = act(s, { type: "MISSION", id: "survey" });
   s = { ...s, journey: { ...s.journey, defender: true, room: "portal" } };
   s = act(s, { type: "APPROACH", choice: "listen", roll: 0.5 });
-  return act(s, { type: "ENGAGE" });
+  s = act(s, { type: "ENGAGE" });
+  return {
+    ...s,
+    enemy: s.combat.enemies.find((e) => e.species === "goblin") || s.enemy,
+  };
 }
 const win = (s = battle()) =>
   act(
@@ -81,7 +85,7 @@ function extract(s) {
   );
 }
 test("Registry covers fourteen unique species and powers with real item and visual identities", () => {
-  assert.equal(m.MONSTERS.length, 26);
+  assert.equal(m.MONSTERS.length, 28);
   for (const key of ["id", "skill", "visual"])
     assert.equal(new Set(m.MONSTERS.slice(0, 14).map((x) => x[key])).size, 14);
   for (const spec of m.MONSTERS) {
@@ -604,7 +608,7 @@ test("Save skill identities round-trip libraries, mastery, provisional skills an
   assert.equal(
     new Set(require("./engine-loader.cjs").combatData.SKILLS.map((s) => s.id))
       .size,
-    14,
+    data.SKILLS.length,
   );
 });
 

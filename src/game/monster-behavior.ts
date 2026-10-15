@@ -1,6 +1,18 @@
 import type { Element } from "./world";
 import type { Game } from "./engine";
 import type { Archetype, CombatEnemy } from "./round-combat";
+import { goblinIntent } from "./goblin-ecosystem";
+
+export interface EnemyIntent {
+  kind: string;
+  label: string;
+  targets: string[];
+  power: number;
+  summon?: string;
+  limit?: number;
+  cover?: number;
+  slow?: number;
+}
 
 export interface SpeciesBehavior {
   role: Archetype;
@@ -29,6 +41,22 @@ const behavior = (
   phases,
 });
 export const SPECIES_BEHAVIOR: Record<string, SpeciesBehavior> = {
+  "goblin-shieldbearer": behavior(
+    "defender",
+    "physical",
+    20,
+    "Shield shove",
+    "Shield link",
+    "Brace the shield",
+  ),
+  "goblin-slinger": behavior(
+    "caster",
+    "physical",
+    12,
+    "Sling stone",
+    "Crippling pebble",
+    "Hide behind rubble",
+  ),
   goblin: behavior(
     "skirmisher",
     "physical",
@@ -269,7 +297,7 @@ export const MIXED_GROUPS: Record<string, string[]> = {
   "crypt-roamer": ["crypt-roamer", "crypt-elite"],
   "crypt-elite": ["crypt-elite", "crypt-roamer"],
 };
-export function speciesIntent(s: Game, e: CombatEnemy) {
+export function speciesIntent(s: Game, e: CombatEnemy): EnemyIntent | null {
   const profile = e.behaviorId ? SPECIES_BEHAVIOR[e.behaviorId] : undefined;
   if (!profile) return null; // Existing saved battles retain their accepted behavior until finished.
   const alive = s.party.filter((c) => c.hp > 0),
@@ -283,6 +311,8 @@ export function speciesIntent(s: Game, e: CombatEnemy) {
       : alive[(round + profile.speed) % Math.max(1, alive.length)];
   if (e.broken || e.paralysis)
     return { kind: "wait", label: "Interrupted", targets: [], power: 0 };
+  const goblin = goblinIntent(s, e);
+  if (goblin) return goblin;
   if (e.boss) {
     if (round % 3 === 1)
       return { kind: "charge", label: profile.defense, targets: [], power: 0 };
