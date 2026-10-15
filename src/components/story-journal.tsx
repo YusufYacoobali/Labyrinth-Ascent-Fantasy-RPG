@@ -63,6 +63,11 @@ export function CompanionRelationships({ id }: { id: string }) {
             {c.name} · {pairRelationship(state, id, c.id)}
           </Copy>
         ))}
+      <Copy muted style={{ fontSize: 12 }}>
+        Bonded companions reduce one incoming hit to their partner by 15% each
+        round while standing and unimpeded. Hostile pairs decline optional
+        cooperation in personal stories.
+      </Copy>
     </Panel>
   );
 }
@@ -107,6 +112,11 @@ export function StoryChronicle() {
         <Copy title>Faction standing</Copy>
         <Copy muted>
           Guild {state.faction.guild} · White Stag {state.faction.stag}
+        </Copy>
+        <Copy muted style={{ fontSize: 12 }}>
+          At 10 standing with the Guild, White Stag or your current route
+          faction, allies add one ration to each sanctuary cache. Caches
+          replenish next expedition.
         </Copy>
         {Object.entries(ROUTE_FACTIONS).map(([id, name]) => (
           <Copy key={id} muted style={{ fontSize: 12 }}>

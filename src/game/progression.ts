@@ -1,6 +1,31 @@
 import type { CombatState } from "./round-combat";
 import type { GenericRecord } from "./generic-stories";
+import { MONSTERS, essenceId } from "./monsters";
 import type { Action, Character, Game, Skill, LootReceipt } from "./engine";
+
+/** Binding always identifies the held species, even when several grant the same power. */
+export function essenceBindingOptions(s: Game, skill: Skill) {
+  return MONSTERS.filter((m) => m.skill === skill).flatMap((m) => {
+    const itemId = essenceId(m.id),
+      quantity = s.inventory[itemId] || 0;
+    const unsecured = Math.min(
+      quantity,
+      s.expedition.unsecured.inventory[itemId] || 0,
+    );
+    return quantity > 0
+      ? [
+          {
+            species: m.id,
+            itemId,
+            name: m.name,
+            quantity,
+            unsecured,
+            secured: quantity - unsecured,
+          },
+        ]
+      : [];
+  });
+}
 
 export const skillSlots = (level: number) =>
   Math.min(6, 2 + Math.floor(level / 3));

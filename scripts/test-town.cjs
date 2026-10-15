@@ -166,7 +166,7 @@ test("Town contracts track unique recruits, training, crafting and actual kills"
   s = reduce(s, { type: "TRAIN" });
   s = reduce(s, { type: "TRAIN" });
   s = reduce(s, { type: "TRAIN" });
-  assert.equal(e.questProgress(s, "ready-for-gate"), 3);
+  assert.equal(e.questProgress(s, "ready-for-gate"), 2);
   s = reduce(s, { type: "ACCEPT", id: "trusted-company" });
   const first = reduce(s, { type: "CLAIM", id: "trusted-company" });
   assert.equal(first.gold, s.gold + 180);

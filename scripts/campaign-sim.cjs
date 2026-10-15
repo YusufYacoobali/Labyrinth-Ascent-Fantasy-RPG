@@ -9,6 +9,7 @@ const {
   stories: quests,
   genericData: gd,
   monsters: m,
+  townProgression: tp,
 } = require("./engine-loader.cjs");
 const events = {
   1: "leave",
@@ -303,7 +304,11 @@ function campaign(seed = 1, maxExpeditions = 12) {
     let trained = 0;
     for (let d = 0; d < days; d++) {
       if (s.party.some((c) => c.hp < c.maxHp) && d === 0) act({ type: "REST" });
-      else if (trained < 6 && s.gold >= 60) {
+      else if (
+        trained < 6 &&
+        s.gold >= 60 &&
+        s.party.some((c) => tp.trainingXp(c, s.bestFloor) > 0)
+      ) {
         act({ type: "TRAIN" });
         trained++;
       } else act({ type: "WORK" });

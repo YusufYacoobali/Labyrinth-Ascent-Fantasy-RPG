@@ -25,6 +25,7 @@ function arena(size = 2, count = 2, floor = 1) {
   });
   for (const id of ["kael", "lyria", "bram"].slice(0, size - 1))
     s = e.reducer(s, { type: "RECRUIT", id });
+  s.journey.maps[1] = JSON.parse(JSON.stringify(require("./fixtures/floor-v2-6da6d25.json")));
   s = e.reducer({ ...s, day: 30, food: 30 }, { type: "ENTER" });
   s = {
     ...s,
@@ -46,6 +47,7 @@ function arena(size = 2, count = 2, floor = 1) {
       atk: 1,
       speed: 1,
       archetype: "skirmisher",
+      behaviorId: undefined,
       stage: 0,
     })),
   };

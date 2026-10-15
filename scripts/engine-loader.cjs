@@ -27,6 +27,10 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  behavior: load("src/game/monster-behavior.ts"),
+  relationships: load("src/game/relationships.ts"),
+  narration: load("src/game/room-narration.ts"),
+  townProgression: load("src/game/town-progression.ts"),
   skillIds: load("src/game/skill-ids.ts"),
   generic: load("src/game/generic-stories.ts"),
   genericData: load("src/game/generic-encounters.ts"),

@@ -90,20 +90,22 @@ export function characterVisual(
     return { key: "human-mage", style: "magic", color: "#99baff" };
   return players[character.portrait] || players[0];
 }
-/** Floor identity wins over the old reused atlas index. Side fights keep their own creature. */
+/** Explicit species wins over reused atlas indices and the surrounding floor. */
 export function enemyVisual(
   state: Pick<Game, "floor" | "enemy" | "sideBattle" | "journey">,
 ): CombatVisual {
-  if (state.enemy?.sprite === 20)
-    return { key: "bonegnaw", style: "melee", color: "#ccbb89" };
-  if (state.sideBattle || /plunderer/i.test(state.enemy?.name || ""))
-    return { key: "plunderer", style: "melee", color: "#9bd1ff" };
-  const species = FLOOR_VISUALS.find(
-    (v) =>
-      v.key ===
-      (MONSTERS.find((m) => m.id === state.enemy?.species)?.visual ||
-        state.enemy?.species),
-  );
+  const identity =
+    MONSTERS.find((m) => m.id === state.enemy?.species)?.visual ||
+    state.enemy?.species;
+  const species = FLOOR_VISUALS.find((v) => v.key === identity);
   if (species) return species;
+  if (identity === "bonegnaw" || (!identity && state.enemy?.sprite === 20))
+    return { key: "bonegnaw", style: "melee", color: "#ccbb89" };
+  if (
+    identity === "plunderer" ||
+    state.sideBattle ||
+    /plunderer/i.test(state.enemy?.name || "")
+  )
+    return { key: "plunderer", style: "melee", color: "#9bd1ff" };
   return FLOOR_VISUALS[Math.max(0, Math.min(11, state.floor - 1))];
 }

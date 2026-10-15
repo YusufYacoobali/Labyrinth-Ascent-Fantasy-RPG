@@ -1,3 +1,4 @@
+import { pairBond } from "./relationships";
 import { SOLO_SCENES } from "./companion-solo-scenes";
 import { BALANCE as B } from "./balance";
 import { reactionFor } from "./story-reactions";
@@ -68,7 +69,12 @@ export function presentStoryStage(s: Game, stage: StoryStage): StoryStage {
     stage.location === "town"
       ? [...s.party, ...s.reserve]
       : s.party.filter((c) => c.hp > 0);
-  if (!solo || !pair || pair.ids.every((id) => roster.some((c) => c.id === id)))
+  if (
+    !solo ||
+    !pair ||
+    (pair.ids.every((id) => roster.some((c) => c.id === id)) &&
+      pairBond(s, pair.ids[0], pair.ids[1]) > -2)
+  )
     return stage;
   return {
     ...stage,

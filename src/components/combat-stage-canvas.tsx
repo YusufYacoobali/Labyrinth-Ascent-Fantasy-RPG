@@ -30,6 +30,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Copy, Icon } from "./game-ui";
 import { theme as t } from "@/theme";
+import type { CombatEnemy } from "@/game/round-combat";
 import type { Character } from "@/game/engine";
 import { FLOORS } from "@/game/world";
 import {
@@ -38,6 +39,7 @@ import {
   cueResponse,
   cueDuration,
   formation,
+  enemyFormation,
   healthPanel,
   type CombatCue,
 } from "@/game/combat-animation";
@@ -91,7 +93,7 @@ function Figure({
   const ch = (image?.height() || 6) / 6;
   const scale = size / Math.max(cw, ch);
   const pose = useDerivedValue(() => {
-    if (fallen && !cue?.fallen.includes(id))
+    if (fallen && !(enemy && cue?.enemyDied) && !cue?.fallen.includes(id))
       return { row: 4, frame: 7, advance: 0, recoil: 0, opacity: 0.4 };
     return combatPose(time.get(), clock.get(), cue, id, enemy, reduced);
   }, [cue, id, enemy, reduced, fallen]);
@@ -451,9 +453,19 @@ export default function CombatStage({
   const background = useImage(battleAtlases[Math.floor(floorIndex / 4)]);
   const cell = floorIndex % 4;
   const positions = formation(width, height, state.party.length);
-  const enemyX = width * 0.77;
-  const enemyY = height * 0.61;
-  const enemySize = Math.min(140, width * 0.36, height * 0.38);
+  const allEnemies =
+    state.combat?.enemies ||
+    (state.enemy ? [{ ...state.enemy, id: "enemy" }] : []);
+  const enemyPositions = enemyFormation(width, height, allEnemies.length);
+  const activeEnemyId = (state.enemy as CombatEnemy | null)?.id || "enemy";
+  const activePoint =
+    enemyPositions[
+      Math.max(
+        0,
+        allEnemies.findIndex((e) => e.id === activeEnemyId),
+      )
+    ] || enemyFormation(width, height, 1)[0];
+  const { x: enemyX, y: enemyY, size: enemySize } = activePoint;
   useEffect(() => {
     if (!cue) return;
     time.set(0);
@@ -511,27 +523,31 @@ export default function CombatStage({
     selected: selected === c.id,
     fallen: c.hp <= 0,
   }));
-  if (state.enemy)
+  allEnemies.forEach((enemy, i) => {
+    if (enemy.hp <= 0 && !(enemy.id === activeEnemyId && cue?.enemyDied))
+      return;
     subjects.push({
-      motionKey: enemyVisual(state).key,
-      id: "enemy",
-      x: enemyX,
-      y: enemyY,
-      size: enemySize,
+      motionKey: enemyVisual({ ...state, enemy }).key,
+      id: enemy.id,
+      ...enemyPositions[i],
       enemy: true,
       selected: false,
-      fallen: false,
+      fallen: enemy.hp <= 0,
     });
+  });
   subjects.sort((a, b) => a.y - b.y);
-  const figuresReady =
-    state.party.every((c) => loaded.includes(c.id)) &&
-    (!state.enemy || loaded.includes("enemy"));
+  const figuresReady = subjects.every((subject) => loaded.includes(subject.id));
   useEffect(() => {
     if (background && figuresReady) onReady();
   }, [background, figuresReady, onReady]);
   return (
     <View
-      accessibilityLabel={`${state.enemy?.name || "Enemy"} facing your party in ${FLOORS[state.floor - 1].name}`}
+      accessibilityLabel={`${
+        allEnemies
+          .filter((e) => e.hp > 0)
+          .map((e) => e.name)
+          .join(", ") || "Defeated enemies"
+      } facing your party in ${FLOORS[state.floor - 1].name}`}
       onLayout={(e) => {
         const { width: w, height: h } = e.nativeEvent.layout;
         if (w > 0 && h > 0)
@@ -582,7 +598,7 @@ export default function CombatStage({
               onLoaded={onLoaded}
               time={time}
               clock={clock}
-              cue={cue}
+              cue={subject.enemy && subject.id !== activeEnemyId ? null : cue}
               reduced={reduced}
               destination={
                 subject.enemy

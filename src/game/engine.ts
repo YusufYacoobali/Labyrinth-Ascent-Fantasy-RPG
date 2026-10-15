@@ -1,3 +1,4 @@
+import { trainingLimit, trainingXp, temperingOffer } from "./town-progression";
 import { deserializeSave } from "./skill-ids";
 import { BALANCE as B } from "./balance";
 import { resolveGenericAction } from "./generic-stories";
@@ -32,6 +33,7 @@ import {
   nextRandom,
 } from "./monsters";
 import {
+  essenceBindingOptions,
   prepareSkills,
   skillSlots,
   newExpedition,
@@ -777,7 +779,7 @@ const hurtParty = (party: Character[], amount: number) =>
 export function questProgress(s: Game, id: QuestId): number {
   if (id === "trusted-company")
     return Math.min(3, s.townProgress.signed.length);
-  if (id === "ready-for-gate") return Math.min(3, s.townProgress.trained);
+  if (id === "ready-for-gate") return Math.min(2, s.townProgress.trained);
   if (id === "ironbell-apprentice") return Math.min(2, s.townProgress.crafted);
   if (id === "quartermaster")
     return Math.min(3, s.inventory["beast-core"] || 0);
@@ -988,7 +990,9 @@ export function needsGateConfirmation(s: Game, a: Action) {
     gateOpen(s.day) &&
     (a.type === "REST" ||
       a.type === "WORK" ||
-      (a.type === "TRAIN" && s.gold >= 60)) &&
+      (a.type === "TRAIN" &&
+        s.gold >= 60 &&
+        s.party.some((c) => trainingXp(c, s.bestFloor) > 0))) &&
     !a.skipOpening
   );
 }
@@ -1598,8 +1602,15 @@ function reduceGame(s: Game, a: Action): Game {
       );
     if (!["town", "camp"].includes(s.phase))
       return note(s, "Bind essences in town or shelter.");
+    const options = essenceBindingOptions(s, a.skill);
+    if (!a.species && options.length > 1)
+      return note(
+        s,
+        "Choose which species essence to bind. Each held essence is listed separately.",
+      );
+    const selectedSpecies = a.species || options[0]?.species;
     const spec = MONSTERS.find(
-      (m) => m.skill === a.skill && (!a.species || a.species === m.id),
+      (m) => m.skill === a.skill && m.id === selectedSpecies,
     );
     const c = s.party
       .concat(s.phase === "town" ? s.reserve : [])
@@ -1653,46 +1664,31 @@ function reduceGame(s: Game, a: Action): Game {
       const days = daysToGate(s.day);
       if (!days)
         return note(s, "The gate is open now. Your expedition awaits.");
-      if (a.mode === "train" && s.gold < days * 60)
-        return note(s, `A full training plan costs ${days * 60} gold.`);
-      const party = s.party.map((c) =>
-        a.mode === "train"
-          ? gainXp(c, days * 45)
-          : a.mode === "rest"
-            ? {
-                ...c,
-                hp: c.maxHp,
-                mp: c.maxMp,
-                ailments: { poison: 0, paralysis: 0 },
-              }
-            : c,
-      );
+      let next = s,
+        trained = 0,
+        worked = 0;
+      for (let i = 0; i < days; i++) {
+        const eligible = next.party.some(
+          (c) => trainingXp(c, next.bestFloor) > 0,
+        );
+        const type =
+          a.mode === "rest"
+            ? "REST"
+            : a.mode === "work" || !eligible
+              ? "WORK"
+              : "TRAIN";
+        if (type === "TRAIN" && next.gold < 60)
+          return note(
+            next,
+            "Training paused: the next session costs 60 gold. Your completed days are preserved.",
+          );
+        next = reducer(next, { type, skipOpening: true });
+        if (type === "TRAIN") trained++;
+        if (type === "WORK") worked++;
+      }
       return note(
-        {
-          ...s,
-          day: s.day + days,
-          party,
-          townProgress: {
-            ...s.townProgress,
-            trained: s.townProgress.trained + (a.mode === "train" ? days : 0),
-          },
-          gold:
-            s.gold +
-            (a.mode === "work"
-              ? 125 * days
-              : a.mode === "train"
-                ? -60 * days
-                : 0),
-          faction: {
-            ...s.faction,
-            guild: s.faction.guild + (a.mode === "work" ? days : 0),
-          },
-        },
-        a.mode === "train"
-          ? `${days} days of training complete. The gate is open.`
-          : a.mode === "work"
-            ? `${days} days of contracts complete. +${125 * days} gold. The gate is open.`
-            : "The party rests until the opening. All HP, MP, and ailments restored.",
+        next,
+        `Preparation complete: ${trained} training days, ${worked} work days${a.mode === "rest" ? `, ${days} recovery days` : ""}. The gate is open.`,
       );
     }
     if (a.type === "BENCH") {
@@ -1888,24 +1884,35 @@ function reduceGame(s: Game, a: Action): Game {
           ...s,
           day: s.day + 1,
           gold: s.gold + 125,
-          faction: { ...s.faction, guild: s.faction.guild + 1 },
+          faction: {
+            ...s.faction,
+            guild: Math.max(
+              s.faction.guild,
+              Math.min(B.townWorkStandingCap, s.faction.guild + 1),
+            ),
+          },
         },
-        "Completed a town contract. +125 gold and +1 guild standing.",
+        `Completed a town contract. +125 gold${s.faction.guild < B.townWorkStandingCap ? " and +1 Guild standing" : "; further standing comes from expeditions"}.`,
       );
     if (a.type === "TRAIN") {
+      if (!s.party.some((c) => trainingXp(c, s.bestFloor) > 0))
+        return note(
+          s,
+          `Town training prepares characters up to level ${trainingLimit(s.bestFloor)}. Explore deeper or help a weaker companion catch up.`,
+        );
       if (s.gold < 60) return note(s, "Training costs 60 gold.");
       return note(
         {
           ...s,
           day: s.day + 1,
           gold: s.gold - 60,
-          party: s.party.map((c) => gainXp(c, 45)),
+          party: s.party.map((c) => gainXp(c, trainingXp(c, s.bestFloor))),
           townProgress: {
             ...s.townProgress,
             trained: s.townProgress.trained + 1,
           },
         },
-        "The party trained together. Everyone gained 45 XP.",
+        `The party trained. Eligible companions gained up to 45 XP; the current training ceiling is level ${trainingLimit(s.bestFloor)}.`,
       );
     }
     if (a.type === "BUY" || a.type === "BUY_ITEM") {
@@ -2008,19 +2015,28 @@ function reduceGame(s: Game, a: Action): Game {
     if (a.type === "FORGE") {
       const c = s.party.find((x) => x.id === a.id);
       if (!c) return s;
-      const cost = 120 + c.gear * 80;
-      if (s.gold < cost) return note(s, `Tempering costs ${cost} gold.`);
+      const offer = temperingOffer(s, c);
+      if (!offer.available) return note(s, offer.reason);
       return note(
         {
           ...s,
-          gold: s.gold - cost,
-          party: s.party.map((c) =>
-            c.id === a.id
-              ? { ...c, gear: c.gear + 1, atk: c.atk + 6, def: c.def + 2 }
-              : c,
+          gold: s.gold - offer.gold,
+          inventory: {
+            ...s.inventory,
+            [offer.material]: s.inventory[offer.material] - offer.quantity,
+          },
+          party: s.party.map((p) =>
+            p.id === a.id
+              ? {
+                  ...p,
+                  gear: p.gear + 1,
+                  atk: p.atk + offer.attack,
+                  def: p.def + offer.defense,
+                }
+              : p,
           ),
         },
-        "Weapon tempered. Attack +6, defense +2.",
+        `Tempering tier ${c.gear + 1} complete. Attack +${offer.attack}, defense +${offer.defense}.`,
       );
     }
     if (a.type === "REFINE_GEAR") {

@@ -104,6 +104,7 @@ test("Recruitment caps at four and no duplicate signing costs", () => {
 });
 test("Bench and invite preserve levels and gear with no second fee", () => {
   let s = reduce(create(), { type: "RECRUIT", id: "kael" });
+  s.inventory["beast-core"] = 2;
   s = reduce(s, { type: "FORGE", id: "kael" });
   const gold = s.gold,
     atk = s.party[1].atk;
@@ -302,7 +303,7 @@ test("Every campaign route reaches all twelve events and both final rewards", ()
     s = reduce(s, { type: "MISSION", id: "survey" });
     const seen = new Set();
     let safety = 0;
-    while (safety++ < 400) {
+    while (safety++ < 600) {
       if (s.phase === "arrival") {
         s = reduce(s, {
           type: "APPROACH",
@@ -324,7 +325,13 @@ test("Every campaign route reaches all twelve events and both final rewards", ()
               : choices[s.floor];
         s = reduce(s, { type: "EVENT", choice, roll: 0.5 });
       } else if (["exploration", "branch"].includes(s.phase)) {
-        s = reduce(s, toward(s));
+        s = reduce(
+          s,
+          toward(
+            s,
+            s.floor < 12 && !seen.has(s.floor) ? "aftermath" : "portal",
+          ),
+        );
       } else if (s.phase === "nag")
         s = reduce(s, { type: "NAG_DECISION", rest: false });
       else if (s.phase === "camp")
@@ -418,7 +425,7 @@ test("Preparation plans stop at the next gate and cannot skip an open gate", () 
     assert.equal(e.gateOpen(s.day), true);
     assert.equal(
       s.gold,
-      before + (mode === "work" ? 750 : mode === "train" ? -360 : 0),
+      before + (mode === "work" ? 750 : mode === "train" ? 380 : 0),
     );
     const again = reduce(s, { type: "PREPARE_CYCLE", mode });
     assert.equal(again.day, 30);

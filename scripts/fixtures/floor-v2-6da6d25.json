@@ -1,0 +1,323 @@
+{
+  "version": 2,
+  "seed": 42,
+  "floor": 1,
+  "routeId": "",
+  "entrance": "entrance",
+  "portal": "portal",
+  "sanctuary": "sanctuary",
+  "route": [
+    "east",
+    "east",
+    "east",
+    "east",
+    "north",
+    "north",
+    "east"
+  ],
+  "nodes": {
+    "entrance": {
+      "id": "entrance",
+      "kind": "landmark",
+      "x": 0,
+      "y": 0,
+      "depth": 0,
+      "exits": {
+        "east": "aftermath",
+        "west": "loop-west",
+        "south": "loop-south",
+        "north": "branch-entrance-0"
+      }
+    },
+    "aftermath": {
+      "id": "aftermath",
+      "kind": "story",
+      "x": 1,
+      "y": 0,
+      "depth": 1,
+      "exits": {
+        "west": "entrance",
+        "east": "room-2",
+        "north": "branch-aftermath-0"
+      }
+    },
+    "room-2": {
+      "id": "room-2",
+      "kind": "crossroads",
+      "x": 2,
+      "y": 0,
+      "depth": 2,
+      "exits": {
+        "west": "aftermath",
+        "east": "room-3",
+        "south": "branch-room-2-0"
+      }
+    },
+    "room-3": {
+      "id": "room-3",
+      "kind": "landmark",
+      "x": 3,
+      "y": 0,
+      "depth": 3,
+      "exits": {
+        "west": "room-2",
+        "east": "room-4"
+      }
+    },
+    "room-4": {
+      "id": "room-4",
+      "kind": "crossroads",
+      "x": 4,
+      "y": 0,
+      "depth": 4,
+      "exits": {
+        "west": "room-3",
+        "north": "room-5",
+        "south": "branch-room-4-0"
+      }
+    },
+    "room-5": {
+      "id": "room-5",
+      "kind": "crossroads",
+      "x": 4,
+      "y": -1,
+      "depth": 5,
+      "exits": {
+        "south": "room-4",
+        "north": "room-6"
+      }
+    },
+    "room-6": {
+      "id": "room-6",
+      "kind": "crossroads",
+      "x": 4,
+      "y": -2,
+      "depth": 6,
+      "exits": {
+        "south": "room-5",
+        "east": "portal",
+        "west": "branch-room-6-0"
+      }
+    },
+    "portal": {
+      "id": "portal",
+      "kind": "portal",
+      "x": 5,
+      "y": -2,
+      "depth": 7,
+      "exits": {
+        "west": "room-6"
+      }
+    },
+    "loop-west": {
+      "id": "loop-west",
+      "kind": "crossroads",
+      "x": -1,
+      "y": 0,
+      "depth": 1,
+      "exits": {
+        "east": "entrance",
+        "south": "loop-southwest",
+        "west": "sanctuary",
+        "north": "branch-loop-west-0"
+      }
+    },
+    "loop-southwest": {
+      "id": "loop-southwest",
+      "kind": "crossroads",
+      "x": -1,
+      "y": 1,
+      "depth": 2,
+      "exits": {
+        "north": "loop-west",
+        "east": "loop-south",
+        "south": "branch-loop-southwest-0"
+      }
+    },
+    "loop-south": {
+      "id": "loop-south",
+      "kind": "crossroads",
+      "x": 0,
+      "y": 1,
+      "depth": 1,
+      "exits": {
+        "west": "loop-southwest",
+        "north": "entrance",
+        "south": "branch-loop-south-0"
+      }
+    },
+    "sanctuary": {
+      "id": "sanctuary",
+      "kind": "camp",
+      "x": -2,
+      "y": 0,
+      "depth": 2,
+      "exits": {
+        "east": "loop-west"
+      }
+    },
+    "branch-entrance-0": {
+      "id": "branch-entrance-0",
+      "kind": "crossroads",
+      "x": 0,
+      "y": -1,
+      "depth": 1,
+      "exits": {
+        "south": "entrance",
+        "west": "branch-loop-west-0"
+      }
+    },
+    "branch-aftermath-0": {
+      "id": "branch-aftermath-0",
+      "kind": "crossroads",
+      "x": 1,
+      "y": -1,
+      "depth": 2,
+      "exits": {
+        "south": "aftermath",
+        "north": "branch-aftermath-1"
+      }
+    },
+    "branch-aftermath-1": {
+      "id": "branch-aftermath-1",
+      "kind": "crossroads",
+      "x": 1,
+      "y": -2,
+      "depth": 3,
+      "exits": {
+        "south": "branch-aftermath-0",
+        "north": "branch-aftermath-2"
+      }
+    },
+    "branch-aftermath-2": {
+      "id": "branch-aftermath-2",
+      "kind": "dead-end",
+      "x": 1,
+      "y": -3,
+      "depth": 4,
+      "exits": {
+        "south": "branch-aftermath-1"
+      }
+    },
+    "branch-room-2-0": {
+      "id": "branch-room-2-0",
+      "kind": "dead-end",
+      "x": 2,
+      "y": 1,
+      "depth": 3,
+      "exits": {
+        "north": "room-2"
+      }
+    },
+    "branch-room-4-0": {
+      "id": "branch-room-4-0",
+      "kind": "dead-end",
+      "x": 4,
+      "y": 1,
+      "depth": 5,
+      "exits": {
+        "north": "room-4"
+      }
+    },
+    "branch-room-6-0": {
+      "id": "branch-room-6-0",
+      "kind": "dead-end",
+      "x": 3,
+      "y": -2,
+      "depth": 7,
+      "exits": {
+        "east": "room-6"
+      }
+    },
+    "branch-loop-west-0": {
+      "id": "branch-loop-west-0",
+      "kind": "crossroads",
+      "x": -1,
+      "y": -1,
+      "depth": 2,
+      "exits": {
+        "south": "loop-west",
+        "north": "branch-loop-west-1",
+        "east": "branch-entrance-0"
+      }
+    },
+    "branch-loop-west-1": {
+      "id": "branch-loop-west-1",
+      "kind": "crossroads",
+      "x": -1,
+      "y": -2,
+      "depth": 3,
+      "exits": {
+        "south": "branch-loop-west-0",
+        "north": "branch-loop-west-2"
+      }
+    },
+    "branch-loop-west-2": {
+      "id": "branch-loop-west-2",
+      "kind": "dead-end",
+      "x": -1,
+      "y": -3,
+      "depth": 4,
+      "exits": {
+        "south": "branch-loop-west-1"
+      }
+    },
+    "branch-loop-southwest-0": {
+      "id": "branch-loop-southwest-0",
+      "kind": "crossroads",
+      "x": -1,
+      "y": 2,
+      "depth": 3,
+      "exits": {
+        "north": "loop-southwest",
+        "south": "branch-loop-southwest-1"
+      }
+    },
+    "branch-loop-southwest-1": {
+      "id": "branch-loop-southwest-1",
+      "kind": "crossroads",
+      "x": -1,
+      "y": 3,
+      "depth": 4,
+      "exits": {
+        "north": "branch-loop-southwest-0",
+        "south": "branch-loop-southwest-2"
+      }
+    },
+    "branch-loop-southwest-2": {
+      "id": "branch-loop-southwest-2",
+      "kind": "dead-end",
+      "x": -1,
+      "y": 4,
+      "depth": 5,
+      "exits": {
+        "north": "branch-loop-southwest-1"
+      }
+    },
+    "branch-loop-south-0": {
+      "id": "branch-loop-south-0",
+      "kind": "crossroads",
+      "x": 0,
+      "y": 2,
+      "depth": 2,
+      "exits": {
+        "north": "loop-south",
+        "south": "branch-loop-south-1"
+      }
+    },
+    "branch-loop-south-1": {
+      "id": "branch-loop-south-1",
+      "kind": "dead-end",
+      "x": 0,
+      "y": 3,
+      "depth": 3,
+      "exits": {
+        "north": "branch-loop-south-0"
+      }
+    }
+  },
+  "explored": [
+    "entrance"
+  ],
+  "known": []
+}

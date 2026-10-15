@@ -55,6 +55,28 @@ export function healthPanel(point: { x: number; y: number; size: number }) {
     height: 50,
   };
 }
+/** Stable slots keep survivors in place while another enemy reacts or falls. */
+export function enemyFormation(width: number, height: number, count: number) {
+  const points =
+    count <= 1
+      ? [[0.77, 0.61]]
+      : count === 2
+        ? [
+            [0.78, 0.42],
+            [0.78, 0.81],
+          ]
+        : [
+            [0.73, 0.36],
+            [0.87, 0.59],
+            [0.73, 0.83],
+          ];
+  const size = Math.min(
+    count <= 1 ? 140 : count === 2 ? 104 : 88,
+    width * (count <= 1 ? 0.36 : 0.25),
+    height * (count <= 1 ? 0.38 : 0.28),
+  );
+  return points.map(([x, y]) => ({ x: width * x, y: height * y, size }));
+}
 export function battleCue(
   before: Game,
   after: Game,

@@ -32,6 +32,7 @@ import {
 } from "@/components/native-chrome";
 import { theme as t } from "@/theme";
 import { SceneImage } from "@/components/scene-motion";
+import { temperingOffer } from "@/game/town-progression";
 export function PartyScreen() {
   const { state, dispatch } = useGame();
   const [selected, setSelected] = useState(state.party[0]?.id);
@@ -526,7 +527,8 @@ export function BlacksmithScreen() {
   const weapon = ITEMS.find(
     (i) => c.equipment.includes(i.id) && i.kind === "weapon",
   );
-  const cost = 120 + c.gear * 80;
+  const offer = temperingOffer(state, c);
+  const cost = offer.gold;
   return (
     <Guard>
       <Frame active="Home" title="Ironbell Forge" portrait={c.portrait}>
@@ -600,14 +602,16 @@ export function BlacksmithScreen() {
                       {weapon?.name || "Wanderer’s Blade"}
                     </Copy>
                     <Copy style={{ color: t.color.green }}>
-                      +{c.gear} → +{c.gear + 1}
+                      {offer.material
+                        ? `+${c.gear} → +${c.gear + 1}`
+                        : `+${c.gear} · Complete`}
                     </Copy>
                   </View>
                 </View>
                 <Ornament />
                 {[
-                  ["ATK", c.atk, c.atk + 6],
-                  ["DEF", c.def, c.def + 2],
+                  ["ATK", c.atk, c.atk + offer.attack],
+                  ["DEF", c.def, c.def + offer.defense],
                   ["SPD", c.speed, c.speed],
                 ].map(([label, before, after]) => (
                   <View
@@ -645,9 +649,21 @@ export function BlacksmithScreen() {
                     {state.gold.toLocaleString()}/{cost} gold
                   </Copy>
                 </Surface>
+                {!!offer.material && (
+                  <Copy>
+                    {ITEMS.find((i) => i.id === offer.material)?.name ||
+                      offer.material}
+                    : {state.inventory[offer.material] || 0}/{offer.quantity}
+                  </Copy>
+                )}
+                {!!offer.reason && <Copy muted>{offer.reason}</Copy>}
                 <Button
-                  label={"Upgrade · " + cost + " gold"}
-                  disabled={state.gold < cost}
+                  label={
+                    offer.material
+                      ? "Upgrade · " + cost + " gold"
+                      : "Tempering complete"
+                  }
+                  disabled={!offer.available}
                   onPress={() => dispatch({ type: "FORGE", id: c.id })}
                 />
                 <Copy muted style={{ fontSize: 11, lineHeight: 15 }}>

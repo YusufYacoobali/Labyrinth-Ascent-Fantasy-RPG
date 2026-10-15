@@ -1,3 +1,5 @@
+import { factionSupplyBonus } from "./relationships";
+import { narrateRoom } from "./room-narration";
 import { assignGeneric } from "./generic-stories";
 import { principalResolved, principalAftermath } from "./stories";
 import { passTime } from "./survival";
@@ -184,9 +186,11 @@ export function enterMappedRoom(
     return {
       ...next,
       phase: "camp",
-      food: next.food + (fresh ? BALANCE.sanctuaryRations : 0),
+      food:
+        next.food +
+        (fresh ? BALANCE.sanctuaryRations + factionSupplyBonus(next) : 0),
       message: fresh
-        ? "The sanctuary cache holds three party rations. It replenishes between expeditions."
+        ? `The sanctuary cache holds ${BALANCE.sanctuaryRations + factionSupplyBonus(next)} party rations${factionSupplyBonus(next) ? "; faction allies added an extra ration" : ""}. It replenishes between expeditions.`
         : "The sanctuary cache is empty this expedition.",
       journey: {
         ...next.journey,
@@ -358,7 +362,21 @@ export function roomStory(s: Game) {
           : room.kind === "portal"
             ? "The upward arch"
             : "Passages in the stone",
-    body: `${FLOORS[s.floor - 1].name}. ${count === 1 ? "Only one passage leaves this chamber." : `${count} passages meet here.`} You face ${s.journey.facing}. ${room.kind === "landmark" ? "The stonework is a reliable landmark on your chart." : "Your lantern shows the connected openings; it cannot tell you which reaches the portal."}`,
+    body: narrateRoom({
+      seed: s.journey.seed,
+      floor: s.floor,
+      floorName: FLOORS[s.floor - 1].name,
+      biome:
+        s.floor >= 5 && s.floor <= 7
+          ? s.route || "roots"
+          : FLOORS[s.floor - 1].environment,
+      id: room.id,
+      kind: room.kind,
+      exits: count,
+      facing: s.journey.facing,
+      resolved: s.journey.resolvedBranches.includes(encounterKey(s)),
+      injured: s.party.some((c) => c.injuries > 0),
+    }),
   };
 }
 
@@ -706,7 +724,15 @@ export function resolveExploration(
         s.journey.room,
       );
     return say(
-      { ...moveRoom(s, backRoom(s) || "loop-west"), phase },
+      {
+        ...moveRoom(
+          s,
+          backRoom(s) ||
+            Object.values(currentRoom(s).exits)[0] ||
+            s.journey.room,
+        ),
+        phase,
+      },
       "You shoulder your packs. The team chooses to carry on together.",
     );
   }

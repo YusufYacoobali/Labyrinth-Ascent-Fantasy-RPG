@@ -11,6 +11,7 @@ function act(s, a) {
     ...legacy,
     id: s.combat.enemies[0].id,
     archetype: "skirmisher",
+    behaviorId: undefined,
   };
   s = {
     ...s,

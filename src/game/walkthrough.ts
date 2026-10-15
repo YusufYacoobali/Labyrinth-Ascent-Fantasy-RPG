@@ -50,7 +50,7 @@ export function walkthroughTip(s: Game): Guidance | null {
       return tip(
         "train",
         "Train before the gate",
-        "Open Prepare at the Guild, then Train to strengthen the whole party. It costs 60 gold and one day. Stop when the gate opens.",
+        "Open Prepare at the Guild, then Train. It costs 60 gold and one day and helps companions catch up to level 2 initially. Clearing deeper floors raises that ceiling. Stop when the gate opens.",
         { destination: "/guild", button: "Visit Guild" },
       );
     if (!done("equipment"))

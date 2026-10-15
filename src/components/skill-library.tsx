@@ -4,7 +4,11 @@ import { Button, Copy, Eyebrow, Panel } from "./game-ui";
 import { useGame } from "@/game/provider";
 import { SKILLS, SKILL_RANKS } from "@/game/combat-data";
 import { MONSTERS, essenceId } from "@/game/monsters";
-import { skillRank, skillSlots } from "@/game/progression";
+import {
+  essenceBindingOptions,
+  skillRank,
+  skillSlots,
+} from "@/game/progression";
 
 export function SkillLibrary({
   characterId,
@@ -18,7 +22,7 @@ export function SkillLibrary({
   const c = state.party.concat(state.reserve).find((p) => p.id === characterId);
   if (!c) return null;
   const town = state.phase === "town";
-  const canBind = town || state.phase === "camp";
+  const canBind = town || (state.phase === "camp" && !state.journey.wildCamp);
   const offers = SKILLS.filter(
     (s) =>
       catalog ||
@@ -39,13 +43,11 @@ export function SkillLibrary({
       {offers.map((skill) => {
         const known = c.learnedSkills.includes(skill.name);
         const equipped = c.skills.includes(skill.name);
-        const species = MONSTERS.find((m) => m.skill === skill.name)!;
-        const id = essenceId(species.id);
+        const sources = MONSTERS.filter((m) => m.skill === skill.name);
+        const essences = essenceBindingOptions(state, skill.name);
         const provisional = state.expedition.provisionalSkills[c.id]?.includes(
           skill.name,
         );
-        const fieldEssence =
-          (state.expedition.unsecured.inventory[id] || 0) > 0;
         const rank = skillRank(c, skill.name);
         const points = c.mastery[skill.name] || 0;
         return (
@@ -60,7 +62,7 @@ export function SkillLibrary({
                 ? "Equipped"
                 : known
                   ? "In library"
-                  : species.name + " essence"}
+                  : "Requires a compatible monster essence"}
             </Copy>
             <Copy>{SKILL_RANKS[skill.name][rank - 1]}</Copy>
             {provisional && <Copy>Secured on extraction · lost on defeat</Copy>}
@@ -106,21 +108,35 @@ export function SkillLibrary({
                 }
               />
             )}
-            {!known && (
-              <Button
-                small
-                tone="blue"
-                label={`Bind · ${state.inventory[id] || 0} ${species.name} essence${fieldEssence ? " · Secured on extraction" : ""}`}
-                disabled={!canBind || c.hp <= 0 || !(state.inventory[id] > 0)}
-                onPress={() =>
-                  dispatch({
-                    type: "LEARN",
-                    id: c.id,
-                    skill: skill.name,
-                    species: species.id,
-                  })
-                }
-              />
+            {essences.map((essence) => (
+              <View key={essence.species} style={{ gap: 5 }}>
+                <Copy muted>
+                  {essence.name} essence ×{essence.quantity} · {essence.secured}{" "}
+                  secured · {essence.unsecured} unsecured
+                </Copy>
+                {!known && (
+                  <Button
+                    small
+                    tone="blue"
+                    label={`Bind ${essence.name} essence${!town && essence.unsecured > 0 ? " · Secured on extraction" : ""}`}
+                    disabled={!canBind || c.hp <= 0}
+                    onPress={() =>
+                      dispatch({
+                        type: "LEARN",
+                        id: c.id,
+                        skill: skill.name,
+                        species: essence.species,
+                      })
+                    }
+                  />
+                )}
+              </View>
+            ))}
+            {!known && !essences.length && (
+              <Copy muted>
+                Sources: {sources.map((m) => m.name).join(", ")}. No compatible
+                essence held.
+              </Copy>
             )}
           </Panel>
         );

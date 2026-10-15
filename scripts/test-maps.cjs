@@ -16,6 +16,7 @@ function start(seed = 42) {
     name: "Map test",
     roll: 0.5,
   });
+  s.journey.maps[1] = JSON.parse(JSON.stringify(require("./fixtures/floor-v2-6da6d25.json")));
   s = campaignAction({ ...s, day: 30 }, { type: "ENTER" });
   s = campaignAction(s, { type: "MISSION", id: "survey" });
   return campaignAction(s, { type: "ENGAGE" });

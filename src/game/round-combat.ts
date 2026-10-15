@@ -1,9 +1,15 @@
+import { bondedProtector } from "./relationships";
+import {
+  MIXED_GROUPS,
+  SPECIES_BEHAVIOR,
+  speciesIntent,
+} from "./monster-behavior";
 import type { Game, Enemy, Character, Skill, BattleEffect } from "./engine";
 import { resolveBattle } from "./battle";
 import { SKILLS, resist } from "./combat-data";
 import { skillRank, earnMastery } from "./progression";
 import { fatigueMultiplier } from "./exhaustion";
-import { nextRandom, monsterFor } from "./monsters";
+import { MONSTERS, nextRandom, monsterFor } from "./monsters";
 import {
   currentMapKey,
   backRoom,
@@ -15,6 +21,7 @@ export type Archetype =
   "skirmisher" | "bruiser" | "defender" | "caster" | "support";
 export interface CombatEnemy extends Enemy {
   id: string;
+  behaviorId?: string;
   level: number;
   speed: number;
   archetype: Archetype;
@@ -133,32 +140,42 @@ export function beginCombat(
     count = s.enemy.boss
       ? 1
       : s.floor <= 2
-        ? draw.roll < 0.65
+        ? draw.roll < B.earlySoloChance
           ? 1
           : 2
         : s.floor <= 7
           ? 2
           : 3;
-  const archetypes: Archetype[] = [
-    "skirmisher",
-    "bruiser",
-    "defender",
-    "caster",
-    "support",
-  ];
   const enemies = Array.from({ length: count }, (_, index): CombatEnemy => {
-    const base = s.enemy!,
-      hp = Math.round(
-        (base.boss
-          ? B.bossHp[0] + s.floor * B.bossHp[1]
-          : B.normalHp[0] + s.floor * B.normalHp[1]) *
-          (1 + B.partyHpScale * (s.party.length - 1)) *
-          (s.journey.defender && !base.boss ? 1.2 : 1),
-      );
+    const original = s.enemy!,
+      primary = monsterFor(original, s.floor);
+    const group = MIXED_GROUPS[primary.id] || [primary.id];
+    const species =
+      original.boss || index === 0
+        ? primary
+        : MONSTERS.find((m) => m.id === group[index % group.length]) || primary;
+    const profile = SPECIES_BEHAVIOR[species.id];
+    const base =
+      index === 0
+        ? original
+        : {
+            ...original,
+            species: species.id,
+            name: species.name,
+            element: profile?.element || original.element,
+          };
+    const hp = Math.round(
+      (base.boss
+        ? B.bossHp[0] + s.floor * B.bossHp[1]
+        : B.normalHp[0] + s.floor * B.normalHp[1]) *
+        (1 + B.partyHpScale * (s.party.length - 1)) *
+        (s.journey.defender && !base.boss ? 1.2 : 1),
+    );
     return {
       ...base,
       id: `${id}:enemy-${index + 1}`,
-      name: count > 1 ? `${base.name} ${index + 1}` : base.name,
+      name: base.name,
+      behaviorId: species.id,
       hp,
       maxHp: hp,
       atk: Math.round(
@@ -167,10 +184,8 @@ export function beginCombat(
           : B.enemyAttack[0] + s.floor * B.enemyAttack[1],
       ),
       level: s.floor,
-      speed: base.boss
-        ? 8 + s.floor
-        : 6 + s.floor + ((index + s.floor) % 5) * 2,
-      archetype: archetypes[(index + s.floor) % archetypes.length],
+      speed: profile?.speed || 10,
+      archetype: profile?.role || "skirmisher",
       stage: 0,
       poison: 0,
       paralysis: 0,
@@ -203,6 +218,8 @@ export function beginCombat(
   };
 }
 export function enemyIntent(s: Game, e: CombatEnemy) {
+  const authored = speciesIntent(s, e);
+  if (authored) return authored;
   const alive = s.party.filter((c) => c.hp > 0),
     round = s.combat?.round || 1;
   const weak = [...alive].sort(
@@ -367,6 +384,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
   };
   const events: RoundEvent[] = [],
     guards = new Set<string>(),
+    supportUsed = new Set<string>(),
     enemySkipped = new Set<string>(),
     skipped = new Set<string>(),
     cast = new Set<string>();
@@ -472,6 +490,8 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
       for (const id of targetIds) {
         const old = next;
         let target = next.party.find((c) => c.id === id)!;
+        const protector = bondedProtector(next, id, supportUsed);
+        if (protector) supportUsed.add(protector.id);
         const raw =
           Math.max(
             2,
@@ -491,6 +511,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
           )
             ? 0.85
             : 1) *
+          (protector ? 1 - B.bondedProtection : 1) *
           (guards.has(id) ? 0.5 : 1) *
           (enemy.weakened ? 1 - enemy.weakened : 1);
         const barrier = target.ailments.barrier || 0,
@@ -563,7 +584,7 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
         emit(
           enemy.id,
           id,
-          `${enemy.name} → ${target.name}: ${hit} ${enemy.element} damage${guards.has(id) ? " (guarded)" : ""}.`,
+          `${enemy.name} → ${target.name}: ${hit} ${enemy.element} damage${guards.has(id) ? " (guarded)" : ""}${protector ? ` (${protector.name} offers bonded protection)` : ""}.`,
           "strike",
         );
       }

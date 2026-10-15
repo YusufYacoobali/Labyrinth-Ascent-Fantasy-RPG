@@ -33,6 +33,7 @@ import { ITEMS, QUESTS, Vendor } from "@/game/world";
 import { useGame } from "@/game/provider";
 import { Guard } from "./town";
 import { theme as t } from "@/theme";
+import { trainingLimit, trainingXp } from "@/game/town-progression";
 import {
   Surface,
   TabStrip,
@@ -914,14 +915,18 @@ export function GuildScreen() {
               {[
                 {
                   title: "Train together",
-                  detail: "+45 XP each · 60 gold · +1 day",
+                  detail: `Up to 45 XP each, through level ${trainingLimit(state.bestFloor)} · 60 gold · +1 day`,
                   action: "TRAIN" as const,
-                  disabled: state.gold < 60,
+                  disabled:
+                    state.gold < 60 ||
+                    !state.party.some(
+                      (c) => trainingXp(c, state.bestFloor) > 0,
+                    ),
                   label: "Train",
                 },
                 {
                   title: "Town contracts",
-                  detail: "+125 gold · +1 standing · +1 day",
+                  detail: "+125 gold · +1 Guild standing up to 20 · +1 day",
                   action: "WORK" as const,
                   disabled: false,
                   label: "Work",
@@ -973,14 +978,24 @@ export function GuildScreen() {
                     }
                   />
                   <Button
-                    label={"Train · " + daysToGate(state.day) * 60 + " gold"}
+                    label="Catch up, then work until opening"
                     small
                     tone="dark"
-                    disabled={state.gold < daysToGate(state.day) * 60}
+                    disabled={
+                      state.gold < 60 &&
+                      state.party.some(
+                        (c) => trainingXp(c, state.bestFloor) > 0,
+                      )
+                    }
                     onPress={() =>
                       dispatch({ type: "PREPARE_CYCLE", mode: "train" })
                     }
                   />
+                  <Copy muted>
+                    Training costs 60 gold per day while someone can learn. Once
+                    everyone reaches the catch-up limit, remaining days earn
+                    contract gold.
+                  </Copy>
                 </Surface>
               )}
               <Button

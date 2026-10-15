@@ -1,3 +1,6 @@
+import { Image } from "expo-image";
+import { MOTION_SHEETS } from "./combat-sheets";
+import { enemyVisual } from "@/game/combat-visuals";
 import { battleCue, type CombatCue } from "@/game/combat-animation";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { View } from "react-native";
@@ -10,7 +13,7 @@ import {
   type QueuedAction,
 } from "@/game/round-combat";
 import { SKILLS } from "@/game/combat-data";
-import { Atlas, Bar, Button, Copy, Eyebrow, Panel } from "./game-ui";
+import { Bar, Button, Copy, Eyebrow, Panel } from "./game-ui";
 import CombatStage from "./combat-stage";
 import { Reveal } from "./combat-motion";
 import { theme as t } from "@/theme";
@@ -107,7 +110,12 @@ export default function TacticalCombat() {
     enemies.find((e) => e.id === frame?.actor) ||
     enemies.find((e) => e.hp > 0) ||
     enemies[0];
-  const stage = { ...source, party, enemy: enemyTarget };
+  const stage = {
+    ...source,
+    party,
+    enemy: enemyTarget,
+    combat: { ...combat, enemies },
+  };
   const assign = (
     kind: QueuedAction["kind"],
     extra: Partial<QueuedAction> = {},
@@ -160,12 +168,22 @@ export default function TacticalCombat() {
                 enemy.id === enemyTarget?.id ? t.color.gold : t.color.goldDim,
             }}
           >
-            <Atlas
-              sprite
-              index={enemy.sprite}
-              enemyFloor={source.floor}
-              size={enemies.length === 3 ? 64 : 78}
-            />
+            <View
+              style={{
+                width: enemies.length === 3 ? 64 : 78,
+                height: enemies.length === 3 ? 64 : 78,
+                overflow: "hidden",
+              }}
+            >
+              <Image
+                source={MOTION_SHEETS[enemyVisual({ ...source, enemy }).key]}
+                contentFit="fill"
+                style={{
+                  width: (enemies.length === 3 ? 64 : 78) * 8,
+                  height: (enemies.length === 3 ? 64 : 78) * 6,
+                }}
+              />
+            </View>
             <Copy title style={{ fontSize: 15 }}>
               {enemy.name}
             </Copy>

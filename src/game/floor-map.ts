@@ -120,14 +120,36 @@ export function generateFloor(floor: number, seed = 1, routeId = ""): FloorMap {
     nodes[b].exits[opposite(h)] = a;
   };
   add("entrance", "landmark", 0, 0);
-  let previous = "entrance",
-    x = 0,
-    y = 0;
-  // A seed-grown spine guarantees the band distance without assigning relative labels to coordinates.
+  const shuffled = <T>(items: T[]) =>
+    items
+      .map((value) => ({ value, roll: rng() }))
+      .sort((a, b) => a.roll - b.roll)
+      .map((x) => x.value);
+  const spine: [number, number][] = [[0, 0]],
+    occupied = new Set(["0,0"]);
+  const grow = (): boolean => {
+    if (spine.length > distance) return true;
+    const [x, y] = spine[spine.length - 1];
+    for (const h of shuffled(HEADINGS)) {
+      const next: [number, number] = [x + DELTA[h][0], y + DELTA[h][1]],
+        key = next.join(",");
+      if (occupied.has(key)) continue;
+      occupied.add(key);
+      spine.push(next);
+      if (grow()) return true;
+      spine.pop();
+      occupied.delete(key);
+    }
+    return false;
+  };
+  grow();
+  const spineIds = ["entrance"];
   for (let i = 1; i <= distance; i++) {
-    const h: Heading = rng() < 0.5 ? "north" : "east";
-    x += DELTA[h][0];
-    y += DELTA[h][1];
+    const [x, y] = spine[i],
+      [px, py] = spine[i - 1];
+    const h = HEADINGS.find(
+      (h) => DELTA[h][0] === x - px && DELTA[h][1] === y - py,
+    )!;
     const id = i === distance ? "portal" : i === 1 ? "aftermath" : `room-${i}`;
     add(
       id,
@@ -141,19 +163,53 @@ export function generateFloor(floor: number, seed = 1, routeId = ""): FloorMap {
       x,
       y,
     );
-    link(previous, h, id);
-    previous = id;
+    link(spineIds[i - 1], h, id);
+    spineIds.push(id);
   }
-  // An equal-length loop beside the entrance and one permanent sanctuary.
-  add("loop-west", "crossroads", -1, 0);
-  add("loop-southwest", "crossroads", -1, 1);
-  add("loop-south", "crossroads", 0, 1);
-  link("entrance", "west", "loop-west");
-  link("loop-west", "south", "loop-southwest");
-  link("loop-southwest", "east", "loop-south");
-  link("loop-south", "north", "entrance");
-  add("sanctuary", "camp", -2, 0);
-  link("loop-west", "west", "sanctuary");
+  // Place a real loop beside a varying spine edge, rather than always at entry.
+  let loopPlaced = false;
+  for (const i of shuffled(Array.from({ length: distance }, (_, i) => i))) {
+    const a = nodes[spineIds[i]],
+      b = nodes[spineIds[i + 1]];
+    const forward = HEADINGS.find((h) => a.exits[h] === b.id)!;
+    for (const side of shuffled(
+      HEADINGS.filter((h) => h !== forward && h !== opposite(forward)),
+    )) {
+      const ax = a.x + DELTA[side][0],
+        ay = a.y + DELTA[side][1],
+        bx = b.x + DELTA[side][0],
+        by = b.y + DELTA[side][1];
+      if (coordinates.has(`${ax},${ay}`) || coordinates.has(`${bx},${by}`))
+        continue;
+      add("loop-west", "crossroads", ax, ay);
+      add("loop-southwest", "crossroads", bx, by);
+      link(a.id, side, "loop-west");
+      link("loop-west", forward, "loop-southwest");
+      link("loop-southwest", opposite(side), b.id);
+      loopPlaced = true;
+      break;
+    }
+    if (loopPlaced) break;
+  }
+  if (!loopPlaced) throw new Error("Could not place a connected floor loop");
+  // Sanctuary placement varies in distance, heading and branch, but stays permanent once saved.
+  const shelterAnchors = shuffled(
+    Object.values(nodes).filter(
+      (n) => n.id !== "portal" && n.id !== "entrance",
+    ),
+  );
+  for (const anchor of shelterAnchors) {
+    const h = shuffled(HEADINGS).find(
+      (h) =>
+        !anchor.exits[h] &&
+        !coordinates.has(`${anchor.x + DELTA[h][0]},${anchor.y + DELTA[h][1]}`),
+    );
+    if (!h) continue;
+    add("sanctuary", "camp", anchor.x + DELTA[h][0], anchor.y + DELTA[h][1]);
+    link(anchor.id, h, "sanctuary");
+    break;
+  }
+  if (!nodes.sanctuary) throw new Error("Could not place floor sanctuary");
   // Branches grow out of any free compass edge; optional connections create further loops.
   const anchors = Object.values(nodes).filter(
     (n) => n.id !== "portal" && n.kind !== "camp",
