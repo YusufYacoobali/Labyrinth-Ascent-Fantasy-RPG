@@ -27,6 +27,9 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  factionOpportunities: load("src/game/faction-opportunities.ts"),
+  reconciliation: load("src/game/reconciliation.ts"),
+  storyContext: load("src/game/story-context.ts"),
   director: load("src/game/encounter-director.ts"),
   shortcuts: load("src/game/shortcuts.ts"),
   travel: load("src/game/known-travel.ts"),

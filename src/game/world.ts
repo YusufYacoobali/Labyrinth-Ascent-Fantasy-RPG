@@ -1,3 +1,4 @@
+import { FACTION_ITEMS, type FactionId } from "./faction-opportunities";
 import { MONSTERS, essenceId } from "./monsters";
 import { TOWN_ITEMS, TOWN_QUESTS } from "./town-content";
 export type Element = "physical" | "fire" | "frost" | "venom";
@@ -223,6 +224,7 @@ export const VENDORS: {
   },
 ];
 export interface Item {
+  faction?: FactionId;
   id: string;
   name: string;
   icon: string;
@@ -452,6 +454,7 @@ export const ITEMS: Item[] = [
     description: "Proof that your party reached the twelfth floor.",
   },
   ...TOWN_ITEMS,
+  ...FACTION_ITEMS,
   ...MONSTERS.map((m): Item => ({
     id: essenceId(m.id),
     name: `${m.name} essence`,

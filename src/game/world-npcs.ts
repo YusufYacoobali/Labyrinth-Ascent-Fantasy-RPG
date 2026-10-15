@@ -40,5 +40,6 @@ export const npcAt = (s: Game, room = s.journey.room) =>
   )?.[0] as WorldNpcId | undefined;
 export function npcDescription(s: Game, id: WorldNpcId) {
   const data = WORLD_NPCS[id];
-  return `${data.name}. ${s.npcs?.[id]?.visits ? data.returning : data.intro}`;
+  const memory = s.npcs?.[id];
+  return `${data.name}. ${id === "sable" && (memory?.trust || 0) < 0 ? "Sable remembers the salvage you claimed. The rival crew keeps its packs closed and asks whether your next promise will cost them again." : memory?.visits ? data.returning : data.intro}${id === "tamsin" && (memory?.trust || 0) >= 3 ? " Trusted crews receive a fourth ration in the core trade." : ""}${id === "sable" && (memory?.trust || 0) >= 2 ? " The crew offers a shared salvage survey instead of another race." : ""}`;
 }

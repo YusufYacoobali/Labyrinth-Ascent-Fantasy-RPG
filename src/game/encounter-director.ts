@@ -139,7 +139,8 @@ export function establishExpedition(s: Game): Game {
         const gear = ITEMS.filter(
           (i) =>
             ["weapon", "armor", "helmet", "boots", "charm"].includes(i.kind) &&
-            i.quality === (floor >= 8 ? "rare" : "fine"),
+            i.quality === (floor >= 8 ? "rare" : "fine") &&
+            !i.faction,
         );
         encounters[key][room.id] = {
           kind,

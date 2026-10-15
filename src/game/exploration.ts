@@ -537,6 +537,47 @@ export function resolveExploration(
           : `The catch snaps. Standing companions lose ${s.route === "forge" ? 22 : 15} HP${s.route === "roots" ? " and are poisoned" : s.route === "frost" ? " and are chilled" : s.route === "crypt" ? " and lose 12 MP" : ""}, but you recover 30 gold.`,
       );
     }
+    if (
+      b.kind === "company" &&
+      npcAt(s) === "sable" &&
+      ["cooperate", "claim"].includes(a.choice)
+    ) {
+      const old = s.npcs?.sable,
+        cooperate = a.choice === "cooperate";
+      if (cooperate && (old?.trust || 0) < 2)
+        return say(
+          s,
+          "Sable needs an earlier act of trust before sharing a cache.",
+        );
+      const message = cooperate
+        ? "Sable's crew shares a ration and a maintenance key. Both parties sign the survey; your rivals will remember who stood beside them."
+        : "You take the disputed salvage for 80 gold. Sable folds the shared chart away and records your claim against the crew.";
+      return say(
+        {
+          ...next,
+          gold: s.gold + (cooperate ? 0 : 80),
+          food: s.food + (cooperate ? 1 : 0),
+          inventory: cooperate
+            ? {
+                ...s.inventory,
+                "labyrinth-key": (s.inventory["labyrinth-key"] || 0) + 1,
+              }
+            : s.inventory,
+          npcs: {
+            ...s.npcs,
+            sable: {
+              visits: (old?.visits || 0) + 1,
+              helped: (old?.helped || 0) + (cooperate ? 1 : 0),
+              lastExpedition: s.expedition.number,
+              trust: (old?.trust || 0) + (cooperate ? 2 : -3),
+              decisions: [...(old?.decisions || []), a.choice].slice(-12),
+            },
+          },
+          journey: { ...chartRumour(next, s.floor), met: s.journey.met + 1 },
+        },
+        message,
+      );
+    }
     if (b.kind === "company" && ["talk", "help"].includes(a.choice)) {
       if (a.choice === "help" && s.food < 1)
         return say(s, "You need a ration to share with this team.");
@@ -579,10 +620,11 @@ export function resolveExploration(
       if ((s.inventory["beast-core"] || 0) < 2)
         return say(s, "Tamsin's trade requires two monster cores.");
       const old = s.npcs?.tamsin;
+      const quantity = (old?.trust || 0) >= 3 ? 4 : 3;
       return say(
         {
           ...next,
-          food: s.food + 3,
+          food: s.food + quantity,
           inventory: {
             ...s.inventory,
             "beast-core": s.inventory["beast-core"] - 2,
@@ -598,7 +640,7 @@ export function resolveExploration(
             },
           },
         },
-        "Tamsin trades three party rations for two monster cores. Rations bought with field-found cores remain at risk until extraction.",
+        `Tamsin trades ${quantity} party rations for two monster cores${quantity === 4 ? ", including a ration reserved for a trusted customer" : ""}. Rations bought with field-found cores remain at risk until extraction.`,
       );
     }
     if (b.kind === "spring" && ["gather", "drink"].includes(a.choice)) {

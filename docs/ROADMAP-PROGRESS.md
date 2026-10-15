@@ -107,9 +107,22 @@ Verification: 221 grouped checks pass, including ten director groups, 1,000 addi
 
 The 200-seed benchmark completes 178 campaigns within twelve expeditions, with zero state stalls. First-expedition median Floor 4; completed-campaign median seven expeditions; mean battle length 6.73 rounds; fallen-character events 3,197; unfed checks 0; median mastery 215; loot Continue actions 5,380; binding actions 2,291; story choices 6,704; generic appearances 3,411; repetition violations 0; treatment cost 477,300 gold and 7,530 injured-character recovery days. Twenty-two campaigns remain unfinished at the cap. The completion tail and recovery costs need the Milestone 6 preparation/balance pass. Report: `verification/master-m4-campaign.json`.
 
+## Milestone 5 — story and world consequences
+
+The existing ten personal arcs, twelve floor chains, four route chains and 24 generic encounters remain the content base. Six authored investigation/cooperation alternatives now use dwarven knowledge, equipped essence skills, protective equipment, Elian's earlier assistance, route standing or Sable's trust. Their availability is revalidated when choosing, and the ordinary one-time story resolution records their rewards. Injuries and earlier harmful decisions add contextual reactions. Important stages use the existing illustrated scene library and preserve unique aftermath.
+
+All ten companions now have an individual reconciliation conversation. Opening it grants no loyalty: the player acknowledges the grievance, then donates two real party rations to an appropriate rescue effort. Insufficient supplies leave the promise pending; closing, reloading or repeating an old choice cannot restore loyalty for free. Prior decisions remain recorded.
+
+Sable's disputed salvage and cooperative surveys have durable trust, gold/supply/key and future-dialogue consequences. Shared surveys require earlier trust; a claim closes off cooperation until trust is rebuilt. Tamsin's remembered trust improves the finite monthly barter. The journal records meetings, trust, decisions and later opportunities.
+
+Six faction commissions require earned standing, floor progress and secured species materials. Each grants exclusive equipment once. Ten standing unlocks affiliated stock and a 10% merchant discount, with identical displayed, cart and resolver prices. Locked mixed carts are atomic; exclusive faction equipment is excluded from procedural cache pools. Existing faction sanctuary assistance and bonded/hostile cooperation continue to apply.
+
+Verification: 229 grouped checks pass, including eight world-consequence groups covering every companion's reconciliation, pending promises, authored conditions, durable rewards, all six faction deliveries, atomic stock purchases, disputes and trusted trades. Typecheck, lint and Android/iOS/web exports pass. UI/device/human checks remain explicitly deferred.
+
+The existing 200-seed policy continues to choose the original authored options; results remain 178 completions, zero stalls, first-floor median 4, completed-campaign median 7, mean 6.73 rounds, 3,197 fallen-character events, no starvation or repetition violations. Recovery cost remains 477,300 gold and 7,530 injured-character days. The new optional faction/NPC alternatives are verified deterministically, rather than represented as sampled by that unchanged campaign policy. Report: `verification/master-m5-campaign.json`.
+
 ## Remaining sequence
 
-5. Conditional stories, rivals, authored reconciliation and tangible faction opportunities.
 6. Build/equipment synergy, crafting progression, extraction reports and modest optional goals.
 7. Production art, audio, accessibility, performance and platform verification.
 

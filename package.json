@@ -52,7 +52,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node scripts/test-engine.cjs && node scripts/test-rounds.cjs && node scripts/test-town.cjs && node scripts/test-exploration.cjs && node scripts/test-maps.cjs && node scripts/test-walkthrough.cjs && node scripts/test-animation.cjs && node scripts/test-rewards.cjs && node scripts/test-stories.cjs && node scripts/test-critical.cjs && node scripts/test-goblins.cjs && node scripts/test-framework.cjs && node scripts/test-ecosystems.cjs && node scripts/test-director.cjs",
+    "test": "node scripts/test-engine.cjs && node scripts/test-rounds.cjs && node scripts/test-town.cjs && node scripts/test-exploration.cjs && node scripts/test-maps.cjs && node scripts/test-walkthrough.cjs && node scripts/test-animation.cjs && node scripts/test-rewards.cjs && node scripts/test-stories.cjs && node scripts/test-critical.cjs && node scripts/test-goblins.cjs && node scripts/test-framework.cjs && node scripts/test-ecosystems.cjs && node scripts/test-director.cjs && node scripts/test-consequences.cjs",
     "playtest": "node scripts/playtest.cjs",
     "typecheck": "tsc --noEmit",
     "export": "expo export --platform all",

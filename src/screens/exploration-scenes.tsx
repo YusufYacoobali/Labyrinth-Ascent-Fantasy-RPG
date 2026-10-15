@@ -364,7 +364,7 @@ export function BranchScene() {
           ))}
         {!resolved && npc === "tamsin" && (
           <Choice
-            label="Trade two monster cores for three rations"
+            label={`Trade two monster cores for ${(state.npcs?.tamsin?.trust || 0) >= 3 ? "four" : "three"} rations`}
             detail="One trade this expedition; field-found cores produce unsecured rations"
             icon="sack"
             disabled={(state.inventory["beast-core"] || 0) < 2}
@@ -372,6 +372,31 @@ export function BranchScene() {
               dispatch({ type: "BRANCH_CHOICE", choice: "trade", roll: 1 })
             }
           />
+        )}
+        {!resolved && npc === "sable" && (
+          <>
+            <Choice
+              label="Claim the disputed salvage"
+              detail="80 unsecured gold; Sable's trust falls by three"
+              icon="gold"
+              onPress={() =>
+                dispatch({ type: "BRANCH_CHOICE", choice: "claim", roll: 1 })
+              }
+            />
+            <Choice
+              label="Survey the cache together"
+              detail="Requires two trust from earlier meetings; gain a ration and a maintenance key"
+              icon="map"
+              disabled={(state.npcs?.sable?.trust || 0) < 2}
+              onPress={() =>
+                dispatch({
+                  type: "BRANCH_CHOICE",
+                  choice: "cooperate",
+                  roll: 1,
+                })
+              }
+            />
+          </>
         )}
         <RouteMap />
         <Directions />

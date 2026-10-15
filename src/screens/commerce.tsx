@@ -1,3 +1,5 @@
+import { FactionOpportunities } from "@/components/faction-opportunities";
+import { factionAccess } from "@/game/faction-opportunities";
 import React, { useState } from "react";
 import { View, Pressable, TextInput } from "react-native";
 import { Image } from "expo-image";
@@ -480,7 +482,7 @@ export function ShopScreen() {
             : true),
   );
   const total = ITEMS.reduce(
-    (n, i) => n + (cart[i.id] || 0) * buyPrice(i, state.day),
+    (n, i) => n + (cart[i.id] || 0) * buyPrice(i, state.day, state),
     0,
   );
   const quantity = (id: string, n: number) =>
@@ -555,7 +557,7 @@ export function ShopScreen() {
                   : qty;
             const price = sell
               ? sellPrice(item, buyer)
-              : buyPrice(item, state.day);
+              : buyPrice(item, state.day, state);
             return (
               <Surface key={item.id} parchment style={{ padding: 9, gap: 6 }}>
                 <View
@@ -587,6 +589,9 @@ export function ShopScreen() {
                       style={{ fontSize: 11, lineHeight: 15, color: "#725335" }}
                     >
                       Owned {owned} · {price}g
+                      {!sell && factionAccess(state, item)
+                        ? ` · ${factionAccess(state, item)}`
+                        : ""}
                     </Copy>
                   </View>
                   {!sell && (
@@ -627,6 +632,7 @@ export function ShopScreen() {
                       </Copy>
                       <Pressable
                         accessibilityRole="button"
+                        disabled={!!factionAccess(state, item)}
                         accessibilityLabel={"Add " + item.name + " to cart"}
                         onPress={() =>
                           quantity(item.id, (cart[item.id] || 0) + 1)
@@ -805,6 +811,7 @@ export function GuildScreen() {
           onChange={setTab}
         />
         <View style={{ padding: 10, gap: 8 }}>
+          {tab === "Contracts" && <FactionOpportunities />}
           {tab === "Contracts" ? (
             QUESTS.map((q, index) => {
               const status = state.quests[q.id],

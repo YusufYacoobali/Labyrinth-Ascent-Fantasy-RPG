@@ -1,3 +1,6 @@
+import { StoryArt, EventArt } from "./story-art";
+import { WORLD_NPCS, type WorldNpcId } from "@/game/world-npcs";
+import { reconciliationStage } from "@/game/reconciliation";
 import { ROUTE_FACTIONS } from "@/game/route-stories";
 import React from "react";
 import { View } from "react-native";
@@ -76,7 +79,9 @@ export function StoryScene() {
   const active = state.stories.active,
     chain = STORY_CHAINS.find((c) => c.id === active?.chain);
   const base = chain?.stages.find((s) => s.id === active?.stage);
-  const stage = base ? presentStoryStage(state, base) : undefined;
+  const stage =
+    reconciliationStage(state) ||
+    (base ? presentStoryStage(state, base) : undefined);
   if (!stage) return null;
   return (
     <View style={{ padding: 18, gap: 16 }}>
@@ -84,6 +89,23 @@ export function StoryScene() {
       <Copy title style={{ fontSize: 28, color: t.color.goldLight }}>
         {stage.title}
       </Copy>
+      {stage.location === "field" ? (
+        stage.site === "shelter" ? (
+          <StoryArt
+            group="rooms"
+            index={4}
+            label="Evidence in the established sanctuary"
+          />
+        ) : (
+          <EventArt floor={stage.floor || state.floor} label={stage.title} />
+        )
+      ) : (
+        <StoryArt
+          group="rooms"
+          index={1}
+          label="A quiet conversation among expedition companions"
+        />
+      )}
       <Copy>{stage.body}</Copy>
       {stage.choices.map((c) => (
         <Button
@@ -124,6 +146,26 @@ export function StoryChronicle() {
           </Copy>
         ))}
       </Panel>
+      {Object.entries(state.npcs || {}).map(([id, memory]) => (
+        <Panel key={id} style={{ gap: 5, padding: 12 }}>
+          <Copy title>{WORLD_NPCS[id as WorldNpcId]?.name || id}</Copy>
+          <Copy muted>
+            {memory.visits} meetings · trust {memory.trust} · last decisions:{" "}
+            {memory.decisions.join(", ")}
+          </Copy>
+          <Copy muted>
+            {id === "sable"
+              ? memory.trust >= 2
+                ? "Shared surveys are available at future meetings."
+                : memory.trust < 0
+                  ? "The rival crew remembers your disputed claim."
+                  : "Earlier aid can lead to a shared survey."
+              : id === "tamsin" && memory.trust >= 3
+                ? "Trusted core trades include a fourth ration."
+                : "Your earlier help will be remembered at the next meeting."}
+          </Copy>
+        </Panel>
+      ))}
       {STORY_CHAINS.filter((c) => state.stories.stages[c.id]).map((c) => {
         const progress = state.stories.stages[c.id],
           complete = progress >= c.stages.length;

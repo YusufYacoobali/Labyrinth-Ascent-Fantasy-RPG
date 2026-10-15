@@ -1,3 +1,5 @@
+import { contextualStoryStage } from "./story-context";
+import { resolveReconciliation } from "./reconciliation";
 import { pairBond } from "./relationships";
 import { SOLO_SCENES } from "./companion-solo-scenes";
 import { BALANCE as B } from "./balance";
@@ -75,8 +77,8 @@ export function presentStoryStage(s: Game, stage: StoryStage): StoryStage {
     (pair.ids.every((id) => roster.some((c) => c.id === id)) &&
       pairBond(s, pair.ids[0], pair.ids[1]) > -2)
   )
-    return stage;
-  return {
+    return contextualStoryStage(s, stage);
+  return contextualStoryStage(s, {
     ...stage,
     body: solo.body,
     choices: stage.choices.map((c) => ({
@@ -89,7 +91,7 @@ export function presentStoryStage(s: Game, stage: StoryStage): StoryStage {
             outcome: solo.alternateOutcome || c.outcome,
           }),
     })),
-  };
+  });
 }
 export function resolveStoryAction(s: Game, a: Action): Game | undefined {
   if (a.type === "RECONCILE") {
@@ -99,17 +101,22 @@ export function resolveStoryAction(s: Game, a: Action): Game | undefined {
       loyalty(s, a.id) >= B.reconciliationThreshold
     )
       return s;
-    const message = `${a.id[0].toUpperCase() + a.id.slice(1)} asks for an honest account of what went wrong. You agree on a way forward. Loyalty restored to 30.`;
     return {
       ...s,
+      phase: "story",
       stories: {
         ...s.stories,
-        loyalty: { ...s.stories.loyalty, [a.id]: B.reconciliationLoyalty },
+        active: {
+          chain: `reconcile.${a.id}`,
+          stage: `reconcile.${a.id}.listen`,
+          resume: "town",
+        },
       },
-      message,
-      journal: [message, ...s.journal].slice(0, 60),
+      message: "",
     };
   }
+  const reconciliation = resolveReconciliation(s, a);
+  if (reconciliation) return reconciliation;
   if (a.type === "OPEN_STORY") {
     const chain = STORY_CHAINS.find((c) => c.id === a.id);
     if (!chain || !storyEligible(s, chain)) return s;

@@ -275,8 +275,31 @@ function campaign(seed = 1, maxExpeditions = 12) {
   }
   for (let expedition = 1; expedition <= maxExpeditions; expedition++) {
     for (const c of s.party)
-      if (c.id !== "hero" && quests.loyalty(s, c.id) < 25)
+      if (c.id !== "hero" && quests.loyalty(s, c.id) < 25) {
+        if (s.food < 2) {
+          if (
+            s.gold <
+            e.buyPrice(
+              w.ITEMS.find((i) => i.id === "rations"),
+              s.day,
+              s,
+            )
+          )
+            act({ type: "WORK", skipOpening: true });
+          act({ type: "BUY_ITEM", id: "rations" });
+        }
         act({ type: "RECONCILE", id: c.id });
+        act({
+          type: "STORY_CHOICE",
+          stage: s.stories.active.stage,
+          choice: "listen",
+        });
+        act({
+          type: "STORY_CHOICE",
+          stage: s.stories.active.stage,
+          choice: "restitution",
+        });
+      }
     for (const chain of quests.storyLeads(s)) {
       const stage = chain.stages[s.stories.stages[chain.id] || 0];
       act({ type: "OPEN_STORY", id: chain.id });

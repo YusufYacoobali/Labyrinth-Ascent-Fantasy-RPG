@@ -1,5 +1,10 @@
 import { trainingLimit, trainingXp, temperingOffer } from "./town-progression";
 import { canAutoResolve } from "./combat-commands";
+import {
+  factionAccess,
+  factionDiscount,
+  resolveFactionAction,
+} from "./faction-opportunities";
 import { establishExpedition } from "./encounter-director";
 import { knownPath } from "./known-travel";
 import type { NpcMemory, WorldNpcId } from "./world-npcs";
@@ -244,6 +249,7 @@ export interface Game {
   runGold: number;
   runGross: number;
   contracts: Record<string, number>;
+  factionClaims?: string[];
   runContracts: Record<string, number>;
   runPaid: Record<string, number>;
   knownFloors: number[];
@@ -680,8 +686,12 @@ export const TOWN_RUMOURS = [
   },
 ] as const;
 export const marketRush = (day: number) => day % 30 >= 27 || day % 30 === 0;
-export const buyPrice = (item: Item, day: number) =>
-  Math.ceil(item.price * (marketRush(day) ? 1.15 : 1));
+export const buyPrice = (item: Item, day: number, state?: Game) =>
+  Math.ceil(
+    item.price *
+      (marketRush(day) ? 1.15 : 1) *
+      (state ? 1 - factionDiscount(state, item) : 1),
+  );
 export const sellPrice = (item: Item, vendor: Vendor) =>
   Math.round(item.sell * (item.vendor === vendor ? 1.3 : 0.85));
 export function floorEnvironment(floor: number, route: Route | null): string {
@@ -813,6 +823,7 @@ export type Action =
   | { type: "OPEN_STORY"; id: string }
   | { type: "CLOSE_STORY" }
   | { type: "STORY_CHOICE"; stage: string; choice: string }
+  | { type: "FACTION_DELIVER"; id: string }
   | { type: "RECONCILE"; id: string }
   | RoundRequest
   | { type: "CREATE"; race: Race; name: string; roll: number; seed?: number }
@@ -1393,6 +1404,8 @@ function resolveGameAction(s: Game, a: Action): Game {
 function reduceGame(s: Game, a: Action): Game {
   const genericAction = resolveGenericAction(s, a);
   if (genericAction) return genericAction;
+  const factionAction = resolveFactionAction(s, a);
+  if (factionAction) return factionAction;
   const storyAction = resolveStoryAction(s, a);
   if (storyAction) return storyAction;
   if (a.type === "LEAD") {
@@ -1474,7 +1487,12 @@ function reduceGame(s: Game, a: Action): Game {
         Number.isInteger(entry.quantity) &&
         entry.quantity > 0 &&
         entry.quantity <= 10 &&
-        ITEMS.some((item) => item.id === entry.id && item.kind !== "loot"),
+        ITEMS.some(
+          (item) =>
+            item.id === entry.id &&
+            item.kind !== "loot" &&
+            !factionAccess(s, item),
+        ),
     );
     if (!valid) return s;
     const total = a.items.reduce(
@@ -1483,6 +1501,7 @@ function reduceGame(s: Game, a: Action): Game {
         buyPrice(
           ITEMS.find((i) => i.id === entry.id)!,
           s.day,
+          s,
         ) *
           entry.quantity,
       0,
@@ -2040,7 +2059,8 @@ function reduceGame(s: Game, a: Action): Game {
             : a.id),
       );
       if (!item || item.kind === "loot") return s;
-      const price = buyPrice(item, s.day);
+      if (factionAccess(s, item)) return note(s, factionAccess(s, item));
+      const price = buyPrice(item, s.day, s);
       if (s.gold < price)
         return note(s, `You need ${price} gold for ${item.name}.`);
       const n = {

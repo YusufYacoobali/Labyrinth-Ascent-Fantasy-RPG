@@ -142,6 +142,19 @@ test("Defeat removes five loyalty once, companions stay, reconciliation gates on
   s = e.reducer({ ...s, day: 90 }, { type: "ENTER" });
   assert.equal(s.phase, "town");
   s = e.reducer(s, { type: "RECONCILE", id: "kael" });
+  assert.equal(q.loyalty(s, "kael"), 20);
+  assert.equal(s.phase, "story");
+  s = e.reducer(s, {
+    type: "STORY_CHOICE",
+    stage: s.stories.active.stage,
+    choice: "listen",
+  });
+  s = { ...s, food: Math.max(2, s.food) };
+  s = e.reducer(s, {
+    type: "STORY_CHOICE",
+    stage: s.stories.active.stage,
+    choice: "restitution",
+  });
   assert.equal(q.loyalty(s, "kael"), 30);
   s = e.reducer(s, { type: "ENTER" });
   assert.equal(s.phase, "mission");
