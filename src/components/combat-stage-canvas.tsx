@@ -1,7 +1,11 @@
+import { arenaFloor } from "@/game/visual-environments";
+import { STATUS_COLORS, visibleStatus } from "@/game/combat-presentation";
+import { SPECIES_ART } from "@/game/species-art";
 import React, { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import {
   Atlas,
+  Path,
   Canvas,
   Circle,
   Fill,
@@ -38,7 +42,7 @@ import {
   cueContact,
   cueResponse,
   cueDuration,
-  formation,
+  partyFormation,
   enemyFormation,
   healthPanel,
   type CombatCue,
@@ -56,6 +60,8 @@ import {
 
 function Figure({
   motionKey,
+  species,
+  status,
   id,
   x,
   y,
@@ -71,6 +77,8 @@ function Figure({
   onLoaded,
 }: {
   motionKey: MotionKey;
+  species?: string;
+  status?: string;
   id: string;
   x: number;
   y: number;
@@ -85,17 +93,25 @@ function Figure({
   destination: { x: number; y: number };
   onLoaded: (id: string) => void;
 }) {
-  const image = useImage(MOTION_SHEETS[motionKey]);
+  const art = species ? SPECIES_ART[species] : undefined;
+  const image = useImage(art ? null : MOTION_SHEETS[motionKey]);
   useEffect(() => {
-    if (image) onLoaded(id);
-  }, [image, id, onLoaded]);
-  const cw = (image?.width() || 8) / 8;
-  const ch = (image?.height() || 6) / 6;
+    if (image || art) onLoaded(id);
+  }, [image, art, id, onLoaded]);
+  const cw = art?.width || (image?.width() || 8) / 8;
+  const ch = art?.height || (image?.height() || 6) / 6;
   const scale = size / Math.max(cw, ch);
   const pose = useDerivedValue(() => {
     if (fallen && !(enemy && cue?.enemyDied) && !cue?.fallen.includes(id))
       return { row: 4, frame: 7, advance: 0, recoil: 0, opacity: 0.4 };
-    return combatPose(time.get(), clock.get(), cue, id, enemy, reduced);
+    return combatPose(
+      time.get(),
+      reduced ? 0 : clock.get(),
+      cue,
+      id,
+      enemy,
+      reduced,
+    );
   }, [cue, id, enemy, reduced, fallen]);
   const sprites = useRectBuffer(1, (r) => {
     "worklet";
@@ -112,6 +128,26 @@ function Figure({
       x - (cw * scale) / 2 + p.advance * travel + p.recoil,
       y - ch * scale * 0.96 + p.advance * (destination.y - y),
     );
+  });
+  const pixelTransform = useDerivedValue(() => {
+    const p = pose.get(),
+      bob = reduced ? 0 : p.row === 0 ? Math.sin(clock.get() / 240) * 1.2 : 0;
+    return [
+      {
+        translateX:
+          x - (cw * scale) / 2 + p.advance * (destination.x - x) + p.recoil,
+      },
+      {
+        translateY:
+          y - ch * scale * 0.96 + p.advance * (destination.y - y) + bob,
+      },
+      { scaleX: scale },
+      {
+        scaleY:
+          scale *
+          (p.row === 4 && !reduced ? Math.max(0.25, 1 - p.frame * 0.09) : 1),
+      },
+    ];
   });
   const opacity = useDerivedValue(() => pose.get().opacity);
   // This source sheet faces right. Mirror only its pixels around the moving
@@ -140,20 +176,40 @@ function Figure({
     width: size * 0.54,
     height: 9,
   }));
+  const statusOpacity = useDerivedValue(() =>
+    status ? (reduced ? 0.35 : 0.3 + Math.sin(clock.get() / 350) * 0.1) : 0,
+  );
   return (
     <Group opacity={opacity}>
       <Oval rect={shadow} color="rgba(0,0,0,.48)" />
+      {status && (
+        <Oval
+          rect={shadow}
+          color={STATUS_COLORS[status]}
+          opacity={statusOpacity}
+          style="stroke"
+          strokeWidth={3}
+        />
+      )}
       {selected && !enemy && !fallen && (
         <Oval rect={shadow} color="#7bd1ff" style="stroke" strokeWidth={1.5} />
       )}
-      <Group transform={mirror}>
-        <Atlas
-          image={image}
-          sprites={sprites}
-          transforms={transforms}
-          sampling={{ filter: FilterMode.Nearest, mipmap: MipmapMode.None }}
-        />
-      </Group>
+      {art ? (
+        <Group transform={pixelTransform}>
+          {art.paths.map(({ color, path }) => (
+            <Path key={color} color={color} path={path} />
+          ))}
+        </Group>
+      ) : (
+        <Group transform={mirror}>
+          <Atlas
+            image={image}
+            sprites={sprites}
+            transforms={transforms}
+            sampling={{ filter: FilterMode.Nearest, mipmap: MipmapMode.None }}
+          />
+        </Group>
+      )}
     </Group>
   );
 }
@@ -425,6 +481,25 @@ function Pulse({
   );
 }
 
+function EnvironmentLight({
+  clock,
+  reduced,
+  x,
+  y,
+  color,
+}: {
+  clock: SharedValue<number>;
+  reduced: boolean;
+  x: number;
+  y: number;
+  color: string;
+}) {
+  const opacity = useDerivedValue(() =>
+    reduced ? 0.055 : 0.055 + Math.sin(clock.get() / 470) * 0.012,
+  );
+  return <Circle cx={x} cy={y} r={55} color={color} opacity={opacity} />;
+}
+
 export default function CombatStage({
   playbackDuration,
   state,
@@ -449,10 +524,10 @@ export default function CombatStage({
   const reduced = useReducedMotion();
   const clock = useClock();
   const time = useSharedValue(2500);
-  const floorIndex = Math.max(0, Math.min(11, state.floor - 1));
+  const floorIndex = arenaFloor(state.floor, state.route) - 1;
   const background = useImage(battleAtlases[Math.floor(floorIndex / 4)]);
   const cell = floorIndex % 4;
-  const positions = formation(width, height, state.party.length);
+  const positions = partyFormation(width, height, state.party);
   const allEnemies =
     state.combat?.enemies ||
     (state.enemy ? [{ ...state.enemy, id: "enemy" }] : []);
@@ -516,6 +591,8 @@ export default function CombatStage({
   );
   const targetPoint = positions[targetIndex] || positions[0];
   const subjects = state.party.map((c, i) => ({
+    status: visibleStatus(c),
+    species: undefined as string | undefined,
     motionKey: characterVisual(c).key,
     id: c.id,
     ...positions[i],
@@ -527,6 +604,8 @@ export default function CombatStage({
     if (enemy.hp <= 0 && !(enemy.id === activeEnemyId && cue?.enemyDied))
       return;
     subjects.push({
+      status: visibleStatus(enemy),
+      species: enemy.species,
       motionKey: enemyVisual({ ...state, enemy }).key,
       id: enemy.id,
       ...enemyPositions[i],
@@ -583,6 +662,26 @@ export default function CombatStage({
             />
           </Group>
           <Fill color="rgba(4,12,20,.12)" />
+          <EnvironmentLight
+            clock={clock}
+            reduced={reduced}
+            x={0}
+            y={height * 0.25}
+            color="#ffb66b"
+          />
+          <EnvironmentLight
+            clock={clock}
+            reduced={reduced}
+            x={width}
+            y={height * 0.35}
+            color={
+              state.route === "roots"
+                ? "#a6d287"
+                : state.route === "forge"
+                  ? "#f0a368"
+                  : "#93c9e6"
+            }
+          />
           <Group opacity={focus}>
             <Circle
               cx={actorPoint?.x || 0}

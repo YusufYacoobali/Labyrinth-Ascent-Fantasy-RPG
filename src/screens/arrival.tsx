@@ -1,9 +1,8 @@
-import React, { useEffect, useRef } from "react";
-import { Pressable, View } from "react-native";
+import React from "react";
+import { View } from "react-native";
 import { ArrivalArt } from "@/components/story-art";
 import { StoryCard } from "@/components/story-card";
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
-import { Button, Choice, Copy, Icon } from "@/components/game-ui";
+import { Button, Choice, Copy } from "@/components/game-ui";
 import { Reveal } from "@/components/combat-motion";
 import { FieldSupplies } from "@/components/field-supplies";
 import { ARRIVALS } from "@/game/story";
@@ -13,22 +12,6 @@ import { theme as t } from "@/theme";
 export function Arrival() {
   const { state, dispatch } = useGame();
   const scene = ARRIVALS[state.floor - 1];
-  const player = useAudioPlayer(require("../../assets/audio/cave.wav"));
-  const audio = useAudioPlayerStatus(player);
-  const played = useRef(false);
-  useEffect(() => {
-    if (!state.sound || state.floor !== 1 || state.arrivalChoice) {
-      player.pause();
-      return;
-    }
-    if (audio.isLoaded && !played.current) {
-      played.current = true;
-      void player
-        .seekTo(0)
-        .then(() => player.play())
-        .catch(() => {});
-    }
-  }, [audio.isLoaded, player, state.sound, state.floor, state.arrivalChoice]);
   const resolved = !!state.arrivalChoice;
   if (!state.journey.defender)
     return (
@@ -129,30 +112,6 @@ export function Arrival() {
           />
         </StoryCard>
       </Reveal>
-      {!resolved && state.floor === 1 && state.sound && (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Hear the goblin noises again"
-          onPress={() => {
-            void player
-              .seekTo(0)
-              .then(() => player.play())
-              .catch(() => {});
-          }}
-          style={{
-            alignSelf: "center",
-            padding: 8,
-            flexDirection: "row",
-            gap: 7,
-            alignItems: "center",
-          }}
-        >
-          <Icon name="volume-high" size={17} />
-          <Copy muted style={{ fontSize: 12 }}>
-            Listen again
-          </Copy>
-        </Pressable>
-      )}
     </View>
   );
 }

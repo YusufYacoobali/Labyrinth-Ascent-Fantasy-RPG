@@ -1067,7 +1067,16 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
         e.id === foe.id ? { ...e, ...next.enemy } : e,
       ),
     };
-    if (q.kind === "skill" && q.skill === "Crown Pulse") {
+    const area = q.kind === "skill" && q.skill === "Crown Pulse";
+    if (area) {
+      emit(
+        actor.id,
+        foe.id,
+        `${actor.name}: Crown Pulse → ${foe.name}, ${next.effects.damage} damage.`,
+        "skill",
+        q,
+      );
+
       for (const other of next.combat!.enemies.filter(
         (e) => e.hp > 0 && e.id !== foe.id,
       )) {
@@ -1141,13 +1150,14 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
       used.exhaustion + (q.kind === "skill" ? 2 : 1),
     );
     if (q.kind === "skill") cast.add(`${actor.id}:${q.skill}`);
-    emit(
-      actor.id,
-      foe.id,
-      `${actor.name}: ${q.kind === "skill" ? q.skill : q.kind} → ${foe.name}, ${next.effects.damage} damage${next.effects.absorbed ? ` (${next.effects.absorbed} absorbed by its ward)` : ""}.`,
-      q.kind,
-      q,
-    );
+    if (!area)
+      emit(
+        actor.id,
+        foe.id,
+        `${actor.name}: ${q.kind === "skill" ? q.skill : q.kind} → ${foe.name}, ${next.effects.damage} damage${next.effects.absorbed ? ` (${next.effects.absorbed} absorbed by its ward)` : ""}.`,
+        q.kind,
+        q,
+      );
     const reacting = next.combat.enemies.find((e) => e.id === foe.id);
     const attackElement =
       q.kind === "skill"

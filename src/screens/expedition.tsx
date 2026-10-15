@@ -43,6 +43,7 @@ import {
   DamageNumber,
   Reveal,
   useCombatFeedback,
+  useExpeditionAmbience,
 } from "@/components/combat-motion";
 import {
   daysToGate,
@@ -1182,6 +1183,7 @@ function Victory() {
   );
 }
 export function ExpeditionScreen() {
+  useExpeditionAmbience();
   const { state, dispatch, ready } = useGame();
   const feedback = useCombatFeedback();
   if (!ready) return null;

@@ -1,3 +1,4 @@
+import { SPECIES_ART } from "./species-art";
 import { MONSTERS } from "./monsters";
 import type { Character, Game } from "./engine";
 
@@ -97,6 +98,15 @@ export function enemyVisual(
   const identity =
     MONSTERS.find((m) => m.id === state.enemy?.species)?.visual ||
     state.enemy?.species;
+  const art = state.enemy?.species
+    ? SPECIES_ART[state.enemy.species]
+    : undefined;
+  if (art)
+    return {
+      key: identity as MotionKey,
+      style: art.profile.style,
+      color: art.profile.accent,
+    };
   const species = FLOOR_VISUALS.find((v) => v.key === identity);
   if (species) return species;
   if (identity === "bonegnaw" || (!identity && state.enemy?.sprite === 20))

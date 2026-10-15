@@ -1,4 +1,7 @@
-import type { Action, Game } from "./engine";
+import { skillFamily } from "./essence-powers";
+import { SKILLS } from "./combat-data";
+import { formationOf } from "./formation";
+import type { Character, Action, Game } from "./engine";
 import {
   characterVisual,
   enemyVisual,
@@ -87,7 +90,16 @@ export function battleCue(
     before.party.find((c) => c.hp > 0);
   const visual = actor ? characterVisual(actor) : null;
   const foe = enemyVisual(before);
-  const heal = action.kind === "skill" && action.skill === "Second Wind";
+  const family = skillFamily(action.skill),
+    spec = SKILLS.find((s) => s.name === action.skill);
+  const heal = action.kind === "skill" && family === "Second Wind";
+  const element =
+    spec?.element ||
+    (family === "Venom Fang"
+      ? "venom"
+      : family === "Crown Pulse" || action.skill === "Ember Ward"
+        ? "fire"
+        : undefined);
   const cue: CombatCue = {
     id: after.effects.id,
     actor: actor?.id || "",
@@ -100,19 +112,25 @@ export function battleCue(
       .map((c) => c.id),
     actorStyle: heal
       ? "heal"
-      : action.skill === "Arcane Bolt"
-        ? "magic"
-        : action.skill === "Venom Fang"
-          ? "arrow"
+      : family === "Venom Fang"
+        ? "arrow"
+        : family === "Arcane Bolt" ||
+            family === "Crown Pulse" ||
+            (element && element !== "physical")
+          ? "magic"
           : visual?.style,
     enemyStyle: foe.style,
     color: heal
       ? "#8fffc0"
-      : action.skill === "Venom Fang"
+      : element === "venom"
         ? "#86e890"
-        : action.skill === "Arcane Bolt"
-          ? "#bca0ff"
-          : visual?.color,
+        : element === "fire"
+          ? "#ffb078"
+          : element === "frost"
+            ? "#a5e6fc"
+            : family === "Arcane Bolt"
+              ? "#bca0ff"
+              : visual?.color,
     enemyColor: foe.color,
     healing:
       after.effects.healing ||
@@ -503,4 +521,30 @@ export function formation(width: number, height: number, count: number) {
   return points
     .slice(0, count)
     .map(([x, y]) => ({ x: width * x, y: height * y, size }));
+}
+
+/** Logical ranks are visible: every front fighter stands nearer the enemy.
+ * Extra rows grow the scrollable stage instead of overlapping health panels. */
+export function tacticalStageHeight(party: Character[]) {
+  const front = party.filter((c) => formationOf(c) === "front").length;
+  return Math.max(260, Math.max(front, party.length - front) * 100 + 40);
+}
+export function partyFormation(
+  width: number,
+  height: number,
+  party: Character[],
+) {
+  const fronts = party.filter((c) => formationOf(c) === "front"),
+    backs = party.filter((c) => formationOf(c) === "back");
+  return party.map((c) => {
+    const rank = formationOf(c),
+      members = rank === "front" ? fronts : backs,
+      index = members.findIndex((p) => p.id === c.id),
+      step = (height - 20) / Math.max(1, members.length);
+    return {
+      x: width * (rank === "front" ? 0.4 : 0.13),
+      y: step * (index + 1),
+      size: Math.min(76, width * 0.2, step * 0.48),
+    };
+  });
 }

@@ -11,6 +11,7 @@ import Animated, {
   FadeIn,
   ReduceMotion,
 } from "react-native-reanimated";
+import type { FeedbackKind } from "@/game/combat-audio";
 import { useAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 import { Atlas, Copy } from "./game-ui";
@@ -21,14 +22,27 @@ export function useCombatFeedback() {
   const strike = useAudioPlayer(require("../../assets/audio/strike.wav"));
   const skill = useAudioPlayer(require("../../assets/audio/skill.wav"));
   const reward = useAudioPlayer(require("../../assets/audio/reward.wav"));
-  return (kind: "attack" | "skill" | "reward" | "item" | "guard") => {
+  const fire = useAudioPlayer(require("../../assets/audio/fire.wav"));
+  const frost = useAudioPlayer(require("../../assets/audio/frost.wav"));
+  const venom = useAudioPlayer(require("../../assets/audio/venom.wav"));
+  const bone = useAudioPlayer(require("../../assets/audio/bone.wav"));
+  const pack = useAudioPlayer(require("../../assets/audio/pack.wav"));
+  const skitter = useAudioPlayer(require("../../assets/audio/skitter.wav"));
+  const phase = useAudioPlayer(require("../../assets/audio/phase.wav"));
+
+  return (kind: FeedbackKind) => {
     if (state.sound) {
       const player =
-        kind === "reward"
+        (
+          { fire, frost, venom, bone, pack, skitter, phase } as Partial<
+            Record<FeedbackKind, typeof strike>
+          >
+        )[kind] ||
+        (kind === "reward"
           ? reward
           : kind === "skill" || kind === "item"
             ? skill
-            : strike;
+            : strike);
       void player
         .seekTo(0)
         .then(() => {
@@ -237,4 +251,18 @@ export function Sparks() {
       ))}
     </View>
   );
+}
+
+export function useExpeditionAmbience() {
+  const { state } = useGame(),
+    player = useAudioPlayer(require("../../assets/audio/cave.wav")),
+    active = state.journey.startDay !== null && state.phase !== "town";
+  useEffect(() => {
+    // expo-audio native SharedObject setters configure playback, not React state.
+    // eslint-disable-next-line react-hooks/immutability
+    player.volume = 0.055;
+    player.loop = true;
+    if (active && state.sound) player.play();
+    else player.pause();
+  }, [player, active, state.sound]);
 }

@@ -27,6 +27,10 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  environments: load("src/game/visual-environments.ts"),
+  presentation: load("src/game/combat-presentation.ts"),
+  combatAudio: load("src/game/combat-audio.ts"),
+  speciesArt: load("src/game/species-art.ts"),
   builds: load("src/game/build-equipment.ts"),
   reports: load("src/game/expedition-report.ts"),
   factionOpportunities: load("src/game/faction-opportunities.ts"),

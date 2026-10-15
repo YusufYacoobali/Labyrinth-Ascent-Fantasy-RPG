@@ -2,6 +2,10 @@
 
 Starting point: `6da6d25` on `ui-polish-from-ui-1`. The user requested sequential delivery through the master roadmap. This document tracks the new milestones 0–7; the earlier four-milestone redesign remains documented in GAMEPLAY-REDESIGN.md.
 
+Current status: milestones 0–7 have implementation checkpoints. Automated checks and exports pass; small/large-screen UI checks, physical-device testing and human playthroughs are deferred. Milestone entries below record their individual checkpoints, so earlier artwork and balance limitations may be superseded by later entries.
+
+Historical `meanBattleRounds` values divide all accepted rounds, including unsuccessful attempts, by victory receipts. The final checkpoint also measures completed ordinary and boss fights separately.
+
 ## Milestone 0 — critical fixes
 
 Implemented and committed as `8633ad9`. On 15 October 2026 the user authorized continuing sequentially with UI checks deferred while automation is unavailable. Actual small/large-screen checks remain deferred; automated tests and platform exports are required at each checkpoint. Both UI runtimes reported `failed to write kernel assets: The system cannot find the path specified`.
@@ -135,8 +139,43 @@ Verification: 241 grouped checks pass, including twelve build/progression groups
 
 The 200-seed benchmark now prepares earned recipes, faction deliveries, found gear and affordable upgraded equipment through ordinary town actions. It grants no resources and still navigates using visible information. It completes 199 campaigns within twelve expeditions, with zero stalls, first-expedition median Floor 4 and completed-campaign median five expeditions. Mean battle length 6.03 rounds; fallen-character events 1,446; unfed checks 0; median mastery 173.5; loot Continue actions 4,362; binding actions 2,169; story choices 6,905; generic appearances 2,930; repetition violations 0; treatment cost 156,200 gold and 3,558 injured-character recovery days. One campaign remains incomplete at the cap. This comparison includes a stronger preparation policy, so the improvement cannot be attributed entirely to changed powers. Report: `verification/master-m6-campaign.json`.
 
-## Remaining sequence
+## Milestone 7 — production polish and final automated gate
 
-7. Production art, audio, accessibility, performance and platform verification.
+Thirty species that shared illustrations now have original code-native pixel artwork with distinct anatomy, equipment, crests and palettes. All thirty alpha silhouettes differ, with at most nine merged colour paths per figure. They render in the battlefield, enemy cards and bestiary; the fourteen original species retain their existing motion sheets. A rendered contact sheet was inspected for clear separation and palette consistency. These are original Canvas/SVG drawings, not externally generated bitmap assets. Existing narrative art remains in use.
 
-Each milestone requires its own automated, simulation, UI and persistence gate and a reviewable checkpoint. No later milestone is represented as implemented by the critical-fix foundation.
+Battle formation now displays the actual Front/Back assignments. Crowded ranks grow the scrollable stage instead of overlapping health panels. Bounds checks cover all sixteen four-person assignments at five widths, including narrow phones. Poison, chill, burning and other active conditions have coloured rings alongside their existing textual rules. Elemental and healing powers choose appropriate effects; phase announcements have accessible alerts. Reduced motion suppresses idle movement, status pulsing and environmental flicker while preserving information and final outcomes.
+
+Seven original synthesized cues distinguish fire, frost, venom, bone attacks, packs, spiders and phase changes. Tactical round playback now actually plays feedback; sound/haptics preferences still apply. Quiet expedition ambience has one managed player, and background playback/recording permissions remain disabled. Floor and route scenery use appropriate empty authored environments: green ruins, ice vault, furnace and crypt. Routine traversal and exhaustion scenes no longer always show the same corridor.
+
+Two playback bugs found during this pass are fixed: a new round cannot inherit the last round's cursor, and area attacks record the primary impact before secondary snapshots. Reloading or skipping presentation cannot spend resources or claim rewards again.
+
+Verification: **250 grouped checks**, typecheck, lint and Android/iOS/web exports pass. Nine production groups cover distinct artwork, rank bounds, cursor boundaries, sound policy/waveforms, reduced motion and signature effects, area snapshot/reload order, large-save round trips and scenery selection. The large-save desktop benchmark round-trips a roughly 170 KB version-two campaign with all 44 powers and 21 maps fifty times; measured timing is recorded in `verification/master-m7-save-performance.json`. This measures serialization/normalization, not native disk or device rendering performance.
+
+Final campaign benchmark (`verification/master-final-campaign.json`):
+
+| Metric | Result |
+|---|---:|
+| Seeds | 200 |
+| Completed within twelve expeditions | 199 |
+| State-machine stalls | 0 |
+| First-expedition median floor | 4 |
+| Completed-campaign median expeditions | 5 |
+| Ordinary completed fight median / mean | 4 / 3.72 rounds |
+| Boss completed fight median / mean | 8 / 7.89 rounds |
+| All completed fight mean | 5.00 rounds |
+| Failed-attempt rounds, separate | 4,492 |
+| Fallen-character events | 1,446 |
+| Unfed checks | 0 |
+| Median mastery | 173.5 |
+| Loot Continue / binding actions | 4,362 / 2,169 |
+| Story choices / generic appearances | 6,905 / 2,930 |
+| Unique/generic repetition violations | 0 / 0 |
+| Treatment gold / injured-character recovery days | 156,200 / 3,558 |
+
+Seed 149 is the sole twelve-expedition outlier. With the same policy and no granted resources it completes at expedition 17, with no state stall (`verification/master-final-tail-check.json`). Results sample four origins and six rosters, including a three-character party. They support aggregate pacing targets and recoverable progression; they do not establish human enjoyment or equally strong builds.
+
+### Deferred verification
+
+By the user's explicit instruction, continue despite unavailable UI automation and defer those checks. Small/large-screen interaction checks, physical Android/iOS checks, native storage/rendering/audio measurements and human campaign playthroughs have **not** been performed. Both UI runtimes previously failed to write their kernel assets. Exports confirm bundle generation, not physical-device behavior. These deferred checks are not represented as passed.
+
+Committed checkpoint sequence: `8633ad9` (0), `d0568d0` (1), `d8a7537` (2), `c918011` (3), `39bc263` (4), `bce61ff` (5), `c65061d` (6), followed by the production-polish checkpoint containing this entry.

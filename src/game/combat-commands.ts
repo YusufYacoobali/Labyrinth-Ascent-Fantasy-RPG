@@ -1,13 +1,12 @@
 import { skillCost } from "./build-equipment";
-import type { Character, Game } from "./engine";
+import type { Game } from "./engine";
 import type { QueuedAction } from "./round-combat";
 import { SKILLS } from "./combat-data";
 import { impeded } from "./combat-status";
 import { fatigueMultiplier } from "./exhaustion";
 import { resolveBattle } from "./battle";
 import { ECOSYSTEMS } from "./ecosystem-moves";
-export const formationOf = (c: Character) =>
-  c.formation || (/mage|ranger|archer|warden/i.test(c.job) ? "back" : "front");
+export { formationOf } from "./formation";
 export function repeatCommands(s: Game): QueuedAction[] {
   const enemy = s.combat?.enemies.find((e) => e.hp > 0);
   return s.party

@@ -1,3 +1,6 @@
+import { battleAtlases } from "./battle-backdrop";
+import { arenaFloor } from "@/game/visual-environments";
+import type { Route } from "@/game/world";
 import React from "react";
 import { View } from "react-native";
 import { Image } from "expo-image";
@@ -85,5 +88,37 @@ export function EventArt({ floor, label }: { floor: number; label?: string }) {
       index={floor === 1 ? 0 : floor - 2}
       label={label}
     />
+  );
+}
+
+export function EnvironmentArt({
+  floor,
+  route = null,
+  label,
+}: {
+  floor: number;
+  route?: Route | null;
+  label?: string;
+}) {
+  const index = arenaFloor(floor, route) - 1,
+    cell = index % 4;
+  return (
+    <View style={{ width: "100%", aspectRatio: 1.6, overflow: "hidden" }}>
+      <SceneMotion style={{ flex: 1 }}>
+        <Image
+          source={battleAtlases[Math.floor(index / 4)]}
+          accessibilityLabel={label || "The labyrinth's empty passages"}
+          contentFit="fill"
+          cachePolicy="disk"
+          style={{
+            position: "absolute",
+            width: "200%",
+            height: "480%",
+            left: `${-(cell % 2) * 100}%`,
+            top: `${-Math.floor(cell / 2) * 240 - 65}%`,
+          }}
+        />
+      </SceneMotion>
+    </View>
   );
 }

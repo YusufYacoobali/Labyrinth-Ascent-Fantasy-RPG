@@ -1,3 +1,10 @@
+import {
+  playbackKey,
+  playbackStep,
+  type Playhead,
+} from "@/game/combat-presentation";
+import { eventFeedback } from "@/game/combat-audio";
+import { SPECIES_ART } from "@/game/species-art";
 import { Image } from "expo-image";
 import { MOTION_SHEETS } from "./combat-sheets";
 import { enemyVisual } from "@/game/combat-visuals";
@@ -8,9 +15,19 @@ import {
   repeatCommands,
 } from "@/game/combat-commands";
 import { conditionText, impeded } from "@/game/combat-status";
-import { battleCue, type CombatCue } from "@/game/combat-animation";
+import {
+  battleCue,
+  tacticalStageHeight,
+  type CombatCue,
+} from "@/game/combat-animation";
 import { skillCost } from "@/game/build-equipment";
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { View } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 import { useGame } from "@/game/provider";
@@ -24,19 +41,21 @@ import { SKILLS } from "@/game/combat-data";
 import { skillFamily } from "@/game/essence-powers";
 import { Bar, Button, Copy, Eyebrow, Panel } from "./game-ui";
 import CombatStage from "./combat-stage";
-import { Reveal } from "./combat-motion";
+import { Reveal, useCombatFeedback } from "./combat-motion";
 import { theme as t } from "@/theme";
 export default function TacticalCombat() {
   const { state, dispatch, saving } = useGame(),
     playback = state.roundPlayback;
   const source = playback?.before || state,
     combat = source.combat;
-  const [cursor, setCursor] = useState(0),
+  const [playhead, setPlayhead] = useState<Playhead>({ key: "", step: 0 }),
     [showRules, setShowRules] = useState(false),
     [selected, setSelected] = useState(
       source.party.find((c) => c.hp > 0 && !impeded(c))?.id || "",
     ),
     [queue, setQueue] = useState<Record<string, QueuedAction>>({});
+  const playKey = playbackKey(playback),
+    cursor = playbackStep(playhead, playKey, playback?.events.length || 0);
   const reduced = useReducedMotion(),
     ready = source.party.filter((c) => c.hp > 0 && !impeded(c));
   const frame = playback?.events[Math.min(cursor, playback.events.length - 1)],
@@ -45,18 +64,30 @@ export default function TacticalCombat() {
   const actor = source.party.find((c) => c.id === selected) || ready[0],
     q = actor ? queue[actor.id] : undefined;
   const onReady = useCallback(() => {}, []);
+  const feedback = useCombatFeedback(),
+    feedbackRef = useRef(feedback);
+  useEffect(() => {
+    feedbackRef.current = feedback;
+  }, [feedback]);
+  useEffect(() => {
+    if (frame) {
+      const kind = eventFeedback(frame);
+      if (kind) feedbackRef.current(kind);
+    }
+  }, [frame]);
+
   useEffect(() => {
     if (!playback) return;
     const timer = setTimeout(
       () => {
         if (cursor >= playback.events.length - 1)
           dispatch({ type: "FINISH_PLAYBACK" });
-        else setCursor((n) => n + 1);
+        else setPlayhead({ key: playKey, step: cursor + 1 });
       },
       reduced ? 50 : state.combatSpeed === "fast" ? 160 : 450,
     );
     return () => clearTimeout(timer);
-  }, [playback, cursor, reduced, dispatch, state.combatSpeed]);
+  }, [playback, playKey, cursor, reduced, dispatch, state.combatSpeed]);
   const cue = useMemo(() => {
     if (
       !frame ||
@@ -96,7 +127,15 @@ export default function TacticalCombat() {
       enemy: foe,
       effects: frame.effects,
     };
-    const action = frame.action;
+    const action =
+      frame.action ||
+      (frame.kind === "retaliate"
+        ? {
+            kind: "skill" as const,
+            actor: frame.actor,
+            skill: "Ember Ward" as const,
+          }
+        : undefined);
     const generated = battleCue(before, after, {
       type: "BATTLE",
       kind: action?.kind === "taunt" ? "guard" : action?.kind || "guard",
@@ -168,6 +207,17 @@ export default function TacticalCombat() {
     friendly = q?.kind === "guard" || q?.kind === "item" || q?.kind === "taunt";
   return (
     <View style={{ padding: 10, gap: 10, paddingBottom: 24 }}>
+      {frame?.kind === "phase" && (
+        <Panel style={{ borderColor: t.color.gold, gap: 6 }}>
+          <Copy
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+            title
+          >
+            {frame.text}
+          </Copy>
+        </Panel>
+      )}
       <Eyebrow>
         ROUND {combat.round} · {source.momentum}/3 MOMENTUM
       </Eyebrow>
@@ -228,11 +278,20 @@ export default function TacticalCombat() {
               }}
             >
               <Image
-                source={MOTION_SHEETS[enemyVisual({ ...source, enemy }).key]}
+                source={
+                  SPECIES_ART[enemy.species || ""]
+                    ? { uri: SPECIES_ART[enemy.species!].uri }
+                    : MOTION_SHEETS[enemyVisual({ ...source, enemy }).key]
+                }
+                accessibilityLabel={enemy.name + " silhouette"}
                 contentFit="fill"
                 style={{
-                  width: (enemies.length === 3 ? 64 : 78) * 8,
-                  height: (enemies.length === 3 ? 64 : 78) * 6,
+                  width:
+                    (enemies.length === 3 ? 64 : 78) *
+                    (SPECIES_ART[enemy.species || ""] ? 1 : 8),
+                  height:
+                    (enemies.length === 3 ? 64 : 78) *
+                    (SPECIES_ART[enemy.species || ""] ? 1 : 6),
                 }}
               />
             </View>
@@ -295,7 +354,7 @@ export default function TacticalCombat() {
           </Panel>
         ))}
       </View>
-      <View style={{ height: 220 }}>
+      <View style={{ height: tacticalStageHeight(party) }}>
         <CombatStage
           state={stage}
           selected={frame?.actor || selected}

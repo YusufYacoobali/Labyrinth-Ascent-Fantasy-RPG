@@ -26,6 +26,9 @@ export function ExpeditionReportScreen() {
             {Object.values(r.shares).reduce((a, b) => a + b, 0)} · secured gold{" "}
             {r.net}.
           </Copy>
+          {!!r.maps?.length && (
+            <Copy>Charts extended: {r.maps.join(", ")}.</Copy>
+          )}
           <Copy title>Monsters and spoils</Copy>
           {Object.entries(r.enemies).map(([id, n]) => (
             <Copy key={id}>

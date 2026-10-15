@@ -25,7 +25,13 @@
     },
     "plugins": [
       "expo-router",
-      ["expo-status-bar", { "hidden": true, "style": "light" }],
+      [
+        "expo-status-bar",
+        {
+          "hidden": true,
+          "style": "light"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -38,7 +44,8 @@
         "expo-audio",
         {
           "microphonePermission": false,
-          "recordAudioAndroid": false
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false
         }
       ],
       "expo-asset"

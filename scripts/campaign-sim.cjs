@@ -209,6 +209,7 @@ function campaign(seed = 1, maxExpeditions = 12) {
     starvation: 0,
     rounds: 0,
     battles: 0,
+    battleLengths: [],
     lootInteractions: 0,
     mastery: 0,
     repeatedStories: 0,
@@ -229,6 +230,13 @@ function campaign(seed = 1, maxExpeditions = 12) {
     if (a.type === "COLLECT") {
       report.lootInteractions++;
       report.battles++;
+      if (old.combat)
+        report.battleLengths.push({
+          rounds: Math.max(1, old.combat.round - 1),
+          boss: [...old.combat.enemies, ...(old.combat.defeated || [])].some(
+            (e) => e.boss,
+          ),
+        });
     }
     if (
       s.message.includes("No food remains") &&
@@ -678,6 +686,34 @@ function simulate(count = 200) {
           1,
           runs.reduce((n, r) => n + r.battles, 0),
         ),
+      completedBattleMeanRounds: mean(
+        runs.flatMap((r) => r.battleLengths.map((b) => b.rounds)),
+      ),
+      normalBattleMedianRounds: median(
+        runs.flatMap((r) =>
+          r.battleLengths.filter((b) => !b.boss).map((b) => b.rounds),
+        ),
+      ),
+      normalBattleMeanRounds: mean(
+        runs.flatMap((r) =>
+          r.battleLengths.filter((b) => !b.boss).map((b) => b.rounds),
+        ),
+      ),
+      bossBattleMedianRounds: median(
+        runs.flatMap((r) =>
+          r.battleLengths.filter((b) => b.boss).map((b) => b.rounds),
+        ),
+      ),
+      bossBattleMeanRounds: mean(
+        runs.flatMap((r) =>
+          r.battleLengths.filter((b) => b.boss).map((b) => b.rounds),
+        ),
+      ),
+      failedAttemptRounds: runs.reduce(
+        (n, r) =>
+          n + r.rounds - r.battleLengths.reduce((a, b) => a + b.rounds, 0),
+        0,
+      ),
       masteryMedian: median(runs.map((r) => r.mastery)),
       lootInteractions: runs.reduce((n, r) => n + r.lootInteractions, 0),
       repeatedStories: runs.reduce((n, r) => n + r.repeatedStories, 0),

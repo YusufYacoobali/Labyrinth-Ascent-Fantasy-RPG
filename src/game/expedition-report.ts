@@ -31,6 +31,7 @@ export interface ExpeditionReport {
   lost: boolean;
   highestFloor: number;
   newRooms: number;
+  maps?: string[];
   enemies: Record<string, number>;
   essences: Record<string, number>;
   spoils: Spoils;
@@ -172,6 +173,9 @@ export function expeditionReport(before: Game, after: Game): ExpeditionReport {
         n + Math.max(0, start ? m.explored.length - (start.maps[id] ?? 1) : 0),
       0,
     ),
+    maps: Object.entries(before.journey.maps)
+      .filter(([id, m]) => start && m.explored.length > (start.maps[id] ?? 1))
+      .map(([id]) => `Floor ${id.replace(":", " · ")}`),
     enemies,
     essences,
     spoils: before.expedition.lost

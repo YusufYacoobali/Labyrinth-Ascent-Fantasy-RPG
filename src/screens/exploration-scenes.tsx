@@ -13,7 +13,7 @@ import {
   Copy,
   Panel,
 } from "@/components/game-ui";
-import { StoryArt } from "@/components/story-art";
+import { StoryArt, EnvironmentArt } from "@/components/story-art";
 import { SceneImage } from "@/components/scene-motion";
 import { useGame } from "@/game/provider";
 import { daysRemaining } from "@/game/engine";
@@ -187,7 +187,7 @@ export function ExploreScene() {
   const room = roomStory(state);
   return (
     <View style={{ gap: 12, paddingBottom: 20 }}>
-      <StoryArt group="rooms" index={5} />
+      <EnvironmentArt floor={state.floor} route={state.route} />
       <StoryCard title={room.title} body={room.body}>
         <RouteMap />
         <MissionTracker />
@@ -472,7 +472,7 @@ export function NagScene() {
   if (!nag || !speaker) return null;
   return (
     <View style={{ paddingBottom: 20, gap: 10 }}>
-      <StoryArt group="rooms" index={5} />
+      <EnvironmentArt floor={state.floor} route={state.route} />
       <StoryCard title={speaker.name + " falls behind"} body={nag.quote}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <Atlas index={speaker.portrait} size={62} />
