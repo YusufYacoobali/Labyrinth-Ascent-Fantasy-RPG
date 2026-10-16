@@ -1,10 +1,9 @@
-import { ITEMS } from "@/game/world";
 import { View } from "react-native";
 import { Image } from "expo-image";
 import { Copy, Panel } from "./game-ui";
 import { MOTION_SHEETS } from "./combat-sheets";
 import type { MotionKey } from "@/game/combat-visuals";
-import { MONSTERS, essenceId } from "@/game/monsters";
+import { MONSTERS, essenceId, monsterCoreYield } from "@/game/monsters";
 import { ECOLOGY } from "@/game/ecology";
 import { useGame } from "@/game/provider";
 
@@ -74,10 +73,8 @@ export function Bestiary() {
                   .
                 </Copy>
                 <Copy>
-                  Essence: {m.skill} · 30% independent chance. Material:{" "}
-                  {ITEMS.find((i) => i.id === m.material)?.name ||
-                    "Crafting material"}
-                  . Gold {m.gold}; XP {m.xp} per companion.
+                  {monsterCoreYield(m)} monster cores · {m.xp} XP per ally.{" "}
+                  Essence: {m.skill} · 30% chance.
                 </Copy>
               </>
             )}

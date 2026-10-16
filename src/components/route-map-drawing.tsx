@@ -35,7 +35,7 @@ export default function MapCanvas({
   room,
   facing,
   onSelect,
-  height = 260,
+  height = 130,
   selected,
   trail = [],
   information = {},
@@ -234,31 +234,18 @@ export default function MapCanvas({
           </Canvas>
         </View>
       </GestureDetector>
-      <View style={{ flexDirection: "row", gap: 6 }}>
-        <Button
-          label="Zoom −"
-          small
-          tone="dark"
-          style={{ flex: 1 }}
-          onPress={() => scale.set(Math.max(0.5, scale.get() / 1.25))}
-        />
+      <View style={{ position: "absolute", right: 8, bottom: 8 }}>
         <Button
           label="Recenter"
           small
+          compact
+          dense
           tone="dark"
-          style={{ flex: 1 }}
           onPress={() => {
             panX.set(0);
             panY.set(0);
             scale.set(1);
           }}
-        />
-        <Button
-          label="Zoom +"
-          small
-          tone="dark"
-          style={{ flex: 1 }}
-          onPress={() => scale.set(Math.min(2.5, scale.get() * 1.25))}
         />
       </View>
     </View>

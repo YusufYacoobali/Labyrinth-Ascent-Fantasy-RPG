@@ -8,7 +8,7 @@ import { ROUTE_STORIES } from "./route-stories";
 import { FLOOR_STORIES_THREE } from "./floor-stories-three";
 import { FLOOR_STORIES_TWO } from "./floor-stories-two";
 import { FLOOR_STORIES } from "./floor-stories";
-import { currentRoom, currentMapKey } from "./exploration";
+import { currentRoom, currentMapKey } from "./exploration-state";
 import { COMPANION_STORIES_THREE } from "./companion-stories-three";
 import { COMPANION_STORIES_TWO } from "./companion-stories-two";
 import type { Action, Game } from "./engine";
@@ -226,27 +226,12 @@ export function storyConsequences(before: Game, after: Game, a: Action): Game {
     !before.eventResolved &&
     after.eventResolved &&
     !principalResolved(before);
-  const nag =
-    a.type === "NAG_DECISION" &&
-    before.phase === "nag" &&
-    after.phase !== "nag";
-  if (!loss && !event && !nag) return after;
+  if (!loss && !event) return after;
   const values = { ...after.stories.loyalty },
     reactions: string[] = [];
   for (const c of after.party.filter((c) => c.id !== "hero")) {
     if (loss) values[c.id] = clamp(loyalty(after, c.id) - B.loyaltyDefeat);
-    else if (
-      nag &&
-      before.journey.nag?.speaker === c.id &&
-      a.type === "NAG_DECISION"
-    ) {
-      values[c.id] = clamp(
-        loyalty(after, c.id) + (a.rest ? B.loyaltyApproval : -B.loyaltyHarm),
-      );
-      reactions.push(
-        `${c.name}: ${a.rest ? "Thank you for listening. I can keep going after a real rest." : "I will keep my contract, but I cannot trust this pace."}`,
-      );
-    } else if (event && a.type === "EVENT") {
+    else if (event && a.type === "EVENT") {
       const reaction = reactionFor(before, c.id, a.choice);
       if (reaction) {
         values[c.id] = clamp(

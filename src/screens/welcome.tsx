@@ -28,7 +28,12 @@ export function CreateScreen() {
   if (state.started)
     return <Redirect href={state.phase === "town" ? "/town" : "/expedition"} />;
   return (
-    <Frame background={art.cover} title="Choose your origin" hideNav>
+    <Frame
+      background={art.cover}
+      title="Who will you become?"
+      hideNav
+      back={false}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
@@ -93,12 +98,25 @@ export function CreateScreen() {
               <View style={{ flex: 1, gap: 5 }}>
                 <Copy title>{r.name}</Copy>
                 <Copy style={{ color: t.color.gold }}>{r.job}</Copy>
+                <Copy muted style={{ fontSize: 13 }}>
+                  {r.style}
+                </Copy>
                 <Copy muted style={{ fontSize: 12 }}>
                   {r.trait}
                 </Copy>
               </View>
             </View>
             <Divider />
+            <Copy
+              style={{
+                color: t.color.goldLight,
+                fontFamily: t.font.story,
+                fontSize: 22,
+                lineHeight: 27,
+              }}
+            >
+              “{r.quote}”
+            </Copy>
             <Copy>{r.description}</Copy>
             <View
               style={{
@@ -145,7 +163,7 @@ export function CreateScreen() {
             />
           </View>
           <Button
-            label="Enter Stormhold"
+            label={`Begin as ${name.trim() || r.name}`}
             disabled={!name.trim()}
             onPress={() => {
               dispatch({ type: "CREATE", race, name, roll: Math.random() });

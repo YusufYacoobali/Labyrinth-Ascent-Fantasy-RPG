@@ -1,6 +1,6 @@
 import type { Game } from "./engine";
 import type { RoundEvent } from "./round-combat";
-import { monsterFor } from "./monsters";
+import { monsterFor, monsterCoreYield } from "./monsters";
 export type CombatGoldDrop = { id: string; enemyId: string; amount: number };
 export type Playhead = { key: string; step: number };
 export const playbackKey = (playback: Game["roundPlayback"]) =>
@@ -74,7 +74,7 @@ export function defeatedGold(
       !prior.some((old) => old.id === foe.id && old.hp > 0)
     )
       return [];
-    const amount = monsterFor(foe, playback.before.floor).gold;
+    const amount = monsterCoreYield(monsterFor(foe, playback.before.floor));
     return amount > 0
       ? [{ id: `${event.id}:${foe.id}`, enemyId: foe.id, amount }]
       : [];

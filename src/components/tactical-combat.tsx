@@ -27,6 +27,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CombatIntro from "./combat-intro";
 import CombatEnemyDialog from "./combat-enemy-dialog";
+import CombatCharacterDialog from "./combat-character-dialog";
 import CombatOtherActions from "./combat-other-actions";
 import CombatReinforcements from "./combat-reinforcements";
 import { skillCost } from "@/game/build-equipment";
@@ -79,10 +80,11 @@ export default function TacticalCombat({
     combat = source.combat;
   const [playhead, setPlayhead] = useState<Playhead>({ key: "", step: 0 }),
     [menu, setMenu] = useState<
-      "skill" | "item" | "others" | "tactics" | "enemy" | null
+      "skill" | "item" | "others" | "tactics" | "enemy" | "ally" | null
     >(null),
     [retreat, setRetreat] = useState(false),
     [inspected, setInspected] = useState(""),
+    [inspectedAlly, setInspectedAlly] = useState(""),
     [allyTarget, setAllyTarget] = useState(""),
     [notice, setNotice] = useState(""),
     [submitting, setSubmitting] = useState(""),
@@ -93,6 +95,7 @@ export default function TacticalCombat({
       () => !combat || combat.round > 1 || !!playback,
     ),
     [showRules, setShowRules] = useState(false),
+    [detailTab, setDetailTab] = useState<"help" | "log" | "options">("help"),
     [selected, setSelected] = useState(
       source.party.find((c) => c.hp > 0 && !impeded(c))?.id || "",
     ),
@@ -112,6 +115,7 @@ export default function TacticalCombat({
     ready = source.party.filter((c) => c.hp > 0 && !impeded(c));
   const frame = playback?.events[Math.min(cursor, playback.events.length - 1)];
   const actor = source.party.find((c) => c.id === selected) || ready[0];
+  const inspectedCharacter = source.party.find((c) => c.id === inspectedAlly);
   const onReady = useCallback(() => setSceneReady(true), []);
   const finishIntro = useCallback(() => setIntroDone(true), []);
   const feedback = useCombatFeedback(),
@@ -338,6 +342,12 @@ export default function TacticalCombat({
     setRetreat(false);
     setMenu("enemy");
   };
+  const inspectCharacter = (id: string) => {
+    if (locked || !source.party.some((c) => c.id === id)) return;
+    setInspectedAlly(id);
+    setRetreat(false);
+    setMenu("ally");
+  };
   const request = {
     type: "ROUND" as const,
     battleId: combat.id,
@@ -463,7 +473,7 @@ export default function TacticalCombat({
     </View>
   );
   const commandMenu =
-    (retreat || (menu && menu !== "enemy")) && !playback ? (
+    (retreat || (menu && menu !== "enemy" && menu !== "ally")) && !playback ? (
       <Panel style={[StyleSheet.absoluteFill, styles.overlay]}>
         <View style={[styles.row, { padding: 8 }]}>
           {menu === "item" && !retreat && (
@@ -595,167 +605,318 @@ export default function TacticalCombat({
             </>
           ) : (
             <>
-              <Copy style={{ fontSize: 12 }}>
-                Turn order:{" "}
-                {initiative(source, actions)
-                  .map((c) => `${c.name} (${Math.round(c.speed)})`)
-                  .join(" → ")}
-              </Copy>
-              {!!enemyStatus && (
-                <Copy style={{ fontSize: 12, color: t.color.goldLight }}>
-                  {enemyStatus}
-                </Copy>
-              )}
-              {party.map((c) => (
-                <Copy key={c.id} style={{ fontSize: 12 }}>
-                  {c.name} · {formationOf(c)} · {c.hp}/{c.maxHp} HP · {c.mp}/
-                  {c.maxMp} MP
-                  {conditionText(c.ailments.conditions)
-                    ? " · " + conditionText(c.ailments.conditions)
-                    : ""}
-                  {c.ailments.paralysis ? " · Paralyzed" : ""}
-                </Copy>
-              ))}
-              <Copy style={{ fontSize: 12, color: t.color.gold }}>
-                Floor {source.floor} · Round {combat.round} · Momentum{" "}
-                {source.momentum}/3
-              </Copy>
-              <Button
-                label="Retreat…"
-                small
-                tone="dark"
-                disabled={locked}
-                onPress={() => {
-                  setMenu(null);
-                  setRetreat(true);
-                }}
-              />
-              <SettingsControls />
-              {practice && (
-                <>
-                  <Eyebrow>Practice fight</Eyebrow>
+              <View style={{ flexDirection: "row", gap: 5 }}>
+                {(["help", "log", "options"] as const).map((tab) => (
                   <Button
-                    label="Choose party & enemy"
+                    key={tab}
                     small
-                    tone="dark"
-                    onPress={practice.customize}
+                    tone={detailTab === tab ? "blue" : "dark"}
+                    style={{ flex: 1 }}
+                    label={
+                      tab === "help"
+                        ? "How to play"
+                        : tab === "log"
+                          ? "Action log"
+                          : "Options"
+                    }
+                    onPress={() => setDetailTab(tab)}
                   />
-                  <Button
-                    label="Restart fight"
-                    small
-                    tone="dark"
-                    onPress={practice.restart}
-                  />
-                  <Button
-                    label="Leave trial"
-                    small
-                    tone="dark"
-                    onPress={practice.exit}
-                  />
-                </>
-              )}
-              <Button
-                label="Quick Attack · remaining allies"
-                small
-                tone="red"
-                disabled={locked}
-                onPress={() =>
-                  commit(
-                    ready.map(
-                      (c) =>
-                        queue[c.id] || {
-                          actor: c.id,
-                          kind: "attack",
-                          target: enemyTarget?.id,
-                        },
-                    ),
-                  )
-                }
-              />
-              <Button
-                label="Repeat last actions"
-                small
-                tone="blue"
-                disabled={locked || !combat.lastCommands?.length}
-                onPress={() => commit(repeatCommands(source))}
-              />
-              <Button
-                label={`Taunt with ${actor?.name || "companion"}`}
-                small
-                tone="dark"
-                disabled={!canAct}
-                onPress={() => assign("taunt")}
-              />
-              {allyPicker}
-              <Button
-                label={`Guard ${friend?.name || "ally"}`}
-                small
-                tone="dark"
-                disabled={!canAct}
-                onPress={() => assign("guard", { target: friend?.id })}
-              />
-              <Button
-                label={
-                  state.combatSpeed === "fast"
-                    ? "Playback: Fast"
-                    : "Playback: Normal"
-                }
-                small
-                tone="dark"
-                onPress={() =>
-                  dispatch({
-                    type: "COMBAT_SPEED",
-                    speed: state.combatSpeed === "fast" ? "normal" : "fast",
-                  })
-                }
-              />
-              <Button
-                label={
-                  showRules ? "Hide combat rules" : "Status and formation rules"
-                }
-                small
-                tone="dark"
-                onPress={() => setShowRules((value) => !value)}
-              />
-              {showRules && (
-                <View style={{ gap: 8 }}>
-                  <Copy style={{ fontSize: 12 }}>
-                    Choose an action for each standing, unimpeded companion. The
-                    last choice starts the round automatically. Tap a companion
-                    to change an earlier choice before the round starts.
-                  </Copy>
-                  <Copy style={{ fontSize: 12 }}>
-                    Front attacks prefer the front rank; hunters seek wounded
-                    allies and volleys reach everyone. Guard halves damage and
-                    prevents special-hit ailments after its initiative. Taunt
-                    redirects subsequent single-target attacks to its user.
-                  </Copy>
-                  <Copy style={{ fontSize: 12 }}>
-                    Bleeding deals 2% max HP per stack; burning and venom deal
-                    2.5%. Each caps at three stacks for three future round
-                    ticks. Chilled reduces speed by 2 per stack for four rounds;
-                    three stacks become one skipped action from frozen.
-                  </Copy>
-                  <Copy style={{ fontSize: 12 }}>
-                    Weakened: −20% damage for two rounds. Fractured: −10% armor
-                    per stack, up to three, for three rounds. Exposed: +15%
-                    incoming damage for two rounds. Entangled: −4 speed for two
-                    rounds. Reapplying refreshes duration.
-                  </Copy>
-                  <Copy style={{ fontSize: 12 }}>
-                    Antidote clears venom, chill and freeze; bandages clear
-                    bleeding and entanglement; mastered healing cleanses
-                    ailments. Matching mastered wards prevent their ailments.
+                ))}
+              </View>
+              {detailTab === "help" ? (
+                <View style={{ gap: 14, paddingVertical: 6 }}>
+                  {[
+                    [
+                      "1",
+                      "Choose a companion",
+                      "Tap an ally’s sprite to choose their action. Tap their name or health bar to inspect their stats and skills.",
+                    ],
+                    [
+                      "2",
+                      "Pick a target",
+                      "Tap the enemy you want to hit. Tap its name or health bar to inspect its details and readied move.",
+                    ],
+                    [
+                      "3",
+                      "Choose an action",
+                      "Attack costs no MP. Skill uses MP for stronger moves. Guard reduces incoming damage. Others has items, Focus and Burst.",
+                    ],
+                    [
+                      "4",
+                      "Plan for everyone",
+                      "Choose one action per ally. The round plays automatically after the last choice. Tap an ally to revise their choice before then.",
+                    ],
+                    [
+                      "F",
+                      "Focus · recover MP",
+                      "Others → Focus restores up to 20 MP to that ally and adds 1 shared momentum (maximum 3). It uses their action without attacking. Use it when MP is running low.",
+                    ],
+                    [
+                      "B",
+                      "Burst · spend momentum",
+                      "Attack, Guard and Focus build shared momentum. Others → Burst spends 2 momentum for a hit with 35% more damage and 50 break damage. It uses the ally’s action and costs no MP.",
+                    ],
+                    [
+                      "?",
+                      "Stuck?",
+                      "Use Guard before a heavy hit. Heal wounded allies with a potion under Others. Retreat is in Options. Each completed round uses one expedition day.",
+                    ],
+                  ].map(([step, title, body]) => (
+                    <View
+                      key={step}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "flex-start",
+                        gap: 10,
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 30,
+                          height: 30,
+                          borderRadius: 15,
+                          backgroundColor: t.color.blue,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Copy
+                          style={{ fontFamily: t.font.bold, color: t.color.bg }}
+                        >
+                          {step}
+                        </Copy>
+                      </View>
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Copy style={{ fontFamily: t.font.bold, fontSize: 16 }}>
+                          {title}
+                        </Copy>
+                        <Copy style={{ fontSize: 14, lineHeight: 21 }}>
+                          {body}
+                        </Copy>
+                      </View>
+                    </View>
+                  ))}
+                  <Copy muted style={{ fontSize: 13 }}>
+                    Front allies draw most attacks. Back allies are safer, but
+                    hunters and attacks that hit everyone can still reach them.
                   </Copy>
                 </View>
-              )}
-              {canAutoResolve(source) && (
-                <Button
-                  label="Auto resolve · ordinary rewards"
-                  small
-                  disabled={locked}
-                  onPress={() => dispatch({ type: "AUTO_COMBAT" })}
-                />
+              ) : detailTab === "log" ? (
+                <View style={{ gap: 8 }}>
+                  {!(combat.history || []).length && (
+                    <Copy muted>
+                      The first round has not played yet. Every ally and enemy
+                      action will appear here.
+                    </Copy>
+                  )}
+                  {(combat.history || []).map((entry, i, entries) => (
+                    <React.Fragment key={entry.id}>
+                      {entries[i - 1]?.round !== entry.round && (
+                        <Eyebrow>ROUND {entry.round}</Eyebrow>
+                      )}
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "flex-start",
+                          gap: 8,
+                        }}
+                      >
+                        <Icon
+                          name={
+                            source.party.some((c) => c.id === entry.actor)
+                              ? "account"
+                              : entry.actor
+                                ? "skull-outline"
+                                : "history"
+                          }
+                          size={18}
+                          color={
+                            source.party.some((c) => c.id === entry.actor)
+                              ? t.color.blue
+                              : t.color.gold
+                          }
+                        />
+                        <Copy
+                          selectable
+                          style={{ flex: 1, fontSize: 14, lineHeight: 21 }}
+                        >
+                          {entry.text}
+                        </Copy>
+                      </View>
+                    </React.Fragment>
+                  ))}
+                </View>
+              ) : (
+                <>
+                  <Copy style={{ fontSize: 12 }}>
+                    Turn order:{" "}
+                    {initiative(source, actions)
+                      .map((c) => `${c.name} (${Math.round(c.speed)})`)
+                      .join(" → ")}
+                  </Copy>
+                  {!!enemyStatus && (
+                    <Copy style={{ fontSize: 12, color: t.color.goldLight }}>
+                      {enemyStatus}
+                    </Copy>
+                  )}
+                  {party.map((c) => (
+                    <Copy key={c.id} style={{ fontSize: 12 }}>
+                      {c.name} · {formationOf(c)} · {c.hp}/{c.maxHp} HP · {c.mp}
+                      /{c.maxMp} MP
+                      {conditionText(c.ailments.conditions)
+                        ? " · " + conditionText(c.ailments.conditions)
+                        : ""}
+                      {c.ailments.paralysis ? " · Paralyzed" : ""}
+                    </Copy>
+                  ))}
+                  <Copy style={{ fontSize: 12, color: t.color.gold }}>
+                    Floor {source.floor} · Round {combat.round} · Momentum{" "}
+                    {source.momentum}/3
+                  </Copy>
+                  <Button
+                    label="Retreat…"
+                    small
+                    tone="dark"
+                    disabled={locked}
+                    onPress={() => {
+                      setMenu(null);
+                      setRetreat(true);
+                    }}
+                  />
+                  <SettingsControls />
+                  {practice && (
+                    <>
+                      <Eyebrow>Practice fight</Eyebrow>
+                      <Button
+                        label="Choose party & enemy"
+                        small
+                        tone="dark"
+                        onPress={practice.customize}
+                      />
+                      <Button
+                        label="Restart fight"
+                        small
+                        tone="dark"
+                        onPress={practice.restart}
+                      />
+                      <Button
+                        label="Leave trial"
+                        small
+                        tone="dark"
+                        onPress={practice.exit}
+                      />
+                    </>
+                  )}
+                  <Button
+                    label="Quick Attack · remaining allies"
+                    small
+                    tone="red"
+                    disabled={locked}
+                    onPress={() =>
+                      commit(
+                        ready.map(
+                          (c) =>
+                            queue[c.id] || {
+                              actor: c.id,
+                              kind: "attack",
+                              target: enemyTarget?.id,
+                            },
+                        ),
+                      )
+                    }
+                  />
+                  <Button
+                    label="Repeat last actions"
+                    small
+                    tone="blue"
+                    disabled={locked || !combat.lastCommands?.length}
+                    onPress={() => commit(repeatCommands(source))}
+                  />
+                  <Button
+                    label={`Taunt with ${actor?.name || "companion"}`}
+                    small
+                    tone="dark"
+                    disabled={!canAct}
+                    onPress={() => assign("taunt")}
+                  />
+                  {allyPicker}
+                  <Button
+                    label={`Guard ${friend?.name || "ally"}`}
+                    small
+                    tone="dark"
+                    disabled={!canAct}
+                    onPress={() => assign("guard", { target: friend?.id })}
+                  />
+                  <Button
+                    label={
+                      state.combatSpeed === "fast"
+                        ? "Playback: Fast"
+                        : "Playback: Normal"
+                    }
+                    small
+                    tone="dark"
+                    onPress={() =>
+                      dispatch({
+                        type: "COMBAT_SPEED",
+                        speed: state.combatSpeed === "fast" ? "normal" : "fast",
+                      })
+                    }
+                  />
+                  <Button
+                    label={
+                      showRules
+                        ? "Hide combat rules"
+                        : "Status and formation rules"
+                    }
+                    small
+                    tone="dark"
+                    onPress={() => setShowRules((value) => !value)}
+                  />
+                  {showRules && (
+                    <View style={{ gap: 8 }}>
+                      <Copy style={{ fontSize: 12 }}>
+                        Choose an action for each standing, unimpeded companion.
+                        The last choice starts the round automatically. Tap a
+                        companion to change an earlier choice before the round
+                        starts.
+                      </Copy>
+                      <Copy style={{ fontSize: 12 }}>
+                        Front attacks prefer the front rank; hunters seek
+                        wounded allies and volleys reach everyone. Guard halves
+                        damage and prevents special-hit ailments after its
+                        initiative. Taunt redirects subsequent single-target
+                        attacks to its user.
+                      </Copy>
+                      <Copy style={{ fontSize: 12 }}>
+                        Bleeding deals 2% max HP per stack; burning and venom
+                        deal 2.5%. Each caps at three stacks for three future
+                        round ticks. Chilled reduces speed by 2 per stack for
+                        four rounds; three stacks become one skipped action from
+                        frozen.
+                      </Copy>
+                      <Copy style={{ fontSize: 12 }}>
+                        Weakened: −20% damage for two rounds. Fractured: −10%
+                        armor per stack, up to three, for three rounds. Exposed:
+                        +15% incoming damage for two rounds. Entangled: −4 speed
+                        for two rounds. Reapplying refreshes duration.
+                      </Copy>
+                      <Copy style={{ fontSize: 12 }}>
+                        Antidote clears venom, chill and freeze; bandages clear
+                        bleeding and entanglement; mastered healing cleanses
+                        ailments. Matching mastered wards prevent their
+                        ailments.
+                      </Copy>
+                    </View>
+                  )}
+                  {canAutoResolve(source) && (
+                    <Button
+                      label="Auto resolve · ordinary rewards"
+                      small
+                      disabled={locked}
+                      onPress={() => dispatch({ type: "AUTO_COMBAT" })}
+                    />
+                  )}
+                </>
               )}
             </>
           )}
@@ -766,9 +927,13 @@ export default function TacticalCombat({
     <View style={styles.root}>
       <View
         style={{ flex: 1 }}
-        accessibilityElementsHidden={!introDone || menu === "enemy"}
+        accessibilityElementsHidden={
+          !introDone || menu === "enemy" || menu === "ally"
+        }
         importantForAccessibility={
-          introDone && menu !== "enemy" ? "auto" : "no-hide-descendants"
+          introDone && menu !== "enemy" && menu !== "ally"
+            ? "auto"
+            : "no-hide-descendants"
         }
       >
         <View testID="combat-arena" style={{ flex: 1, minHeight: 0 }}>
@@ -786,6 +951,7 @@ export default function TacticalCombat({
             onSelect={selectActor}
             onSelectEnemy={selectEnemy}
             onInspectEnemy={inspectEnemy}
+            onInspectCharacter={inspectCharacter}
             onReady={onReady}
             healthParty={party}
             threatened={threatened}
@@ -808,7 +974,7 @@ export default function TacticalCombat({
               }}
               style={styles.options}
             >
-              <Icon name="cog" size={21} />
+              <Icon name="help-circle-outline" size={21} />
             </Pressable>
           </View>
           {!!status && !arrivalNotice && (
@@ -964,10 +1130,12 @@ export default function TacticalCombat({
               top:
                 menu === "others"
                   ? undefined
-                  : Math.max(
-                      insets.top + 90,
-                      Math.min(380, viewport.height * 0.44),
-                    ),
+                  : menu === "tactics"
+                    ? insets.top + 60
+                    : Math.max(
+                        insets.top + 90,
+                        Math.min(380, viewport.height * 0.44),
+                      ),
               height: menu === "others" ? 244 : undefined,
               bottom: insets.bottom + 84,
             },
@@ -982,6 +1150,14 @@ export default function TacticalCombat({
           enemy={enemyTarget}
           readiedMove={readiedMove}
           statusText={enemyStatus}
+          onClose={() => setMenu(null)}
+        />
+      )}
+      {menu === "ally" && !playback && inspectedCharacter && (
+        <CombatCharacterDialog
+          character={inspectedCharacter}
+          planned={!!queue[inspectedCharacter.id]}
+          onChoose={() => selectActor(inspectedCharacter.id)}
           onClose={() => setMenu(null)}
         />
       )}

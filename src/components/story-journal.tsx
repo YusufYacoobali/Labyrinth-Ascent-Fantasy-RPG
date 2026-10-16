@@ -5,6 +5,7 @@ import { WORLD_NPCS, type WorldNpcId } from "@/game/world-npcs";
 import { reconciliationStage } from "@/game/reconciliation";
 import { ROUTE_FACTIONS } from "@/game/route-stories";
 import React from "react";
+import { router } from "expo-router";
 import { View } from "react-native";
 import { Button, Copy, Panel } from "./game-ui";
 import { useGame } from "@/game/provider";
@@ -98,9 +99,10 @@ export function StoryScene() {
           key={c.id}
           label={c.label}
           tone="dark"
-          onPress={() =>
-            dispatch({ type: "STORY_CHOICE", stage: stage.id, choice: c.id })
-          }
+          onPress={() => {
+            dispatch({ type: "STORY_CHOICE", stage: stage.id, choice: c.id });
+            if (stage.location === "town") router.replace("/town");
+          }}
         />
       ))}
       <Button

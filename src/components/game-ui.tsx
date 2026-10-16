@@ -493,15 +493,31 @@ export function Bar({
 export function Resources() {
   const { state } = useGame();
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-      <ResourceGlyph index={0} size={22} />
-      <Copy style={{ fontFamily: t.font.bold, fontSize: 12 }}>
-        {state.gold.toLocaleString()}
-      </Copy>
-      <ResourceGlyph index={1} size={21} />
-      <Copy style={{ fontFamily: t.font.bold, fontSize: 12 }}>
-        {state.gems}
-      </Copy>
+    <View style={{ gap: 2 }}>
+      {[
+        { icon: 0, label: "Gold", value: state.gold, color: t.color.goldLight },
+        { icon: 1, label: "Gems", value: state.gems, color: t.color.blue },
+      ].map((resource) => (
+        <View
+          key={resource.label}
+          accessible
+          accessibilityLabel={`${resource.label}: ${resource.value}`}
+          style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+        >
+          <ResourceGlyph index={resource.icon} size={29} />
+          <Copy
+            style={{
+              fontFamily: t.font.bold,
+              fontSize: 19,
+              lineHeight: 25,
+              color: resource.color,
+              fontVariant: ["tabular-nums"],
+            }}
+          >
+            {resource.value.toLocaleString()}
+          </Copy>
+        </View>
+      ))}
     </View>
   );
 }
@@ -927,6 +943,7 @@ export function Frame({
   portrait,
   scroll = true,
   hideNav = false,
+  hideWalkthrough = false,
   fullBleed = false,
   expedition = false,
 }: {
@@ -940,6 +957,7 @@ export function Frame({
   portrait?: number;
   scroll?: boolean;
   hideNav?: boolean;
+  hideWalkthrough?: boolean;
   fullBleed?: boolean;
   expedition?: boolean;
 }) {
@@ -1003,9 +1021,6 @@ export function Frame({
           locations={[0, 0.45, 1]}
           style={StyleSheet.absoluteFill}
         />
-        {!fullBleed && (
-          <View pointerEvents="none" style={styles.frameOutline} />
-        )}
         {title && (
           <Header
             title={title}
@@ -1016,7 +1031,7 @@ export function Frame({
             onSettings={() => setSettings(true)}
           />
         )}
-        {title && !fullBleed && <WalkthroughCard />}
+        {title && !fullBleed && !hideWalkthrough && <WalkthroughCard />}
         <View style={{ flex: 1 }}>
           {scroll ? (
             <ScrollView
@@ -1114,7 +1129,7 @@ export function Frame({
               </Copy>
               <SettingsControls />
               <Button
-                label="Try pixel combat"
+                label="Practice combat"
                 tone="blue"
                 onPress={() => router.push("/combat-trial")}
               />
@@ -1156,17 +1171,6 @@ const styles = StyleSheet.create({
     maxWidth: 460,
     backgroundColor: t.color.bg,
     overflow: "hidden",
-  },
-  frameOutline: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderWidth: 1,
-    borderColor: t.color.goldDim,
-    borderRadius: 20,
-    zIndex: 10,
   },
   header: {
     minHeight: 68,

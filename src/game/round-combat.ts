@@ -55,6 +55,14 @@ export interface CombatEnemy extends Enemy {
   enteredRound?: number;
 }
 export interface CombatState {
+  history?: {
+    id: string;
+    round: number;
+    actor: string;
+    target: string;
+    text: string;
+    kind: string;
+  }[];
   rules?: 2;
   intents?: Record<string, EnemyIntent>;
   lastCommands?: QueuedAction[];
@@ -1432,6 +1440,24 @@ export function resolveRound(s: Game, a: RoundRequest): Game {
     message: "",
   };
   emit("", "", `Round ${combat.round} ends.`, "round");
+  next.combat = {
+    ...next.combat!,
+    history: [
+      ...(combat.history || []),
+      ...events.map(({ id, actor, target, text, kind }) => ({
+        id,
+        round: combat.round,
+        actor,
+        target,
+        text,
+        kind,
+      })),
+    ],
+  };
+  next.expedition = {
+    ...next.expedition,
+    battles: { ...next.expedition.battles, [combat.id]: next.combat },
+  };
   if (a.flee && next.phase !== "defeat" && !next.combat!.complete) {
     const destination =
       backRoom(next) || Object.values(currentRoom(next).exits)[0];

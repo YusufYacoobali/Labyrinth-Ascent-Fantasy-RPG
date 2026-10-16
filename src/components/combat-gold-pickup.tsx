@@ -95,7 +95,7 @@ function DropLabel({
           textAlign: "center",
         }}
       >
-        +{drop.amount} gold
+        +{drop.amount} cores
       </Copy>
     </Animated.View>
   );
@@ -137,7 +137,7 @@ export default function CombatGoldPickup({
       pointerEvents="none"
       style={StyleSheet.absoluteFill}
       testID="combat-gold-pickup"
-      accessibilityLabel={`Gold collected: ${total}`}
+      accessibilityLabel={`Monster cores collected: ${total}`}
       accessibilityLiveRegion="polite"
     >
       {drops.map((drop) => (
@@ -162,7 +162,7 @@ export default function CombatGoldPickup({
           badge,
         ]}
       >
-        <Icon name="sack" size={22} color={t.color.gold} />
+        <Icon name="diamond-stone" size={22} color={t.color.blue} />
         <View>
           <Copy style={{ fontSize: 9, lineHeight: 12, color: t.color.muted }}>
             SPOILS
@@ -171,7 +171,7 @@ export default function CombatGoldPickup({
             <Copy
               style={{ fontSize: 12, lineHeight: 16, color: t.color.goldLight }}
             >
-              +{total} gold
+              +{total} cores
             </Copy>
           </Animated.View>
         </View>
@@ -187,10 +187,10 @@ const styles = StyleSheet.create({
     top: -7,
     width: 12,
     height: 14,
-    borderRadius: 7,
+    borderRadius: 2,
     borderWidth: 2,
-    borderColor: "#ffe6a2",
-    backgroundColor: "#d9982e",
+    borderColor: "#c4eaff",
+    backgroundColor: "#5697cc",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 2,
     borderWidth: 1,
-    borderColor: "#fff2bd",
+    borderColor: "#e1f6ff",
   },
   dropLabel: {
     position: "absolute",

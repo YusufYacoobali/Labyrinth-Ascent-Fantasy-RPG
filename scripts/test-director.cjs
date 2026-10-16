@@ -173,9 +173,9 @@ test("Merchant barter preserves secured inputs and keeps mixed field-derived rat
     );
     const food = s.food;
     s = e.reducer(s, { type: "BRANCH_CHOICE", choice: "trade", roll: 0.5 });
-    assert.equal(s.food, food + 3);
+    assert.equal(s.food, food + 2);
     assert.equal(s.inventory["beast-core"], 0);
-    assert.equal(s.expedition.unsecured.food, field ? 3 : 0);
+    assert.equal(s.expedition.unsecured.food, field ? 2 : 0);
     assert.equal(
       e.reducer(e.normalizeSave(plain(s)), {
         type: "BRANCH_CHOICE",
@@ -221,7 +221,7 @@ test("Rare cache equipment is granted once and remains unsecured through reload"
     1,
   );
 });
-test("Known-route travel charges every watch, updates facing and trail, and refuses unknown passages", () => {
+test("Known-route travel charges one day per passage, updates facing and trail, and refuses unknown passages", () => {
   let s = quiet(),
     map = x.floorMap(s),
     target = Object.keys(map.nodes).find(
@@ -231,7 +231,7 @@ test("Known-route travel charges every watch, updates facing and trail, and refu
   assert.ok(path.length >= 4);
   const n = e.reducer(s, { type: "QUICK_TRAVEL", room: target });
   assert.equal(n.journey.room, target);
-  assert.equal(n.journey.watches, path.length - 1);
+  assert.equal(n.journey.watches, s.journey.watches + (path.length - 1) * 6);
   assert.equal(n.expedition.trail[1].length, path.length - 1);
   assert.equal(
     e.reducer(n, { type: "QUICK_TRAVEL", room: target }).journey.watches,
@@ -246,7 +246,7 @@ test("Known-route travel charges every watch, updates facing and trail, and refu
   };
   assert.equal(
     e.reducer(s, { type: "QUICK_TRAVEL", room: target }).journey.watches,
-    0,
+    s.journey.watches,
   );
 });
 test("Quick travel stops at unresolved encounters and the gate boundary without skipping decisions", () => {
@@ -272,7 +272,7 @@ test("Quick travel stops at unresolved encounters and the gate boundary without 
   const n = e.reducer(s, { type: "QUICK_TRAVEL", room: target });
   assert.equal(n.journey.room, stop);
   assert.equal(n.phase, "branch");
-  assert.equal(n.journey.watches, 1);
+  assert.equal(n.journey.watches, s.journey.watches + 6);
   const late = e.reducer(
     { ...quiet(), journey: { ...quiet().journey, watches: 179 } },
     { type: "QUICK_TRAVEL", room: target },
@@ -305,7 +305,7 @@ test("1000 maps retain coordinates and reciprocal edges after deterministic shor
   }
   assert.ok(doors > 500);
 });
-test("Unlocking a shortcut costs one watch and one key, persists and does not move or turn the party", () => {
+test("Unlocking a shortcut costs one day and one key, persists and does not move or turn the party", () => {
   let s = start(2);
   let map = x.floorMap(s);
   if (!map.shortcuts.length) {
@@ -329,7 +329,7 @@ test("Unlocking a shortcut costs one watch and one key, persists and does not mo
   };
   const n = e.reducer(s, { type: "UNLOCK_SHORTCUT", id: door.id });
   assert.equal(n.inventory["labyrinth-key"], 0);
-  assert.equal(n.journey.watches, s.journey.watches + 1);
+  assert.equal(n.journey.watches, s.journey.watches + 6);
   assert.equal(n.journey.room, s.journey.room);
   assert.equal(n.journey.facing, s.journey.facing);
   assert.equal(x.floorMap(n).shortcuts[0].open, true);

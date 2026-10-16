@@ -1,4 +1,5 @@
 import { FactionOpportunities } from "@/components/faction-opportunities";
+import { RecruitReplyDialog } from "@/components/recruit-reply";
 import { gearFloor } from "@/game/build-equipment";
 import { factionAccess } from "@/game/faction-opportunities";
 import React, { useState } from "react";
@@ -248,7 +249,7 @@ export function TavernScreen() {
                       tone="green"
                       disabled={
                         !Number(offer) ||
-                        Number(offer) > 35 ||
+                        Number(offer) > 50 ||
                         state.party.length >= 4
                       }
                       onPress={() =>
@@ -261,8 +262,8 @@ export function TavernScreen() {
                     />
                   </View>
                   <Copy muted style={{ fontSize: 11 }}>
-                    Negotiate their share of gold finds. Nothing is paid
-                    upfront.
+                    10–50% of expedition gold. Skills and a smaller party raise
+                    the asking share; trust lowers it.
                   </Copy>
                 </Panel>
               )}
@@ -440,6 +441,10 @@ export function TavernScreen() {
             </Panel>
           )}
         </View>
+        <RecruitReplyDialog
+          onDone={() => setSelected(null)}
+          onCounter={(share) => setOffer(String(share))}
+        />
       </Frame>
     </Guard>
   );

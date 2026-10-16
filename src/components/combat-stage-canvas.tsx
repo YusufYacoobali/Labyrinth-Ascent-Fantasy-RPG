@@ -201,6 +201,7 @@ function CharacterHealth({
   reduced,
   destination,
   onSelect,
+  onInspect,
 }: {
   character: Character;
   point: { x: number; y: number; size: number };
@@ -214,6 +215,7 @@ function CharacterHealth({
   reduced: boolean;
   destination: { x: number; y: number };
   onSelect: (id: string) => void;
+  onInspect?: (id: string) => void;
 }) {
   const motion = useAnimatedStyle(() => {
     const pose = combatPose(time.get(), 0, cue, c.id, false, reduced);
@@ -239,111 +241,130 @@ function CharacterHealth({
         motion,
       ]}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Select ${c.name} on battlefield`}
-        accessibilityHint={`HP ${c.hp} of ${c.maxHp}, MP ${c.mp} of ${c.maxMp}${chosen ? ". Action chosen; select to change it." : ""}`}
-        accessibilityState={{ selected, disabled: busy || c.hp <= 0 }}
-        disabled={busy || c.hp <= 0}
-        onPress={() => onSelect(c.id)}
-        style={{ minHeight: point.size + (compact ? 28 : 52) }}
-      >
-        <View
-          style={{
-            paddingHorizontal: 4,
-            paddingVertical: 3,
-            borderWidth: 1,
-            borderRadius: 4,
-            borderColor: selected
-              ? t.color.blue
-              : threatened
-                ? t.color.red
-                : compact
-                  ? "rgba(110,135,150,.3)"
-                  : "#5a626b",
-            backgroundColor: selected
-              ? "rgba(9,32,52,.94)"
-              : compact
-                ? "rgba(5,14,23,.6)"
-                : "rgba(5,14,23,.91)",
-          }}
+      <View style={{ minHeight: point.size + (compact ? 28 : 52) }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            onInspect ? `Inspect ${c.name}` : `Select ${c.name} on battlefield`
+          }
+          accessibilityHint={`HP ${c.hp} of ${c.maxHp}, MP ${c.mp} of ${c.maxMp}. View stats and skills.`}
+          accessibilityState={{ selected, disabled: busy }}
+          disabled={busy}
+          hitSlop={4}
+          onPress={() => (onInspect || onSelect)(c.id)}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-            <Copy
-              numberOfLines={1}
-              style={{
-                flex: 1,
-                fontFamily: t.font.bold,
-                fontSize: 10,
-                lineHeight: 12,
-                color: selected ? "#9fdcff" : t.color.text,
-              }}
-            >
-              {c.name}
-            </Copy>
-            {compact && selected && (
-              <Copy
-                style={{ fontSize: 9, lineHeight: 12, color: t.color.green }}
-              >
-                {c.hp}
-              </Copy>
-            )}
-            {threatened && (
-              <Icon name="sword-cross" size={10} color={t.color.red} />
-            )}
-            {chosen && (
-              <Icon name="check-circle" size={10} color={t.color.green} />
-            )}
-            {c.ailments.paralysis > 0 ? (
-              <Icon name="lightning-bolt" size={10} color="#ccabef" />
-            ) : c.ailments.poison > 0 ? (
-              <Icon name="snake" size={10} color={t.color.green} />
-            ) : c.ailments.ward ? (
-              <Icon name="shield-check" size={10} color={t.color.green} />
-            ) : null}
-          </View>
-          {!compact && (
-            <Copy style={{ fontSize: 10, lineHeight: 12, color: "#a9eac8" }}>
-              HP {c.hp}/{c.maxHp}
-            </Copy>
-          )}
-          <View
-            style={{ height: 3, backgroundColor: "#273640", borderRadius: 1 }}
-          >
-            <View
-              style={{
-                height: 3,
-                borderRadius: 1,
-                backgroundColor:
-                  c.hp <= c.maxHp * 0.3 ? t.color.red : t.color.green,
-                width: `${Math.max(0, Math.min(100, (c.hp / c.maxHp) * 100))}%`,
-              }}
-            />
-          </View>
-          {!compact && (
-            <Copy style={{ fontSize: 10, lineHeight: 12, color: "#b1d8ff" }}>
-              MP {c.mp}/{c.maxMp}
-            </Copy>
-          )}
           <View
             style={{
-              height: 3,
-              marginTop: compact ? 2 : 0,
-              backgroundColor: "#273640",
-              borderRadius: 1,
+              paddingHorizontal: 4,
+              paddingVertical: 3,
+              borderWidth: 1,
+              borderRadius: 4,
+              borderColor: selected
+                ? t.color.blue
+                : threatened
+                  ? t.color.red
+                  : compact
+                    ? "rgba(110,135,150,.3)"
+                    : "#5a626b",
+              backgroundColor: selected
+                ? "rgba(9,32,52,.94)"
+                : compact
+                  ? "rgba(5,14,23,.6)"
+                  : "rgba(5,14,23,.91)",
             }}
           >
             <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 2 }}
+            >
+              <Copy
+                numberOfLines={1}
+                style={{
+                  flex: 1,
+                  fontFamily: t.font.bold,
+                  fontSize: 10,
+                  lineHeight: 12,
+                  color: selected ? "#9fdcff" : t.color.text,
+                }}
+              >
+                {c.name}
+              </Copy>
+              {compact && selected && (
+                <Copy
+                  style={{ fontSize: 9, lineHeight: 12, color: t.color.green }}
+                >
+                  {c.hp}
+                </Copy>
+              )}
+              {threatened && (
+                <Icon name="sword-cross" size={10} color={t.color.red} />
+              )}
+              {chosen && (
+                <Icon name="check-circle" size={10} color={t.color.green} />
+              )}
+              {c.ailments.paralysis > 0 ? (
+                <Icon name="lightning-bolt" size={10} color="#ccabef" />
+              ) : c.ailments.poison > 0 ? (
+                <Icon name="snake" size={10} color={t.color.green} />
+              ) : c.ailments.ward ? (
+                <Icon name="shield-check" size={10} color={t.color.green} />
+              ) : null}
+            </View>
+            {!compact && (
+              <Copy style={{ fontSize: 10, lineHeight: 12, color: "#a9eac8" }}>
+                HP {c.hp}/{c.maxHp}
+              </Copy>
+            )}
+            <View
+              style={{ height: 3, backgroundColor: "#273640", borderRadius: 1 }}
+            >
+              <View
+                style={{
+                  height: 3,
+                  borderRadius: 1,
+                  backgroundColor:
+                    c.hp <= c.maxHp * 0.3 ? t.color.red : t.color.green,
+                  width: `${Math.max(0, Math.min(100, (c.hp / c.maxHp) * 100))}%`,
+                }}
+              />
+            </View>
+            {!compact && (
+              <Copy style={{ fontSize: 10, lineHeight: 12, color: "#b1d8ff" }}>
+                MP {c.mp}/{c.maxMp}
+              </Copy>
+            )}
+            <View
               style={{
                 height: 3,
+                marginTop: compact ? 2 : 0,
+                backgroundColor: "#273640",
                 borderRadius: 1,
-                backgroundColor: t.color.blue,
-                width: `${Math.max(0, Math.min(100, (c.mp / c.maxMp) * 100))}%`,
               }}
-            />
+            >
+              <View
+                style={{
+                  height: 3,
+                  borderRadius: 1,
+                  backgroundColor: t.color.blue,
+                  width: `${Math.max(0, Math.min(100, (c.mp / c.maxMp) * 100))}%`,
+                }}
+              />
+            </View>
           </View>
-        </View>
-      </Pressable>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Select ${c.name} on battlefield`}
+          accessibilityHint={
+            chosen
+              ? "Action chosen; select to change it."
+              : "Choose this companion’s action."
+          }
+          accessibilityState={{ selected, disabled: busy || c.hp <= 0 }}
+          disabled={busy || c.hp <= 0}
+          onPress={() => onSelect(c.id)}
+          style={{ height: point.size, minHeight: 44 }}
+        />
+      </View>
     </Animated.View>
   );
 }
@@ -623,6 +644,7 @@ export default function CombatStage({
   busy,
   onSelect,
   onSelectEnemy,
+  onInspectCharacter,
   onInspectEnemy,
   onReady,
   healthParty,
@@ -1009,6 +1031,7 @@ export default function CombatStage({
           reduced={reduced}
           destination={{ x: enemyX - enemySize * 0.55, y: enemyY }}
           onSelect={onSelect}
+          onInspect={onInspectCharacter}
         />
       ))}
       {compactHud &&

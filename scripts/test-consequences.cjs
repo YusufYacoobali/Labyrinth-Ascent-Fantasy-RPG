@@ -38,6 +38,7 @@ test("All ten companions have distinct two-stage reconciliation with real restit
     let s = fresh();
     s = {
       ...s,
+      food: 3,
       party: [
         ...s.party,
         e.makeCharacter(recruit.race, recruit.id, recruit.name),
@@ -279,7 +280,7 @@ test("Trusted merchant trades use their remembered improved quantity without sec
   );
   const food = s.food;
   s = e.reducer(s, { type: "BRANCH_CHOICE", choice: "trade", roll: 0.5 });
-  assert.equal(s.food, food + 4);
-  assert.equal(s.expedition.unsecured.food, 4);
+  assert.equal(s.food, food + 3);
+  assert.equal(s.expedition.unsecured.food, 3);
 });
 console.log(`${count} world-consequence checks passed.`);

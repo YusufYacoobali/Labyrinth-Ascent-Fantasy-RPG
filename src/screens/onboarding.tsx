@@ -52,30 +52,6 @@ const pages = [
     art: require("../../assets/onboarding/combat-modest.png"),
     title: "Fight for Survival",
     body: "Turn-based combat, easy to learn but full of strategy. Use skills, items and your team’s strengths to overcome powerful foes.",
-    action: "Next",
-  },
-  {
-    art: require("../../assets/onboarding/ob-loot-font-v2.png"),
-    title: "Discover Rare Loot",
-    body: "Find powerful equipment, valuable items and rare treasures. The higher you climb, the greater the rewards.",
-    action: "Next",
-  },
-  {
-    art: require("../../assets/onboarding/ob-choices.png"),
-    title: "Every Choice Matters",
-    body: "Face unexpected events, difficult decisions and lasting consequences. Your choices shape your story.",
-    action: "Next",
-  },
-  {
-    art: require("../../assets/onboarding/ob-level-font.png"),
-    title: "Grow Stronger",
-    body: "Gain experience, level up and unlock new skills. Build powerful synergies and become stronger with each run.",
-    action: "Next",
-  },
-  {
-    art: require("../../assets/onboarding/ob-ending.png"),
-    title: "Your Story Begins",
-    body: "The labyrinth is waiting.\nHow high will you climb?",
     action: "Start Playing",
   },
 ];
@@ -118,7 +94,7 @@ function GuideSlide({
       <View style={{ flex: 1, overflow: "hidden" }}>
         <Image
           source={page.art}
-          contentFit="fill"
+          contentFit="contain"
           cachePolicy="memory-disk"
           style={StyleSheet.absoluteFill}
         />
@@ -168,11 +144,10 @@ function GuideSlide({
         </Copy>
         <Button
           label={page.action}
-          onPress={() => (index === 9 ? finish() : move(index + 1))}
+          onPress={() =>
+            index === pages.length - 1 ? finish() : move(index + 1)
+          }
         />
-        {index === 9 && (
-          <Button label="I’m Ready" tone="dark" onPress={finish} />
-        )}
         <View
           style={{
             flexDirection: "row",
@@ -181,18 +156,19 @@ function GuideSlide({
             paddingTop: 6,
           }}
         >
-          {[0, 1, 2, 3, 4].map((i) => (
+          {pages.map((_, i) => (
             <Pressable
               key={i}
               accessibilityRole="button"
-              accessibilityLabel={`Guide page ${Math.floor(index / 5) * 5 + i + 1}`}
-              onPress={() => move(Math.floor(index / 5) * 5 + i)}
+              accessibilityLabel={`Guide page ${i + 1}`}
+              accessibilityState={{ selected: i === index }}
+              onPress={() => move(i)}
               hitSlop={8}
               style={{
                 width: 6,
                 height: 6,
                 borderRadius: 3,
-                backgroundColor: i === index % 5 ? t.color.text : "#4c5d70",
+                backgroundColor: i === index ? t.color.text : "#4c5d70",
               }}
             />
           ))}
@@ -228,7 +204,7 @@ export function OnboardingScreen() {
   const move = (next: number) => {
     if (Date.now() - lastPress.current < 260) return;
     lastPress.current = Date.now();
-    const target = Math.max(0, Math.min(9, next));
+    const target = Math.max(0, Math.min(pages.length - 1, next));
     setStep(target);
     position.value = withTiming(target, {
       duration: reduced ? 0 : 260,
@@ -252,7 +228,7 @@ export function OnboardingScreen() {
             finish={finish}
           />
         ))}
-        {step !== 9 && (
+        {step !== pages.length - 1 && (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Skip introduction"

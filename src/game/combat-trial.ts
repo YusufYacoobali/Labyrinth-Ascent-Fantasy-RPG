@@ -50,7 +50,7 @@ export const TRIAL_CHARACTERS = [
   },
   ...RECRUITS.map((r) => ({
     id: r.id,
-    name: r.name + " · " + r.job,
+    name: r.name + " · " + makeCharacter(r.race, r.id, r.name).job,
     race: r.race,
     character: r.id,
     roll: 1,

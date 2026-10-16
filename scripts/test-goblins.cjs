@@ -121,7 +121,8 @@ test("Interrupting or killing a scout cancels its call; dead slots are reused wi
   assert.equal(s.phase, "loot");
   assert.equal(s.lootReceipt.enemies.length, 4);
   assert.equal(new Set(s.lootReceipt.enemies.map((e) => e.id)).size, 4);
-  assert.equal(s.lootReceipt.gross, 30 + 65 + 25 + 25);
+  assert.equal(s.lootReceipt.gross, 0);
+  assert.ok(s.lootReceipt.items["beast-core"] >= 4);
   const inventory = plain(s.inventory),
     gold = s.gold,
     seed = s.rng.loot;

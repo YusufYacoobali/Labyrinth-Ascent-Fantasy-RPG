@@ -42,16 +42,24 @@ test("Recruiting and packing advance only when the real action succeeds", () => 
   let s = create();
   s = act(s, { type: "RECRUIT", id: "kael", offer: 0 });
   assert.equal(wt.walkthroughTip(s).id, "recruit");
-  s = act(s, { type: "RECRUIT", id: "kael", offer: 20 });
+  s = act(s, {
+    type: "RECRUIT",
+    id: "kael",
+    offer: e.recruitShare(
+      s,
+      e.RECRUITS.find((r) => r.id === "kael"),
+    ),
+  });
   assert.equal(s.party.length, 2);
   assert.equal(wt.walkthroughTip(s).id, "supplies");
   const failed = act({ ...s, gold: 0 }, { type: "BUY", item: "food" });
   assert.equal(failed.walkthrough.done.includes("supplies"), false);
-  for (let i = 0; i < 8; i++) s = act(s, { type: "BUY", item: "food" });
-  assert.equal(s.food >= 30, true);
-  assert.equal(wt.walkthroughTip(s).id, "train");
-  s = act(s, { type: "TRAIN" });
+  s = act(s, { type: "BUY", item: "food" });
+  assert.equal(s.food, 4);
   assert.equal(wt.walkthroughTip(s).id, "equipment");
+  s = act(s, { type: "BUY_ITEM", id: "chipped-blade" });
+  assert.equal(s.gold, 0);
+  s = act(s, { type: "EQUIP", character: "hero", item: "chipped-blade" });
   s = act(s, { type: "WALKTHROUGH", kind: "ack", id: "equipment" });
   assert.equal(wt.walkthroughTip(s).id, "gate");
 });
@@ -72,7 +80,7 @@ test("Mission and arrival guidance follow actual expedition phases", () => {
   assert.equal(wt.walkthroughTip(s).id, "mission");
   s = act(s, { type: "MISSION", id: "survey" });
   assert.equal(wt.walkthroughTip(s).id, "approach");
-  assert.equal(s.food, 6);
+  assert.equal(s.food, 0);
 });
 test("Campaign advice explains one queued action and single-target supplies", () => {
   const s = arena();

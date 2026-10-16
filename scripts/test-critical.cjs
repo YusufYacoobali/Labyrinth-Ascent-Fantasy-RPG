@@ -225,11 +225,12 @@ test("Training catches up weaker characters without safe infinite levels; bulk p
   assert.ok(s.party[1].xp > 0);
   let bulk = fresh();
   bulk.day = 1;
+  bulk.gold = 1000;
   bulk = e.reducer(bulk, { type: "PREPARE_CYCLE", mode: "train" });
   assert.equal(bulk.day, 30);
   assert.equal(bulk.party[0].level, 2);
   assert.equal(bulk.townProgress.trained, 2);
-  assert.equal(bulk.gold, fresh().gold - 2 * 60 + 27 * 125);
+  assert.equal(bulk.gold, 1000 - 2 * 60 + 27 * 125);
   const veteran = { ...s.party[0], level: 20 };
   assert.equal(tp.trainingXp(veteran, 0), 0);
 });

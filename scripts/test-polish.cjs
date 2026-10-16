@@ -591,7 +591,7 @@ test("Only the idle interval between actors is quartered; attack, impact, and de
   assert.equal(ui.eventPacing(event, 1950, "normal", false, 900).stepMs, 1250);
 });
 
-test("Gold pickup amounts match real enemy rewards, appear once per identity, and never mutate game currency", () => {
+test("Core pickup amounts match real enemy rewards, appear once per identity, and never mutate game currency", () => {
   const { trial } = require("./engine-loader.cjs");
   const state = r.beginCombat({
     ...trial.trialSave(trial.DEFAULT_TRIAL),
@@ -616,7 +616,10 @@ test("Gold pickup amounts match real enemy rewards, appear once per identity, an
   const before = JSON.stringify(playback);
   const drops = ui.defeatedGold(playback, 0);
   assert.equal(drops.length, 1);
-  assert.equal(drops[0].amount, m.monsterFor(foe, state.floor).gold);
+  assert.equal(
+    drops[0].amount,
+    m.monsterCoreYield(m.monsterFor(foe, state.floor)),
+  );
   assert.equal(drops[0].enemyId, foe.id);
   assert.equal(ui.defeatedGold(playback, 1).length, 0);
   assert.equal(ui.defeatedGold(playback, 3).length, 0);

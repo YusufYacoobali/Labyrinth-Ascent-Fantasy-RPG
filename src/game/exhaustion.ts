@@ -99,9 +99,9 @@ export function maybeComplain(s: Game): Game {
     speaker.exhaustion >= 90 ? 90 : speaker.exhaustion >= 75 ? 75 : 50;
   const lines = {
     barbarian:
-      "My arms are turning to stone. Give me a watch to sleep, or the next swing will be slow.",
+      "My arms are turning to stone. Give me a day to sleep, or the next swing will be slow.",
     human:
-      "We keep moving, but nobody is watching our backs anymore. We need a sheltered watch.",
+      "We keep moving, but nobody is watching our backs anymore. We need a sheltered rest.",
     elf: "I can barely hear the corridor over my own breathing. Let us rest before we miss something.",
     dwarf:
       "Even iron breaks if you never let it cool. Find a wall we can put our backs against.",

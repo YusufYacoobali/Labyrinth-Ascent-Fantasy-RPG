@@ -1,11 +1,14 @@
 import React from "react";
-import { Pressable } from "react-native";
+import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { router, Redirect } from "expo-router";
-import { art, Frame, Button } from "@/components/game-ui";
+import { art, Frame, Button, Copy, Icon } from "@/components/game-ui";
 import { useGame } from "@/game/provider";
 import { daysToGate, gateOpen } from "@/game/engine";
 import { SceneMotion } from "@/components/scene-motion";
+import { CORE_TRADE_VALUE } from "@/game/monsters";
+import { TownLifeBoard, TownLifeScene } from "@/components/town-life";
+import { StoryScene } from "@/components/story-journal";
 export function Guard({
   children,
   expedition = false,
@@ -34,6 +37,28 @@ export function TownScreen() {
   const { state, dispatch } = useGame();
   if (state.phase === "town" && state.lastReport && !state.lastReport.reviewed)
     return <Redirect href="/report" />;
+  const townStory =
+    state.phase === "story" && state.stories.active?.resume === "town";
+  if (
+    townStory ||
+    state.townLife?.introSeen === false ||
+    state.townLife?.active ||
+    state.townLife?.result
+  )
+    return (
+      <Guard>
+        <Frame
+          active="Home"
+          title="Stormhold"
+          portrait={state.party[0]?.portrait}
+          back={false}
+          hideNav
+          hideWalkthrough
+        >
+          {townStory ? <StoryScene /> : <TownLifeScene />}
+        </Frame>
+      </Guard>
+    );
   const showGuide = !state.guideSeen && !state.walkthrough.active;
   return (
     <Guard>
@@ -45,14 +70,6 @@ export function TownScreen() {
         back={false}
         scroll={false}
       >
-        {state.lastReport && (
-          <Button
-            small
-            tone="dark"
-            label="Last expedition report"
-            onPress={() => router.push("/report")}
-          />
-        )}
         <SceneMotion subtle style={{ flex: 1 }}>
           <Image
             source={showGuide ? art.townGuide : art.townPlay}
@@ -98,7 +115,38 @@ export function TownScreen() {
               hitSlop={10}
             />
           )}
+          {!showGuide && (
+            <View
+              style={{ position: "absolute", left: 12, right: 12, bottom: 12 }}
+            >
+              <TownLifeBoard />
+            </View>
+          )}
         </SceneMotion>
+        {(state.inventory["beast-core"] || 0) > 0 && (
+          <View style={{ padding: 12, gap: 6 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              <Icon name="diamond-stone" size={26} />
+              <Copy>
+                {state.inventory["beast-core"]} monster cores · ready to trade
+              </Copy>
+            </View>
+            <Button
+              icon="gold"
+              label={`Trade cores at the guild · ${state.inventory["beast-core"] * CORE_TRADE_VALUE} gold`}
+              onPress={() =>
+                dispatch({
+                  type: "SELL",
+                  id: "beast-core",
+                  vendor: "guild",
+                  quantity: state.inventory["beast-core"],
+                })
+              }
+            />
+          </View>
+        )}
       </Frame>
     </Guard>
   );

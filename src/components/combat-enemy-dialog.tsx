@@ -1,6 +1,4 @@
 import {
-  Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -8,12 +6,12 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Enemy, Game } from "@/game/engine";
 import { monsterKnowledge } from "@/game/bestiary";
 import { enemyVisual, mirrorEnemy } from "@/game/combat-visuals";
 import { theme as t } from "@/theme";
-import { Bar, Button, Copy, Icon } from "./game-ui";
+import { Bar, Copy, Icon } from "./game-ui";
+import CombatDetailsPopup from "./combat-details-popup";
 import { MOTION_SHEETS } from "./combat-sheets";
 
 function Discovery({
@@ -58,7 +56,6 @@ export default function CombatEnemyDialog({
   onClose: () => void;
 }) {
   const viewport = useWindowDimensions();
-  const inset = useSafeAreaInsets();
   const compact = viewport.height < 700;
   const size = compact ? 100 : 148;
   const visual = enemyVisual({ ...state, enemy });
@@ -68,307 +65,239 @@ export default function CombatEnemyDialog({
       ? readiedMove
       : undefined;
   return (
-    <Modal
-      transparent
-      visible
-      animationType="none"
-      onRequestClose={onClose}
-      statusBarTranslucent
-      navigationBarTranslucent
+    <CombatDetailsPopup
+      testID="enemy-details-popup"
+      closeLabel="Close enemy details"
+      onClose={onClose}
     >
-      <View
-        style={[
-          styles.scrim,
-          {
-            paddingTop: Math.max(16, inset.top + 12),
-            paddingBottom: Math.max(16, inset.bottom + 12),
-          },
-        ]}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 16 }}
       >
-        <Pressable
-          accessible={false}
-          focusable={false}
-          onPress={onClose}
-          style={StyleSheet.absoluteFill}
-        />
-        <View
-          testID="enemy-details-popup"
-          accessibilityViewIsModal
-          onAccessibilityEscape={onClose}
-          style={[
-            styles.card,
-            {
-              height: Math.min(
-                compact ? 536 : 710,
-                viewport.height - inset.top - inset.bottom - 32,
-              ),
-            },
-          ]}
+        <LinearGradient
+          colors={["#263646", "#101c2a", "#101b28"]}
+          style={[styles.hero, { paddingTop: compact ? 16 : 22 }]}
         >
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 16 }}
+          <Copy
+            style={[
+              styles.label,
+              {
+                color: t.color.gold,
+                letterSpacing: 3,
+                textAlign: "center",
+              },
+            ]}
+          >
+            FIELD NOTES
+          </Copy>
+          <View
+            style={[
+              styles.medallion,
+              {
+                width: size + 22,
+                height: size + 22,
+                borderRadius: (size + 22) / 2,
+              },
+            ]}
           >
             <LinearGradient
-              colors={["#263646", "#101c2a", "#101b28"]}
-              style={[styles.hero, { paddingTop: compact ? 16 : 22 }]}
+              colors={["#80653644", "#0b1420", "#263849"]}
+              style={[
+                StyleSheet.absoluteFill,
+                { borderRadius: (size + 22) / 2 },
+              ]}
+            />
+            <View
+              style={{
+                width: size,
+                height: size,
+                overflow: "hidden",
+                transform: [{ scaleX: mirrorEnemy(visual.key) ? -1 : 1 }],
+              }}
             >
-              <Copy
-                style={[
-                  styles.label,
-                  {
-                    color: t.color.gold,
-                    letterSpacing: 3,
-                    textAlign: "center",
-                  },
-                ]}
-              >
-                FIELD NOTES
-              </Copy>
-              <View
-                style={[
-                  styles.medallion,
-                  {
-                    width: size + 22,
-                    height: size + 22,
-                    borderRadius: (size + 22) / 2,
-                  },
-                ]}
-              >
-                <LinearGradient
-                  colors={["#80653644", "#0b1420", "#263849"]}
-                  style={[
-                    StyleSheet.absoluteFill,
-                    { borderRadius: (size + 22) / 2 },
-                  ]}
-                />
+              <Image
+                source={MOTION_SHEETS[visual.key]}
+                accessibilityLabel={`${enemy.name} illustration`}
+                contentFit="fill"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: size * 8,
+                  height: size * 6,
+                }}
+              />
+            </View>
+          </View>
+          <Copy
+            title
+            accessibilityRole="header"
+            style={{
+              fontSize: compact ? 22 : 26,
+              lineHeight: compact ? 26 : 30,
+              color: t.color.goldLight,
+              textAlign: "center",
+            }}
+          >
+            {enemy.name}
+          </Copy>
+          <Copy
+            muted
+            style={{ fontSize: 11, lineHeight: 16, textAlign: "center" }}
+          >
+            {knowledge.seen} encountered · {knowledge.defeated} defeated
+          </Copy>
+        </LinearGradient>
+        <View style={{ paddingHorizontal: 18, gap: 16 }}>
+          <View style={styles.vitals}>
+            {[
+              {
+                label: "HP",
+                value: enemy.hp,
+                max: enemy.maxHp,
+                color: t.color.red,
+              },
+              {
+                label: "BREAK",
+                value: enemy.poise,
+                max: enemy.maxPoise,
+                color: t.color.gold,
+              },
+            ].map((stat) => (
+              <View key={stat.label} style={{ flex: 1, gap: 6 }}>
                 <View
                   style={{
-                    width: size,
-                    height: size,
-                    overflow: "hidden",
-                    transform: [{ scaleX: mirrorEnemy(visual.key) ? -1 : 1 }],
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
                   }}
                 >
-                  <Image
-                    source={MOTION_SHEETS[visual.key]}
-                    accessibilityLabel={`${enemy.name} illustration`}
-                    contentFit="fill"
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: size * 8,
-                      height: size * 6,
-                    }}
-                  />
-                </View>
-              </View>
-              <Copy
-                title
-                accessibilityRole="header"
-                style={{
-                  fontSize: compact ? 22 : 26,
-                  lineHeight: compact ? 26 : 30,
-                  color: t.color.goldLight,
-                  textAlign: "center",
-                }}
-              >
-                {enemy.name}
-              </Copy>
-              <Copy
-                muted
-                style={{ fontSize: 11, lineHeight: 16, textAlign: "center" }}
-              >
-                {knowledge.seen} encountered · {knowledge.defeated} defeated
-              </Copy>
-            </LinearGradient>
-            <View style={{ paddingHorizontal: 18, gap: 16 }}>
-              <View style={styles.vitals}>
-                {[
-                  {
-                    label: "HP",
-                    value: enemy.hp,
-                    max: enemy.maxHp,
-                    color: t.color.red,
-                  },
-                  {
-                    label: "BREAK",
-                    value: enemy.poise,
-                    max: enemy.maxPoise,
-                    color: t.color.gold,
-                  },
-                ].map((stat) => (
-                  <View key={stat.label} style={{ flex: 1, gap: 6 }}>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 8,
-                      }}
-                    >
-                      <Copy style={styles.label}>{stat.label}</Copy>
-                      <Copy
-                        style={{
-                          fontSize: 12,
-                          lineHeight: 16,
-                          fontVariant: ["tabular-nums"],
-                        }}
-                      >
-                        {stat.value}
-                        <Copy muted style={{ fontSize: 10 }}>
-                          /{stat.max}
-                        </Copy>
-                      </Copy>
-                    </View>
-                    <Bar value={stat.value} max={stat.max} color={stat.color} />
-                  </View>
-                ))}
-              </View>
-              {!!statusText && (
-                <Copy
-                  style={{
-                    color: t.color.goldLight,
-                    fontSize: 12,
-                    lineHeight: 17,
-                  }}
-                >
-                  {statusText}
-                </Copy>
-              )}
-              <View style={styles.discoveryRow}>
-                <Discovery
-                  label="ELEMENT"
-                  icon={
-                    knowledge.element
-                      ? {
-                          physical: "sword",
-                          fire: "fire",
-                          frost: "snowflake",
-                          venom: "snake",
-                        }[knowledge.element]
-                      : "help-circle-outline"
-                  }
-                  value={knowledge.element}
-                />
-                <Discovery
-                  label="ESSENCE SKILL"
-                  icon="creation"
-                  value={knowledge.skill}
-                />
-              </View>
-              <View style={styles.discoveryRow}>
-                <Discovery
-                  label="WEAKNESSES"
-                  icon="shield-off-outline"
-                  value={
-                    knowledge.weaknesses
-                      ? knowledge.weaknesses.join(", ") || "None"
-                      : undefined
-                  }
-                />
-                <Discovery
-                  label="RESISTANCES"
-                  icon="shield-outline"
-                  value={
-                    knowledge.resistances
-                      ? Object.entries(knowledge.resistances)
-                          .map(([element, value]) => `${element} ${value}%`)
-                          .join(", ") || "None"
-                      : undefined
-                  }
-                />
-              </View>
-              <View style={{ gap: 7 }}>
-                <Copy style={[styles.label, { color: t.color.gold }]}>
-                  OBSERVED MOVES
-                </Copy>
-                {knowledge.moves.length ? (
-                  knowledge.moves.map((move) => (
-                    <View
-                      key={move}
-                      style={{
-                        flexDirection: "row",
-                        gap: 7,
-                        alignItems: "flex-start",
-                      }}
-                    >
-                      <Icon
-                        name="diamond-small"
-                        size={15}
-                        color={t.color.goldDim}
-                      />
-                      <Copy style={{ flex: 1, fontSize: 12, lineHeight: 17 }}>
-                        {move}
-                      </Copy>
-                    </View>
-                  ))
-                ) : (
-                  <Copy muted style={{ fontSize: 12, lineHeight: 17 }}>
-                    No moves witnessed yet. Watch it fight to learn more.
-                  </Copy>
-                )}
-                {!!knownReadiedMove && (
+                  <Copy style={styles.label}>{stat.label}</Copy>
                   <Copy
                     style={{
                       fontSize: 12,
-                      lineHeight: 17,
-                      color: t.color.goldLight,
+                      lineHeight: 16,
+                      fontVariant: ["tabular-nums"],
                     }}
                   >
-                    Readying: {knownReadiedMove}
+                    {stat.value}
+                    <Copy muted style={{ fontSize: 10 }}>
+                      /{stat.max}
+                    </Copy>
                   </Copy>
-                )}
-                {!knowledge.skill && (
-                  <Copy muted style={{ fontSize: 10, lineHeight: 15 }}>
-                    Defeat this species to uncover its defenses and essence.
-                  </Copy>
-                )}
+                </View>
+                <Bar value={stat.value} max={stat.max} color={stat.color} />
               </View>
-            </View>
-          </ScrollView>
-          <View style={styles.footer}>
-            <Button
-              label="Back to battle"
-              small
-              tone="gold"
-              onPress={onClose}
+            ))}
+          </View>
+          {!!statusText && (
+            <Copy
+              style={{
+                color: t.color.goldLight,
+                fontSize: 12,
+                lineHeight: 17,
+              }}
+            >
+              {statusText}
+            </Copy>
+          )}
+          <View style={styles.discoveryRow}>
+            <Discovery
+              label="ELEMENT"
+              icon={
+                knowledge.element
+                  ? {
+                      physical: "sword",
+                      fire: "fire",
+                      frost: "snowflake",
+                      venom: "snake",
+                    }[knowledge.element]
+                  : "help-circle-outline"
+              }
+              value={knowledge.element}
+            />
+            <Discovery
+              label="ESSENCE SKILL"
+              icon="creation"
+              value={knowledge.skill}
             />
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close enemy details"
-            onPress={onClose}
-            style={styles.close}
-          >
-            <Icon name="close" size={21} color={t.color.goldLight} />
-          </Pressable>
+          <View style={styles.discoveryRow}>
+            <Discovery
+              label="WEAKNESSES"
+              icon="shield-off-outline"
+              value={
+                knowledge.weaknesses
+                  ? knowledge.weaknesses.join(", ") || "None"
+                  : undefined
+              }
+            />
+            <Discovery
+              label="RESISTANCES"
+              icon="shield-outline"
+              value={
+                knowledge.resistances
+                  ? Object.entries(knowledge.resistances)
+                      .map(([element, value]) => `${element} ${value}%`)
+                      .join(", ") || "None"
+                  : undefined
+              }
+            />
+          </View>
+          <View style={{ gap: 7 }}>
+            <Copy style={[styles.label, { color: t.color.gold }]}>
+              OBSERVED MOVES
+            </Copy>
+            {knowledge.moves.length ? (
+              knowledge.moves.map((move) => (
+                <View
+                  key={move}
+                  style={{
+                    flexDirection: "row",
+                    gap: 7,
+                    alignItems: "flex-start",
+                  }}
+                >
+                  <Icon
+                    name="diamond-outline"
+                    size={15}
+                    color={t.color.goldDim}
+                  />
+                  <Copy style={{ flex: 1, fontSize: 12, lineHeight: 17 }}>
+                    {move}
+                  </Copy>
+                </View>
+              ))
+            ) : (
+              <Copy muted style={{ fontSize: 12, lineHeight: 17 }}>
+                No moves witnessed yet. Watch it fight to learn more.
+              </Copy>
+            )}
+            {!!knownReadiedMove && (
+              <Copy
+                style={{
+                  fontSize: 12,
+                  lineHeight: 17,
+                  color: t.color.goldLight,
+                }}
+              >
+                Readying: {knownReadiedMove}
+              </Copy>
+            )}
+            {!knowledge.skill && (
+              <Copy muted style={{ fontSize: 10, lineHeight: 15 }}>
+                Defeat this species to uncover its defenses and essence.
+              </Copy>
+            )}
+          </View>
         </View>
-      </View>
-    </Modal>
+      </ScrollView>
+    </CombatDetailsPopup>
   );
 }
 
 const styles = StyleSheet.create({
-  scrim: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 16,
-    backgroundColor: "rgba(2,6,12,.8)",
-  },
-  card: {
-    width: "100%",
-    maxWidth: 390,
-    flexShrink: 1,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: t.color.goldDim,
-    overflow: "hidden",
-    backgroundColor: t.color.panel,
-    boxShadow: "0 24px 60px rgba(0,0,0,.65)",
-  },
   hero: {
     alignItems: "center",
     gap: 10,
@@ -403,21 +332,5 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#876b422f",
-  },
-  footer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#0b1521",
-    borderTopWidth: 1,
-    borderTopColor: "#876b4244",
-  },
-  close: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
   },
 });

@@ -65,7 +65,6 @@ export interface Expedition {
   lost: boolean;
   battles: Record<string, CombatState>;
   rounds: number;
-  foraged: string[];
   generic: Record<string, GenericRecord>;
   receipts: Record<string, LootReceipt>;
   resolutions: Record<
@@ -94,7 +93,6 @@ export const newExpedition = (number = 0): Expedition => ({
   lost: false,
   battles: {},
   rounds: 0,
-  foraged: [],
   generic: {},
   receipts: {},
   resolutions: {},

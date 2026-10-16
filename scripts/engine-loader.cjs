@@ -27,6 +27,8 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  townLife: load("src/game/town-life.ts"),
+  recruitment: load("src/game/recruitment.ts"),
   battle: load("src/game/battle.ts"),
   bestiary: load("src/game/bestiary.ts"),
   planning: load("src/game/combat-planning.ts"),

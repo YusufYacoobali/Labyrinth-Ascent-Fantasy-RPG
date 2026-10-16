@@ -28,7 +28,16 @@ function arena(size = 2, count = 2, floor = 1) {
   s.journey.maps[1] = JSON.parse(
     JSON.stringify(require("./fixtures/floor-v2-6da6d25.json")),
   );
-  s = e.reducer({ ...s, day: 30, food: 30 }, { type: "ENTER" });
+  s = e.reducer(
+    {
+      ...s,
+      day: 30,
+      food: 30,
+      potions: 3,
+      inventory: { ...s.inventory, ether: 1, antidote: 1 },
+    },
+    { type: "ENTER" },
+  );
   s = {
     ...s,
     floor,
@@ -267,15 +276,22 @@ test("Multiple monsters produce one receipt with independently rolled species re
   s = e.reducer(s, request(s));
   assert.equal(s.phase, "loot");
   assert.equal(s.lootReceipt.enemies.length, 3);
-  assert.equal(s.lootReceipt.gross, 65 + 85 + 235);
+  assert.equal(s.lootReceipt.gross, 0);
+  assert.equal(
+    s.lootReceipt.items["beast-core"],
+    m.MONSTERS.slice(0, 3).reduce(
+      (n, species) => n + m.monsterCoreYield(species),
+      0,
+    ),
+  );
   assert.equal(s.kills, 3);
 });
-test("Three completed rounds spend one watch; the final accepted victory retains its receipt", () => {
+test("Every completed round spends one day; the final accepted victory retains its receipt", () => {
   let s = arena(1, 1);
   const watches = s.journey.watches;
   for (let i = 0; i < 3; i++)
     s = act(s, { kind: "guard", target: s.party[0].id });
-  assert.equal(s.journey.watches, watches + 1);
+  assert.equal(s.journey.watches, watches + 18);
   s = {
     ...arena(1, 1),
     journey: { ...arena(1, 1).journey, watches: 179 },
@@ -323,7 +339,7 @@ test("Waiting stops on hunger and sanctuary caches cannot replenish within the s
   assert.equal(s.journey.watches, 6);
   assert.equal(s.phase, "camp");
 });
-test("Foraging attempts persist once and wild camps consume a kit instead of giving instant recovery", () => {
+test("Wild camps consume a kit instead of giving instant recovery", () => {
   let s = arena(1, 1);
   s = {
     ...s,
@@ -332,10 +348,6 @@ test("Foraging attempts persist once and wild camps consume a kit instead of giv
     inventory: { ...s.inventory, "camp-kit": 1 },
     journey: { ...s.journey, room: "entrance" },
   };
-  let n = e.reducer(s, { type: "FORAGE" });
-  assert.equal(n.expedition.foraged.length, 1);
-  const again = e.reducer(n, { type: "FORAGE" });
-  assert.equal(again.journey.watches, n.journey.watches);
   s = e.reducer(s, { type: "WILD_CAMP" });
   assert.equal(s.phase, "camp");
   assert.equal(s.inventory["camp-kit"], 0);
@@ -388,7 +400,8 @@ test("Completed loot receipts remain durable after presentation is dismissed", (
   s = e.reducer(s, { type: "COLLECT" });
   assert.equal(s.lootReceipt, null);
   assert.ok(s.expedition.receipts[id]);
-  assert.equal(s.expedition.receipts[id].gross, 65);
+  assert.equal(s.expedition.receipts[id].gross, 0);
+  assert.equal(s.expedition.receipts[id].items["beast-core"], 2);
 });
 test("Playback events for Focus, Guard and items never inherit another actor's attack", () => {
   let s = arena(3, 1);
@@ -450,19 +463,6 @@ test("Control mastery slows individual initiative for two later rounds", () => {
   assert.equal(s.combat.enemies[0].slowed, 2);
   s = act(s, { kind: "guard", target: s.party[0].id });
   assert.equal(s.combat.enemies[0].slowed, 0);
-});
-test("Foraging and a room's original fight retain separate durable identities", () => {
-  let s = arena(1, 1);
-  const original = s.combat.id;
-  s = r.beginCombat({ ...s, combat: null }, "exploration", "forage");
-  assert.notEqual(s.combat.id, original);
-  assert.ok(s.expedition.battles[original]);
-  assert.ok(s.expedition.battles[s.combat.id]);
-  const reload = e.normalizeSave(plain(s));
-  assert.equal(
-    r.beginCombat(reload, "exploration", "forage").combat.id,
-    s.combat.id,
-  );
 });
 test("A wild camp ambush cannot resolve or consume an unrelated room encounter", () => {
   let s = arena(1, 1);

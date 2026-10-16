@@ -70,7 +70,12 @@ export function rescueInjuries(s: Game): Game {
     ),
   };
 }
-export function passTime(s: Game, watches: number): Game {
+/** Watches are retained as save units; a campaign action spends one whole day's units. */
+export function passTime(
+  s: Game,
+  watches: number,
+  options: { rest?: boolean } = {},
+): Game {
   if (s.journey.startDay === null) return s;
   const before = s.journey.watches,
     elapsed = Math.min(B.expeditionDays * B.watchesPerDay, before + watches);
@@ -85,7 +90,7 @@ export function passTime(s: Game, watches: number): Game {
     day++
   ) {
     const fed = next.food > 0,
-      resting = next.phase === "camp";
+      resting = options.rest ?? next.phase === "camp";
     next = {
       ...next,
       food: Math.max(0, next.food - 1),
@@ -129,8 +134,8 @@ export function passTime(s: Game, watches: number): Game {
       message: fed
         ? resting
           ? "A day passes. One party ration used; standing companions recover 25% HP/MP and 35 exhaustion."
-          : "A day passes. One party ration used. Seek a camp or sanctuary for recovery."
-        : "No food remains. No recovery; standing companions gain 15 exhaustion and lose 10% maximum HP.",
+          : next.message
+        : `${resting ? "" : `${next.message} `}No food remains. Standing companions gain 15 exhaustion and lose 10% maximum HP.`,
     };
   }
   const fallen = next.party.length > 0 && next.party.every((c) => c.hp <= 0);
@@ -139,8 +144,7 @@ export function passTime(s: Game, watches: number): Game {
     next = {
       ...next,
       phase: "extraction",
-      message:
-        "The thirty-day watch ends. Finish this decision, then extract the survivors.",
+      message: "Thirty days have passed. The return gate is open.",
     };
   return next;
 }

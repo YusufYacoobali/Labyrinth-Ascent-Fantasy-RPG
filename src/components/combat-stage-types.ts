@@ -13,6 +13,7 @@ export type CombatStageProps = {
   cue: CombatCue | null;
   busy: boolean;
   onSelect: (id: string) => void;
+  onInspectCharacter?: (id: string) => void;
   onSelectEnemy?: (id: string) => void;
   onInspectEnemy?: (id: string) => void;
   onReady: () => void;

@@ -65,7 +65,7 @@ test("Practice and campaign execute identical actions, initiative, HP changes, a
   assert.equal(practice.phase, campaign.phase);
 });
 
-test("Practice gold uses the same per-enemy pickups and victory receipt without accepting a round twice", () => {
+test("Practice cores use the same per-enemy pickups and victory receipt without accepting a round twice", () => {
   const state = trial.trialSave(trial.DEFAULT_TRIAL);
   state.combat.enemies = state.combat.enemies.map((foe) => ({ ...foe, hp: 1 }));
   state.enemy = state.combat.enemies[0];
@@ -78,7 +78,7 @@ test("Practice gold uses the same per-enemy pickups and victory receipt without 
   assert.equal(drops.length, state.combat.enemies.length);
   assert.equal(
     drops.reduce((total, drop) => total + drop.amount, 0),
-    next.lootReceipt.gross,
+    next.lootReceipt.items["beast-core"],
   );
   const finished = e.reducer(next, { type: "FINISH_PLAYBACK" });
   const stale = e.reducer(finished, action);

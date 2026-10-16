@@ -224,13 +224,13 @@ test("Poison and chilled finishers and equipment synergies change real damage wi
   s.party[0].equipment = ["moon-robe"];
   assert.ok(cast(s).party[0].hp > cast(arena("Second Wind")).party[0].hp);
 });
-test("Guardian trophies are guaranteed alongside ordinary materials without forcing an essence", () => {
+test("Guardian trophies are guaranteed alongside cores without forcing an essence", () => {
   for (const species of m.MONSTERS.filter((m) => m.trophy)) {
     let missing = false;
     for (let seed = 1; seed <= 30; seed++) {
       const drops = m.monsterDrops(species, seed * 100000).items;
       assert.equal(drops[species.trophy], 1);
-      assert.ok(drops[species.material] >= species.quantity);
+      assert.equal(drops["beast-core"], m.monsterCoreYield(species));
       if (!drops[m.essenceId(species.id)]) missing = true;
     }
     assert.ok(missing, species.id);

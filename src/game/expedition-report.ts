@@ -24,6 +24,7 @@ export interface DepartureSnapshot {
   pairs: Record<string, number>;
 }
 export interface ExpeditionReport {
+  missionReward?: number;
   challenge?: boolean;
   lostSkills?: Record<string, string[]>;
   number: number;
@@ -182,6 +183,7 @@ export function expeditionReport(before: Game, after: Game): ExpeditionReport {
       ? before.expedition.lostSpoils || before.expedition.unsecured
       : before.expedition.unsecured,
     gross: before.runGross,
+    missionReward: Math.max(0, after.gold - before.gold),
     net: before.expedition.lost ? 0 : before.expedition.unsecured.gold,
     shares: before.expedition.lost
       ? before.expedition.lostShares || {}

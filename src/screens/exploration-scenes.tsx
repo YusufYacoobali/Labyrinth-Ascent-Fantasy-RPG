@@ -4,16 +4,8 @@ import { directedEncounter } from "@/game/encounter-director";
 import { npcAt, npcDescription, WORLD_NPCS } from "@/game/world-npcs";
 import React from "react";
 import { View } from "react-native";
-import {
-  art,
-  Atlas,
-  Bar,
-  Button,
-  Choice,
-  Copy,
-  Panel,
-} from "@/components/game-ui";
-import { StoryArt, EnvironmentArt } from "@/components/story-art";
+import { art, Atlas, Bar, Button, Choice, Copy } from "@/components/game-ui";
+import { StoryArt, EnvironmentArt, EntryArt } from "@/components/story-art";
 import { SceneImage } from "@/components/scene-motion";
 import { useGame } from "@/game/provider";
 import { daysRemaining } from "@/game/engine";
@@ -29,51 +21,11 @@ import {
   currentRoom,
   backRoom,
   exitsFor,
-  roomOccupant,
   encounterKey,
 } from "@/game/exploration";
 import RouteMap from "@/components/route-map";
 import { theme as t } from "@/theme";
 
-export function TeamCondition() {
-  const { state } = useGame();
-  return (
-    <View style={{ flexDirection: "row", gap: 5 }}>
-      {state.party.map((c) => (
-        <Panel
-          key={c.id}
-          style={{ flex: 1, padding: 5, gap: 4, alignItems: "center" }}
-        >
-          <Atlas
-            sprite
-            index={c.portrait}
-            size={45}
-            style={{ opacity: c.hp > 0 ? 1 : 0.35 }}
-          />
-          <Copy numberOfLines={1} style={{ fontSize: 11, lineHeight: 14 }}>
-            {c.name}
-          </Copy>
-          <View style={{ alignSelf: "stretch", gap: 3 }}>
-            <Bar color={t.color.green} value={c.hp} max={c.maxHp} />
-            <Bar value={c.mp} max={c.maxMp} />
-          </View>
-          <Copy
-            style={{
-              fontSize: 10,
-              lineHeight: 13,
-              color: c.hp ? t.color.text : t.color.red,
-            }}
-          >
-            {c.hp ? `${c.hp}/${c.maxHp} HP` : "Fallen"}
-          </Copy>
-          <Copy muted style={{ fontSize: 10, lineHeight: 12 }}>
-            {c.mp} MP
-          </Copy>
-        </Panel>
-      ))}
-    </View>
-  );
-}
 export { default as RouteMap } from "@/components/route-map";
 const arrows: Record<Direction, string> = {
   left: "←",
@@ -81,13 +33,10 @@ const arrows: Record<Direction, string> = {
   right: "→",
   back: "↓",
 };
-function Directions() {
+export function Directions({ afterMove }: { afterMove?: () => void } = {}) {
   const { state, dispatch } = useGame();
   return (
     <View style={{ gap: 6 }}>
-      <Copy muted style={{ fontSize: 12 }}>
-        Facing {state.journey.facing} · directions are relative to you
-      </Copy>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
         {exitsFor(state).map(({ direction, heading }) => (
           <Button
@@ -96,7 +45,10 @@ function Directions() {
             small
             tone="blue"
             style={{ minWidth: "45%", flexGrow: 1 }}
-            onPress={() => dispatch({ type: "MOVE", direction })}
+            onPress={() => {
+              dispatch({ type: "MOVE", direction });
+              afterMove?.();
+            }}
           />
         ))}
       </View>
@@ -105,22 +57,8 @@ function Directions() {
 }
 function FieldSurvival() {
   const { state, dispatch } = useGame();
-  const suitable =
-      currentRoom(state).kind === "landmark" ||
-      roomOccupant(state) === "spring" ||
-      currentRoom(state).kind === "dead-end",
-    foraged = state.expedition.foraged.includes(encounterKey(state));
   return (
     <View style={{ gap: 6 }}>
-      {suitable && (
-        <Button
-          small
-          tone="dark"
-          label={foraged ? "This room has been foraged" : "Forage · one watch"}
-          disabled={foraged}
-          onPress={() => dispatch({ type: "FORAGE" })}
-        />
-      )}
       <Button
         small
         tone="dark"
@@ -167,7 +105,6 @@ export function MissionScene() {
           The team gathers at the threshold. Thirty days inside. No way home
           until the gate returns. What are you here to do?
         </Copy>
-        <TeamCondition />
         {MISSIONS.map((m, i) => (
           <Choice
             key={m.id}
@@ -188,18 +125,21 @@ export function ExploreScene() {
   const room = roomStory(state);
   return (
     <View style={{ gap: 12, paddingBottom: 20 }}>
-      <EnvironmentArt floor={state.floor} route={state.route} />
+      {currentRoom(state).id === "entrance" ? (
+        <EntryArt floor={state.floor} route={state.route} />
+      ) : (
+        <EnvironmentArt floor={state.floor} route={state.route} />
+      )}
       <StoryCard title={room.title} body={room.body}>
         <RouteMap />
+        <Directions />
         <MissionTracker />
         {!!state.message && (
           <Copy style={{ color: t.color.gold, fontSize: 13 }}>
             {state.message}
           </Copy>
         )}
-        <Directions />
         <FieldSurvival />
-        <TeamCondition />
         {!!backRoom(state) && (
           <Button
             label="Retrace previous connection"
@@ -219,12 +159,6 @@ export function ExploreScene() {
             onPress={() => dispatch({ type: "AT_PORTAL" })}
           />
         )}
-        <Button
-          label="Check for an adjacent sanctuary"
-          small
-          tone="dark"
-          onPress={() => dispatch({ type: "SEEK_SHELTER" })}
-        />
       </StoryCard>
     </View>
   );
@@ -232,13 +166,13 @@ export function ExploreScene() {
 const branchScenes = {
   cache: {
     art: art.treasure,
-    title: "Beneath a loose stone",
-    body: "A brass latch catches your lantern light. There may be treasure under the floor—but someone took care to hide it.",
+    title: "A hidden treasure chest",
+    body: "An ironbound chest waits behind the fallen stones. Its lock is intact. What has been hidden here?",
     choices: [
       {
         id: "careful",
-        title: "Check the latch carefully",
-        detail: "Safe treasure; search the compartment",
+        title: "Check the lock and open it",
+        detail: "Safely recover the treasure",
         icon: "magnify",
       },
       {
@@ -313,40 +247,33 @@ export function BranchScene() {
     return <GenericEncounterScene />;
   return (
     <View style={{ gap: 12, paddingBottom: 20 }}>
-      {currentRoom(state).kind === "dead-end" ? (
-        <StoryArt group="eventsB" index={5} />
-      ) : (
-        <StoryArt
-          group="rooms"
-          index={
-            b.kind === "cache"
-              ? 0
-              : b.kind === "company"
-                ? 1
-                : b.kind === "spring"
-                  ? 2
-                  : 3
-          }
-        />
-      )}
+      <StoryArt
+        group="rooms"
+        index={
+          b.kind === "cache"
+            ? 0
+            : b.kind === "company"
+              ? 1
+              : b.kind === "spring"
+                ? 2
+                : 3
+        }
+      />
       <StoryCard
         title={
-          npc
-            ? WORLD_NPCS[npc].name
-            : currentRoom(state).kind === "dead-end"
-              ? scene.title + " · Dead end"
-              : resolved
-                ? "Your old marks"
-                : scene.title
+          npc ? WORLD_NPCS[npc].name : resolved ? "Your old marks" : scene.title
         }
         portrait={npc ? <NpcPortrait id={npc} /> : undefined}
         body={
           resolved
-            ? "This room has already been searched this expedition. Your saved connections remain on the map."
-            : `${currentRoom(state).kind === "dead-end" && Object.keys(currentRoom(state).exits).length === 1 ? "This chamber has one real exit, back through the passage you entered. " : ""}${npc ? npcDescription(state, npc) : plan && b.kind === "beast" ? "The local predators have claimed this passage. Their tracks reveal an optional fight; leaving preserves the room for later." : scene.body}${plan ? " " + plan.approach : ""}`
+            ? "Already searched this expedition."
+            : npc
+              ? npcDescription(state, npc)
+              : plan && b.kind === "beast"
+                ? plan.approach
+                : scene.body
         }
       >
-        <TeamCondition />
         {!resolved &&
           scene.choices.map((c) => (
             <Choice
@@ -430,7 +357,6 @@ export function CampScene() {
           "The lantern is sheltered. Your team can rest here until the return gate opens."
         }
       >
-        <TeamCondition />
         {!state.journey.wildCamp && <ShelterBinding />}
         <Copy muted style={{ fontSize: 13 }}>
           {state.food} rations · {daysRemaining(state)} days until the return
@@ -488,18 +414,11 @@ export function NagScene() {
           </View>
         </View>
         <Choice
-          label="Check the adjoining sanctuary"
-          detail="Only succeeds if a sanctuary is connected here; use the map to reach it"
-          icon="tent"
-          tone="gold"
-          onPress={() => dispatch({ type: "NAG_DECISION", rest: true })}
-        />
-        <Choice
-          label="Ask for one more corridor"
-          detail="Keep moving · +4 exhaustion"
-          icon="shoe-print"
-          tone="red"
-          onPress={() => dispatch({ type: "NAG_DECISION", rest: false })}
+          label="Back to the map"
+          detail="Choose a route to a sanctuary, or use a camping kit."
+          icon="map-outline"
+          tone="blue"
+          onPress={() => dispatch({ type: "NAG_DECISION" })}
         />
       </StoryCard>
     </View>

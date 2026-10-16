@@ -544,7 +544,7 @@ function campaign(seed = 1, maxExpeditions = 12) {
                 : events[s.floor],
           roll: -1,
         });
-      } else if (s.phase === "nag") act({ type: "NAG_DECISION", rest: true });
+      } else if (s.phase === "nag") act({ type: "NAG_DECISION" });
       else if (s.phase === "extraction") act({ type: "RETURN" });
       else if (s.phase === "defeat") {
         returning = true;
@@ -575,18 +575,6 @@ function campaign(seed = 1, maxExpeditions = 12) {
         } else act({ type: "CONTINUE" });
       } else if (["exploration", "branch"].includes(s.phase)) {
         if (living.length < s.party.length) returning = true;
-        const suitable =
-          x.currentRoom(s).kind === "landmark" ||
-          x.currentRoom(s).kind === "dead-end" ||
-          x.roomOccupant(s) === "spring";
-        if (
-          s.food < 4 &&
-          suitable &&
-          !s.expedition.foraged.includes(x.encounterKey(s))
-        ) {
-          act({ type: "FORAGE" });
-          continue;
-        }
         if (
           (needRest || returning) &&
           !known.has(map.sanctuary) &&

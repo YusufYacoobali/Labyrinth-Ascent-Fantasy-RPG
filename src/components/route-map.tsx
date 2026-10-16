@@ -22,9 +22,8 @@ export default function RouteMap({
 }) {
   const { height } = useWindowDimensions();
   const { state, dispatch } = useGame();
-  const [open, setOpen] = useState(fullScreen),
-    [selected, setSelected] = useState<string | null>(null),
-    [list, setList] = useState(false);
+  const [open, setOpen] = useState(true),
+    [selected, setSelected] = useState<string | null>(null);
   const map = floorMap(state),
     fog = visibleRooms(map),
     room = selected ? map.nodes[selected] : null;
@@ -66,35 +65,27 @@ export default function RouteMap({
   return (
     <Panel style={{ padding: 10, gap: 8 }}>
       {!fullScreen && (
-        <Button
-          small
-          compact
-          tone="dark"
-          label={open ? "Hide floor map" : "Show floor map"}
-          onPress={() => setOpen(!open)}
-        />
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          <Button
+            small
+            dense
+            compact
+            style={{ flex: 1 }}
+            tone="dark"
+            label={open ? "Hide map" : "Show map"}
+            onPress={() => setOpen(!open)}
+          />
+        </View>
       )}
       {open && (
         <>
-          {!fullScreen && (
-            <Button
-              small
-              tone="dark"
-              label="Expand map"
-              onPress={() => router.push("/map")}
-            />
-          )}
-          <Copy muted style={{ fontSize: 11 }}>
-            North ↑ · gold: you · blue: visited · amber: reported · grey:
-            unknown
-          </Copy>
           <MapCanvas
             map={map}
             room={state.journey.room}
             facing={state.journey.facing}
             onSelect={setSelected}
             selected={selected}
-            height={fullScreen ? Math.max(260, height - 330) : 260}
+            height={fullScreen ? Math.max(130, (height - 230) / 2) : 130}
             biome={
               state.route ||
               (state.floor >= 9
@@ -106,34 +97,6 @@ export default function RouteMap({
             trail={state.expedition.trail?.[key]}
             information={information}
           />
-          <Copy muted style={{ fontSize: 11 }}>
-            Gold passages: travelled · arch: portal · tent: sanctuary · red
-            triangle: known danger · box: treasure · pink circle: travellers ·
-            diamond: landmark or mystery
-          </Copy>
-          <Button
-            small
-            tone="dark"
-            label={list ? "Hide accessible room list" : "Accessible room list"}
-            onPress={() => setList(!list)}
-          />
-          {list && (
-            <View style={{ gap: 5 }}>
-              {[...fog.visible].map((id) => (
-                <Button
-                  key={id}
-                  small
-                  tone="dark"
-                  label={`${fog.named.has(id) ? roomName(map, id) : `Uncharted passage ${[...fog.visible].indexOf(id) + 1}`} · ${description(id)}`}
-                  onPress={() => setSelected(id)}
-                />
-              ))}
-            </View>
-          )}
-          <Copy muted style={{ fontSize: 11 }}>
-            Drag to pan · pinch or use zoom controls · selecting a room only
-            inspects it
-          </Copy>
         </>
       )}
       {canTravel &&
@@ -142,15 +105,11 @@ export default function RouteMap({
             key={door.id}
             small
             tone="dark"
-            label={`Open shortcut · 1 watch · ${door.requirement === "key" ? "1 labyrinth key" : "survey mechanism"}${shortcutReason(state, map, door) ? ` · ${shortcutReason(state, map, door)}` : ""}`}
+            label={`Open shortcut · 1 day · ${door.requirement === "key" ? "1 labyrinth key" : "survey mechanism"}${shortcutReason(state, map, door) ? ` · ${shortcutReason(state, map, door)}` : ""}`}
             disabled={!!shortcutReason(state, map, door)}
             onPress={() => dispatch({ type: "UNLOCK_SHORTCUT", id: door.id })}
           />
         ))}
-      <Copy muted style={{ fontSize: 11 }}>
-        {map.explored.length} visited ·{" "}
-        {map.known.filter((id) => !map.explored.includes(id)).length} reported
-      </Copy>
       <Host colorScheme="dark" style={{ position: "absolute" }}>
         <BottomSheet
           isPresented={!!room}
@@ -198,7 +157,7 @@ export default function RouteMap({
             )}
             {canTravel && visited && path.length > 2 && (
               <Button
-                label={`Follow known route · ${path.length - 1} watches`}
+                label={`Follow known route · ${path.length - 1} days`}
                 onPress={() => {
                   setSelected(null);
                   dispatch({ type: "QUICK_TRAVEL", room: selected! });

@@ -2,6 +2,7 @@ import { StoryLeads, StoryScene } from "@/components/story-journal";
 import TacticalCombat from "@/components/tactical-combat";
 import { EventArt } from "@/components/story-art";
 import { StoryCard } from "@/components/story-card";
+import { RewardItems, RewardItem } from "@/components/reward-items";
 import React, { useState } from "react";
 import { View } from "react-native";
 import { Redirect, router } from "expo-router";
@@ -32,16 +33,16 @@ import {
   ExploreScene,
   BranchScene,
   CampScene,
-  TeamCondition,
   RouteMap,
   MissionTracker,
 } from "./exploration-scenes";
-import { EVENTS, FLOORS, ITEMS, ROUTES } from "@/game/world";
+import { EVENTS, FLOORS, ROUTES } from "@/game/world";
 import { useGame } from "@/game/provider";
 import { Guard } from "./town";
 import { FieldSupplies } from "@/components/field-supplies";
 import { Arrival } from "./arrival";
 import { theme as t } from "@/theme";
+import { CORE_TRADE_VALUE } from "@/game/monsters";
 
 export function LabyrinthScreen() {
   const { state, dispatch } = useGame();
@@ -232,7 +233,7 @@ export function LabyrinthScreen() {
               Food coverage: {state.food}/30 days.{" "}
               {state.food >= 30
                 ? "Prepared for the sealed month."
-                : `${30 - state.food} more party rations cover the full month; forage and trade can help inside.`}
+                : `${30 - state.food} more party rations cover the full month; sanctuary caches and trade can help inside.`}
             </Copy>
             <Button
               label={open ? "Begin expedition" : "Prepare for expedition"}
@@ -323,45 +324,66 @@ function Loot() {
       <Copy title style={{ fontSize: 27 }}>
         {loot.name} defeated
       </Copy>
-      <Panel style={{ gap: 8 }}>
-        <Copy>Gold found: {loot.gross}</Copy>
-        {Object.entries(loot.shares).map(([id, amount]) => (
-          <Copy key={id} muted>
-            {state.party.find((c) => c.id === id)?.name || id}: {amount} gold
-            held for extraction
-          </Copy>
-        ))}
-        <Copy>Your gold: {loot.net}</Copy>
-      </Panel>
-      <Panel style={{ gap: 8 }}>
-        <Eyebrow>ENEMIES DEFEATED</Eyebrow>
-        {(loot.enemies || [{ id: loot.id, name: loot.name }]).map((enemy) => (
-          <Copy key={enemy.id}>{enemy.name}</Copy>
-        ))}
-        <Eyebrow>RECOVERED</Eyebrow>
-        {Object.entries(loot.items).map(([id, amount]) => (
-          <Copy key={id}>
-            {amount} × {ITEMS.find((i) => i.id === id)?.name || id}
-          </Copy>
-        ))}
-        {!Object.keys(loot.items).some((id) => id.startsWith("essence-")) && (
-          <Copy muted>No essence this time · 30% chance per monster</Copy>
-        )}
-      </Panel>
+      <RewardItems items={loot.items} gold={loot.net} />
+      {(loot.items["beast-core"] || 0) > 0 && (
+        <Copy muted style={{ fontSize: 13 }}>
+          Monster cores are crystallised energy. Trade them in town for{" "}
+          {CORE_TRADE_VALUE} gold each.
+        </Copy>
+      )}
       <Panel style={{ gap: 8 }}>
         <Eyebrow>PARTY EXPERIENCE</Eyebrow>
         {loot.xp.map((p) => (
-          <Copy key={p.id}>
-            {p.name} · +{p.amount} XP
-            {p.after > p.before ? ` · Level ${p.before} → ${p.after}` : ""}
-          </Copy>
+          <RewardItem
+            key={p.id}
+            icon={
+              p.after > p.before ? "arrow-up-bold-circle" : "star-four-points"
+            }
+            label={
+              p.after > p.before
+                ? `${p.name} · Lv. ${p.before} → ${p.after}`
+                : p.name
+            }
+            value={`+${p.amount} XP`}
+          />
         ))}
       </Panel>
-      <Copy muted>
-        Spoils are unsecured until extraction. Bind essences in town or shelter;
-        field-found powers are lost on defeat.
+      <Copy muted style={{ fontSize: 12 }}>
+        Bring your spoils home to keep them.
       </Copy>
       <Button label="Continue" onPress={() => dispatch({ type: "COLLECT" })} />
+    </View>
+  );
+}
+function Discovery() {
+  const { state, dispatch } = useGame();
+  const found = state.discoveryReceipt;
+  if (!found) return null;
+  return (
+    <View style={{ paddingBottom: 20, gap: 12 }}>
+      <View
+        style={{
+          alignItems: "center",
+          paddingTop: 32,
+          paddingBottom: 12,
+          gap: 12,
+        }}
+      >
+        <Icon name="treasure-chest" size={72} />
+        <Copy title style={{ fontSize: 28, color: t.color.goldLight }}>
+          {found.title}
+        </Copy>
+      </View>
+      <View style={{ paddingHorizontal: 18, gap: 12 }}>
+        <RewardItems {...found} />
+        <Copy muted style={{ fontSize: 12, textAlign: "center" }}>
+          Packed for the journey. Bring it home safely.
+        </Copy>
+        <Button
+          label="Continue exploring"
+          onPress={() => dispatch({ type: "ACK_DISCOVERY" })}
+        />
+      </View>
     </View>
   );
 }
@@ -369,6 +391,23 @@ function Victory() {
   const { state, dispatch } = useGame();
   const extracted = state.phase === "extraction";
   const final = state.floor === 12 && !!state.ending;
+  const summary: [string, string, number][] = [
+    ["sword", "Enemies defeated", state.runKills],
+    [
+      "diamond-stone",
+      "Monster cores",
+      state.expedition.unsecured.inventory["beast-core"] || 0,
+    ],
+    ["gold", "Gold collected", state.runGold],
+    [
+      "creation",
+      "Essences",
+      Object.entries(state.expedition.unsecured.inventory)
+        .filter(([id]) => id.startsWith("essence-"))
+        .reduce((n, [, qty]) => n + qty, 0),
+    ],
+  ];
+  const earned = summary.filter(([, , value]) => value > 0);
   return (
     <View
       style={{
@@ -405,70 +444,33 @@ function Victory() {
           </Copy>
         </View>
       </Reveal>
-      <TeamCondition />
       {!extracted && !final && <RouteMap />}
-      <MissionTracker />
+      {!extracted && <MissionTracker />}
       <Copy style={{ fontSize: 14, lineHeight: 20 }}>
         {extracted
           ? state.expedition.lost
-            ? "The party is brought home after defeat. Unsecured spoils and provisional skills were lost; earlier progress remains."
+            ? "You made it home. Your experience remains; unsecured spoils were lost."
             : state.party.some((c) => c.hp <= 0)
-              ? "Thirty days inside. You gather the fallen, pack the spoils, and step toward Stormhold."
-              : "Thirty days inside. Your companions pack the spoils and check the final headcount. Stormhold is waiting."
+              ? "Gather the fallen. Stormhold is waiting."
+              : "Your spoils are packed. Stormhold is waiting."
           : final
             ? "The crown is yours. Find shelter while the last days pass, then take your story home."
             : state.journey.portal
-              ? "The arch pulses blue. Look at the team’s condition: climb while you can, or let everyone recover in shelter."
-              : "The enemy falls silent. Your companions check wounds and count supplies. The next floor is beyond a portal you still need to find."}
+              ? "Climb through the portal, or rest before the next floor."
+              : "Keep exploring to find the upward portal."}
       </Copy>
-      <Panel style={{ padding: 13, gap: 8 }}>
-        {[
-          ["Enemies defeated", state.runKills],
-          ["Gold earned after shares", state.runGold],
-          ["Gold found before shares", state.runGross],
-          [
-            "Companion shares held for extraction",
-            Object.values(
-              state.phase === "town"
-                ? state.runPaid
-                : state.expedition.accruedShares,
-            ).reduce((n, gold) => n + gold, 0),
-          ],
-          [
-            "Party standing",
-            `${state.party.filter((c) => c.hp > 0).length}/${state.party.length}`,
-          ],
-          ["Rations left", state.food],
-          [
-            "Unbound essences",
-            Object.entries(state.inventory)
-              .filter(([id]) => id.startsWith("essence-"))
-              .reduce((n, [, qty]) => n + qty, 0),
-          ],
-          [
-            "Your path",
-            state.route
-              ? ROUTES.find((r) => r.id === state.route)!.name
-              : "Not chosen yet",
-          ],
-        ]
-          .filter(
-            (_, i) =>
-              (extracted || final || i < 4) &&
-              (i !== 7 || state.route !== null),
-          )
-          .map(([label, n]) => (
-            <View
+      {earned.length > 0 && (
+        <Panel style={{ padding: 13, gap: 8 }}>
+          {earned.map(([icon, label, n]) => (
+            <RewardItem
               key={String(label)}
-              style={{ flexDirection: "row", justifyContent: "space-between" }}
-            >
-              <Copy style={{ fontSize: 12 }}>{label}</Copy>
-              <Copy style={{ fontSize: 12, color: t.color.goldLight }}>
-                {n}
-              </Copy>
-            </View>
+              icon={String(icon)}
+              label={String(label)}
+              value={n}
+            />
           ))}
-      </Panel>
+        </Panel>
+      )}
       {extracted ? (
         <Button
           label="Return to town"
@@ -514,13 +516,6 @@ function Victory() {
               />
             </>
           )}
-          <Choice
-            label="Find a safe place to rest"
-            detail={`${daysRemaining(state)} days remain inside · choose how long to wait`}
-            icon="campfire"
-            tone="dark"
-            onPress={() => dispatch({ type: "SEEK_SHELTER" })}
-          />
         </View>
       )}
       {!final && !extracted && <FieldSupplies />}
@@ -538,7 +533,9 @@ export function ExpeditionScreen() {
   const feedback = useCombatFeedback();
   if (!ready) return null;
   if (state.phase === "town") return <Redirect href="/labyrinth" />;
-  const battleFocus = !!state.roundPlayback || state.phase === "combat";
+  const battleFocus =
+    !state.discoveryReceipt &&
+    (!!state.roundPlayback || state.phase === "combat");
   const event = EVENTS[FLOORS[state.floor - 1]?.event || "camp"];
   const background =
     state.phase === "event"
@@ -577,24 +574,16 @@ export function ExpeditionScreen() {
         subtitle={
           daysRemaining(state) === 0
             ? "Return gate open · thirty-day window complete"
-            : `${daysRemaining(state)} days left inside · ${6 - (state.journey.watches % 6)} watches until dawn`
+            : `${daysRemaining(state)} days left · Day ${state.day}`
         }
         back={false}
         expedition
         hideNav
         scroll={!battleFocus}
       >
-        {!["combat", "loot", "story", "arrival"].includes(state.phase) && (
-          <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>
-            <Button
-              small
-              tone="dark"
-              label="Read the expedition journal"
-              onPress={() => router.push("/journal")}
-            />
-          </View>
-        )}
-        {state.phase === "story" ? (
+        {state.discoveryReceipt ? (
+          <Discovery />
+        ) : state.phase === "story" ? (
           <StoryScene />
         ) : state.roundPlayback ? (
           <TacticalCombat key={state.combat?.id} />
@@ -664,11 +653,12 @@ export function ExpeditionScreen() {
             />
           </View>
         )}
-        {["exploration", "camp", "victory"].includes(state.phase) && (
-          <View style={{ padding: 12 }}>
-            <StoryLeads />
-          </View>
-        )}
+        {!state.discoveryReceipt &&
+          ["exploration", "camp", "victory"].includes(state.phase) && (
+            <View style={{ padding: 12 }}>
+              <StoryLeads />
+            </View>
+          )}
       </Frame>
     </Guard>
   );

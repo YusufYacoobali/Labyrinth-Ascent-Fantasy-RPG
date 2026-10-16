@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { View } from "react-native";
-import { Button, Copy, Eyebrow, Panel } from "./game-ui";
+import { Pressable, View } from "react-native";
+import { Atlas, Bar, Button, Copy, Eyebrow, Icon, Panel } from "./game-ui";
 import { useGame } from "@/game/provider";
 import { SKILLS, SKILL_RANKS } from "@/game/combat-data";
 import { MONSTERS, essenceId } from "@/game/monsters";
@@ -9,6 +9,7 @@ import {
   skillRank,
   skillSlots,
 } from "@/game/progression";
+import { theme as t } from "@/theme";
 
 export function SkillLibrary({
   characterId,
@@ -23,81 +24,158 @@ export function SkillLibrary({
   if (!c) return null;
   const town = state.phase === "town";
   const canBind = town || (state.phase === "camp" && !state.journey.wildCamp);
+  const capacity = skillSlots(c.level);
+  const nextSlot = [3, 6, 9, 12].find((level) => level > c.level);
   const offers = SKILLS.filter(
-    (s) =>
+    (skill) =>
       catalog ||
-      c.learnedSkills.includes(s.name) ||
+      c.learnedSkills.includes(skill.name) ||
       MONSTERS.some(
-        (m) => m.skill === s.name && state.inventory[essenceId(m.id)] > 0,
+        (m) => m.skill === skill.name && state.inventory[essenceId(m.id)] > 0,
       ),
   );
   return (
-    <View style={{ gap: 10 }}>
-      <Eyebrow>
-        {c.skills.length}/{skillSlots(c.level)} SKILL SLOTS · {c.name}
-      </Eyebrow>
-      <Copy muted>
-        Two slots initially; another at levels 3, 6, 9 and 12. Active and
-        passive skills share slots. Change loadouts in town.
-      </Copy>
+    <View style={{ gap: 8 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <Eyebrow>
+          SKILLS · {c.skills.length}/{capacity}
+        </Eyebrow>
+        {nextSlot && (
+          <Copy muted style={{ fontSize: 12 }}>
+            Next slot: Lv. {nextSlot}
+          </Copy>
+        )}
+      </View>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+        {Array.from({ length: capacity }, (_, index) => {
+          const skill = SKILLS.find((s) => s.name === c.skills[index]);
+          return (
+            <Pressable
+              key={index}
+              accessibilityRole="button"
+              accessibilityLabel={
+                skill
+                  ? `${skill.name}, equipped. Show details`
+                  : `Empty skill slot ${index + 1}`
+              }
+              disabled={!skill}
+              onPress={() =>
+                setDetails(details === skill?.name ? null : skill?.name || null)
+              }
+              style={{
+                flex: 1,
+                minWidth: 64,
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 8,
+                gap: 4,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderStyle: skill ? "solid" : "dashed",
+                borderColor: skill ? skill.color : t.color.line,
+                backgroundColor: t.color.panel,
+              }}
+            >
+              <Icon
+                name={skill?.icon || "plus"}
+                size={26}
+                color={skill?.color || t.color.muted}
+              />
+              <Copy
+                numberOfLines={2}
+                style={{ fontSize: 11, lineHeight: 14, textAlign: "center" }}
+              >
+                {skill?.name || "Empty"}
+              </Copy>
+            </Pressable>
+          );
+        })}
+      </View>
       {offers.map((skill) => {
         const known = c.learnedSkills.includes(skill.name);
         const equipped = c.skills.includes(skill.name);
-        const sources = MONSTERS.filter((m) => m.skill === skill.name);
         const essences = essenceBindingOptions(state, skill.name);
+        const rank = skillRank(c, skill.name);
+        const expanded = details === skill.name;
         const provisional = state.expedition.provisionalSkills[c.id]?.includes(
           skill.name,
         );
-        const rank = skillRank(c, skill.name);
-        const points = c.mastery[skill.name] || 0;
         return (
-          <Panel key={skill.name} style={{ gap: 7 }}>
-            <Copy title>
-              {skill.name}
-              {known ? ` · Rank ${rank}` : ""}
+          <Panel key={skill.name} style={{ padding: 10, gap: 7 }}>
+            <View
+              style={{ flexDirection: "row", gap: 10, alignItems: "center" }}
+            >
+              <Icon name={skill.icon} size={32} color={skill.color} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Copy style={{ fontFamily: t.font.bold, fontSize: 16 }}>
+                  {skill.name}
+                </Copy>
+                <Copy muted style={{ fontSize: 12 }}>
+                  {skill.passive ? "Passive" : `${skill.cost} MP`}
+                  {known ? ` · Rank ${rank}` : ""}
+                  {equipped ? " · Equipped" : ""}
+                </Copy>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${expanded ? "Hide" : "Show"} ${skill.name} details`}
+                accessibilityState={{ expanded }}
+                hitSlop={10}
+                onPress={() => setDetails(expanded ? null : skill.name)}
+              >
+                <Icon
+                  name={expanded ? "chevron-up" : "information-outline"}
+                  size={24}
+                />
+              </Pressable>
+            </View>
+            <Copy style={{ fontSize: 13, lineHeight: 18 }}>
+              {SKILL_RANKS[skill.name][rank - 1]}
             </Copy>
-            <Copy muted>
-              {skill.passive ? "Passive" : `${skill.cost} MP`} ·{" "}
-              {equipped
-                ? "Equipped"
-                : known
-                  ? "In library"
-                  : "Requires a compatible monster essence"}
-            </Copy>
-            <Copy>{SKILL_RANKS[skill.name][rank - 1]}</Copy>
-            {provisional && <Copy>Secured on extraction · lost on defeat</Copy>}
-            {known && (
-              <Copy muted>
-                Mastery {points}/{rank === 1 ? 12 : 40}
-                {rank === 3 ? " · Complete" : " · Earned through use"}
+            {provisional && (
+              <Copy muted style={{ fontSize: 12 }}>
+                Bring this skill home to keep it.
               </Copy>
             )}
-            <Button
-              small
-              tone="dark"
-              label={
-                details === skill.name ? "Hide ranks" : "View all three ranks"
-              }
-              onPress={() =>
-                setDetails(details === skill.name ? null : skill.name)
-              }
-            />
-            {details === skill.name &&
-              SKILL_RANKS[skill.name].map((description, i) => (
-                <Copy key={i} muted>
-                  Rank {i + 1}
-                  {i === 1
-                    ? " · 12 mastery"
-                    : i === 2
-                      ? " · 40 mastery"
-                      : ""}: {description}
-                </Copy>
-              ))}
+            {expanded && (
+              <View style={{ gap: 6 }}>
+                {known && (
+                  <Bar
+                    value={c.mastery[skill.name] || 0}
+                    max={rank === 1 ? 12 : 40}
+                    label={
+                      rank === 3
+                        ? "Mastered"
+                        : `Mastery ${c.mastery[skill.name] || 0}/${rank === 1 ? 12 : 40}`
+                    }
+                  />
+                )}
+                {SKILL_RANKS[skill.name].map((description, i) => (
+                  <Copy key={i} muted style={{ fontSize: 12, lineHeight: 17 }}>
+                    Rank {i + 1}: {description}
+                  </Copy>
+                ))}
+              </View>
+            )}
             {known && town && (
               <Button
                 small
-                label={equipped ? "Unequip" : "Equip skill"}
-                disabled={!equipped && c.skills.length >= skillSlots(c.level)}
+                compact
+                tone={equipped ? "dark" : "blue"}
+                label={
+                  equipped
+                    ? "Unequip"
+                    : c.skills.length >= capacity
+                      ? "Slots full"
+                      : "Equip"
+                }
+                disabled={!equipped && c.skills.length >= capacity}
                 onPress={() =>
                   dispatch({
                     type: "SLOT_SKILL",
@@ -108,46 +186,41 @@ export function SkillLibrary({
                 }
               />
             )}
-            {essences.map((essence) => (
-              <View key={essence.species} style={{ gap: 5 }}>
-                <Copy muted>
-                  {essence.name} essence ×{essence.quantity} · {essence.secured}{" "}
-                  secured · {essence.unsecured} unsecured
-                </Copy>
-                {!known && (
-                  <Button
-                    small
-                    tone="blue"
-                    label={`Bind ${essence.name} essence${!town && essence.unsecured > 0 ? " · Secured on extraction" : ""}`}
-                    disabled={!canBind || c.hp <= 0}
-                    onPress={() =>
-                      dispatch({
-                        type: "LEARN",
-                        id: c.id,
-                        skill: skill.name,
-                        species: essence.species,
-                      })
-                    }
-                  />
-                )}
-              </View>
-            ))}
+            {!known &&
+              essences.map((essence) => (
+                <Button
+                  key={essence.species}
+                  small
+                  compact
+                  tone="blue"
+                  icon="creation"
+                  label={`Bind ${essence.name} · ×${essence.quantity}`}
+                  disabled={!canBind || c.hp <= 0}
+                  onPress={() =>
+                    dispatch({
+                      type: "LEARN",
+                      id: c.id,
+                      skill: skill.name,
+                      species: essence.species,
+                    })
+                  }
+                />
+              ))}
             {!known && !essences.length && (
-              <Copy muted>
-                Sources: {sources.map((m) => m.name).join(", ")}. No compatible
-                essence held.
+              <Copy muted style={{ fontSize: 12 }}>
+                Find{" "}
+                {MONSTERS.filter((m) => m.skill === skill.name)
+                  .map((m) => m.name)
+                  .join(" / ")}{" "}
+                essence.
               </Copy>
             )}
           </Panel>
         );
       })}
       {!offers.length && (
-        <Copy muted>Defeat monsters for a 30% chance of their essence.</Copy>
+        <Copy muted>Find monster essences to learn new skills.</Copy>
       )}
-      <Copy muted>
-        Duplicates can teach another ally, replace recipe materials at the
-        forge, or be sold to the guild.
-      </Copy>
     </View>
   );
 }
@@ -167,29 +240,40 @@ export function ShelterBinding() {
       <Button
         small
         tone="blue"
-        label={
-          open ? "Close essence binding" : `Bind essences · ${count} available`
-        }
+        icon="creation"
+        label={open ? "Close binding" : `Bind essences · ${count}`}
         onPress={() => setOpen(!open)}
       />
       {open && (
         <>
-          <Copy>
-            Essences found on this expedition become permanent only after
-            successful extraction. New skills fill empty slots; swaps require
-            town.
+          <Copy muted style={{ fontSize: 12 }}>
+            Choose who learns. Bring new powers home to keep them.
           </Copy>
-          {state.party
-            .filter((c) => c.hp > 0)
-            .map((c) => (
-              <Button
-                key={c.id}
-                small
-                tone={selected === c.id ? "blue" : "dark"}
-                label={c.name}
-                onPress={() => setSelected(c.id)}
-              />
-            ))}
+          <View style={{ flexDirection: "row", gap: 6 }}>
+            {state.party
+              .filter((c) => c.hp > 0)
+              .map((c) => (
+                <Pressable
+                  key={c.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Bind to ${c.name}`}
+                  accessibilityState={{ selected: selected === c.id }}
+                  onPress={() => setSelected(c.id)}
+                  style={{
+                    alignItems: "center",
+                    gap: 3,
+                    padding: 5,
+                    borderWidth: 1,
+                    borderRadius: 6,
+                    borderColor:
+                      selected === c.id ? t.color.blue : t.color.line,
+                  }}
+                >
+                  <Atlas index={c.portrait} size={42} />
+                  <Copy style={{ fontSize: 12 }}>{c.name}</Copy>
+                </Pressable>
+              ))}
+          </View>
           <SkillLibrary characterId={selected} />
         </>
       )}

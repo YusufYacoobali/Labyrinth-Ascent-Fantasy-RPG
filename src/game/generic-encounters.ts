@@ -292,7 +292,7 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
     "A clock without daylight",
     4,
     [
-      "A water clock measures watches in a chamber with no windows. Its lowest cup is blocked by a maker’s seal that fell from the frame.",
+      "A water clock marks passing days in a chamber with no windows. Its lowest cup is blocked by a maker’s seal that fell from the frame.",
       "A pendulum taps against a stone marked with six lines. A little brass weight has slipped between the teeth of its escapement.",
     ],
     [
@@ -307,7 +307,7 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
         id: "help",
         label: "Label it as an unverified timepiece",
         outcome:
-          "Your note warns travellers to keep their own watches. An old clock cannot decide when the return gate opens.",
+          "Your note warns travellers to record each day themselves. An old clock cannot decide when the return gate opens.",
       },
     ],
   ),
@@ -471,16 +471,16 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
   encounter(
     "generic.veterans",
     "travellers",
-    "Veterans counting the watches",
+    "Veterans counting the days",
     8,
     [
-      "Two veteran companies disagree about how many watches remain. One counted a long battle as an afternoon; the other counted its rounds.",
-      "A veteran has stopped crossing days off her slate. Her companion has written each watch instead and is trying to reconcile the totals.",
+      "Two veteran companies disagree about how many days remain. One forgot to record their last battle. The other marked a day for every round.",
+      "A veteran has stopped crossing days off her slate. Her companion has recorded each movement and encounter instead and is trying to reconcile the totals.",
     ],
     [
       {
         id: "talk",
-        label: "Compare recorded watches",
+        label: "Compare recorded days",
         outcome:
           "The companies reconcile their own slates. Your party keeps the expedition clock it has actually lived through.",
       },

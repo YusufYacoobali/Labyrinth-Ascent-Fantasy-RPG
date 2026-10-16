@@ -44,9 +44,9 @@ The campaign uses `ROUND` commands with a battle ID, round number and one action
 
 Accepted rounds save their resolution events before playback. Repeated round numbers cannot replay rewards. Reload skips presentation and restores the resolved result. Defeated monsters contribute independent drops to a single receipt. Retreat spends a round, takes enemy responses and follows a connected edge. The encounter keeps its enemy HP, round and mastery caps for re-entry.
 
-Daily food, wild camps, forage records, rescue injuries and town recovery are implemented. See [FLOOR-MAPS.md](FLOOR-MAPS.md) for exact values. Campaign balance values are centralized in `src/game/balance.ts`. Animation trials remain disposable and do not grant mastery or alter the saved campaign.
+Daily food, wild camps, rescue injuries and town recovery are implemented. See [FLOOR-MAPS.md](FLOOR-MAPS.md) for exact values. Campaign balance values are centralized in `src/game/balance.ts`. Animation trials remain disposable and do not grant mastery or alter the saved campaign.
 
-The scenario suite covers shared reservations, initiative, defeated actors/targets, single-target resources, cooldown/status timing, boss thresholds, retreat persistence, interrupted playback, final-watch rewards, daily food/hunger, caches, foraging and injuries. Seeded campaign results are written to `verification/campaign-simulation.json`; report completion and balance only from the final verified run.
+The scenario suite covers shared reservations, initiative, defeated actors/targets, single-target resources, cooldown/status timing, boss thresholds, retreat persistence, interrupted playback, final-watch rewards, daily food/hunger, caches, one-day actions and injuries. Seeded campaign results are written to `verification/campaign-simulation.json`; report completion and balance only from the final verified run.
 
 ## Milestone 4: story and relationship deliveries
 
@@ -59,7 +59,7 @@ The content shipped in the requested order: relationships plus Kael/Lyria; Bram/
 
 Loyalty starts at 50. Approved decisions add five, companion quest milestones add ten, harmful decisions remove ten, and defeat removes five once. Named companions respond differently to authored principal decisions. Reactions go into the journal without a mandatory dialogue after routine actions. Companions below 25 must reconcile in town before joining the next expedition; they remain with the party throughout the sealed month. Authored paired decisions move relationships through hostile, neutral and bonded. Guild and White Stag standing remain alongside the four route factions.
 
-The journal is accessible during an expedition. It shows chain categories, completed outcomes, next-stage floor and sanctuary/portal requirements, faction standing and aftermath. Field conversations are optional; accepting a substantial story decision costs one watch, while town conversations use no day. A final-watch decision resolves before extraction.
+The journal is accessible during an expedition. It shows chain categories, completed outcomes, next-stage floor and sanctuary/portal requirements, faction standing and aftermath. Field conversations are optional; accepting a substantial story decision costs one day, while town conversations use no day. A final-watch decision resolves before extraction.
 
 ## Final verification
 

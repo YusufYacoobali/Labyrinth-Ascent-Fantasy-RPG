@@ -1,10 +1,11 @@
 import React from "react";
 import { View } from "react-native";
-import { Button, Copy, Panel } from "./game-ui";
+import { Choice } from "./game-ui";
 import { useGame } from "@/game/provider";
 import { encounterKey } from "@/game/exploration";
 import { GENERIC_ENCOUNTERS } from "@/game/generic-encounters";
-import { EnvironmentArt } from "./story-art";
+import { EnvironmentArt, StoryArt } from "./story-art";
+import { StoryCard } from "./story-card";
 export function GenericEncounterScene() {
   const { state, dispatch } = useGame();
   const room = encounterKey(state),
@@ -12,39 +13,46 @@ export function GenericEncounterScene() {
   const encounter = GENERIC_ENCOUNTERS.find((c) => c.id === record?.id);
   if (!record || !encounter) return null;
   return (
-    <View style={{ padding: 18, gap: 16 }}>
-      <Copy muted>Travelling encounter</Copy>
-      <Copy title style={{ fontSize: 27 }}>
-        {encounter.title}
-      </Copy>
-      <View style={{ maxHeight: 128, overflow: "hidden", borderRadius: 8 }}>
+    <View style={{ gap: 12, paddingBottom: 20 }}>
+      {encounter.people ? (
+        <StoryArt
+          group="rooms"
+          index={1}
+          label="Travellers sheltering beside a lantern"
+        />
+      ) : (
         <EnvironmentArt
           floor={state.floor}
           route={state.route}
           label="The surrounding labyrinth passage"
         />
-      </View>
-      <Panel style={{ padding: 14 }}>
-        <Copy>{encounter.variants[record.variant]}</Copy>
-      </Panel>
-      {encounter.choices.map((c) => (
-        <Button
-          key={c.id}
-          label={c.label}
-          tone="dark"
-          disabled={
-            state.food < (c.foodCost || 0) || state.gold < (c.goldCost || 0)
-          }
-          onPress={() =>
-            dispatch({
-              type: "GENERIC_CHOICE",
-              room,
-              id: record.id,
-              choice: c.id,
-            })
-          }
-        />
-      ))}
+      )}
+      <StoryCard
+        title={encounter.title}
+        body={encounter.variants[record.variant]}
+      >
+        {encounter.choices.map((c) => (
+          <Choice
+            key={c.id}
+            label={c.label}
+            icon={
+              c.id === "leave" ? "walk" : c.foodCost ? "sack" : "chat-outline"
+            }
+            tone={c.id === "leave" ? "dark" : c.id === "help" ? "gold" : "blue"}
+            disabled={
+              state.food < (c.foodCost || 0) || state.gold < (c.goldCost || 0)
+            }
+            onPress={() =>
+              dispatch({
+                type: "GENERIC_CHOICE",
+                room,
+                id: record.id,
+                choice: c.id,
+              })
+            }
+          />
+        ))}
+      </StoryCard>
     </View>
   );
 }

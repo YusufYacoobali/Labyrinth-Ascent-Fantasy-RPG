@@ -95,7 +95,8 @@ export function establishExpedition(s: Game): Game {
       )) {
         const late =
             context.remainingWatches -
-              (Math.max(0, floor - context.startFloor) * 12 + room.depth) <
+              (Math.max(0, floor - context.startFloor) * 12 + room.depth) *
+                BALANCE.watchesPerDay <
             B.forecastWatches,
           strong = context.level >= floor + 2;
         const kind = weighted(
@@ -194,6 +195,34 @@ export function establishExpedition(s: Game): Game {
         variant: WORLD_NPCS[id].role === "merchant" ? "merchant" : "explorers",
         approach: `An expedition crew has made a temporary stop here.`,
       };
+    }
+  }
+  // The first floor always offers two real item chests, outside named NPC rooms.
+  const firstKey = mapKey(1, null);
+  if (encounters[firstKey]) {
+    const candidates = Object.keys(encounters[firstKey]).filter(
+      (room) =>
+        !Object.values(npcs).some(
+          (p) => p?.map === firstKey && p.room === room,
+        ),
+    );
+    const existing = candidates.filter(
+      (room) => encounters[firstKey][room].kind === "cache",
+    );
+    const spare = candidates.filter(
+      (room) => encounters[firstKey][room].kind === "quiet",
+    );
+    const others = candidates.filter(
+      (room) => !existing.includes(room) && !spare.includes(room),
+    );
+    for (const room of [...existing, ...spare, ...others].slice(0, 2)) {
+      encounters[firstKey][room] = {
+        ...encounters[firstKey][room],
+        kind: "cache",
+        variant: "cache",
+        approach: "An ironbound chest is tucked behind the fallen stones.",
+      };
+      occupants[firstKey][room] = "cache";
     }
   }
   // Reserve content at entry. History is committed only when a traveller is encountered.

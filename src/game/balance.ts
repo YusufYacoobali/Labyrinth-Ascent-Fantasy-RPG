@@ -21,7 +21,6 @@ export const BALANCE = {
   shortcutSurveyRooms: 8,
   watchesPerDay: 6,
   expeditionDays: 30,
-  roundsPerWatch: 3,
   dailyRecovery: 0.25,
   fedExhaustionRecovery: 35,
   hungerExhaustion: 15,

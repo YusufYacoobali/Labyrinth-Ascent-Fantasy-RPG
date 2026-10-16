@@ -20,10 +20,12 @@ export function StoryArt({
   group,
   index,
   label,
+  focus = "center",
 }: {
   group: keyof typeof sheets;
   index: number;
   label?: string;
+  focus?: "center" | "bottom";
 }) {
   return (
     <View
@@ -46,7 +48,7 @@ export function StoryArt({
             width: "300%",
             height: "320%",
             left: `${-(index % 3) * 100}%`,
-            top: `${-Math.floor(index / 3) * 160 - 30}%`,
+            top: `${-Math.floor(index / 3) * 160 - (focus === "bottom" ? 60 : 30)}%`,
           }}
         />
       </SceneMotion>
@@ -78,6 +80,30 @@ export function ArrivalArt({
       />
     );
   return <StoryArt group="arrivalsB" index={floor - 8} label={label} />;
+}
+
+/** Floor entries show a lantern and passages, never the portal's waiting enemy. */
+export function EntryArt({
+  floor,
+  route = null,
+}: {
+  floor: number;
+  route?: Route | null;
+}) {
+  return floor === 1 ? (
+    <StoryArt
+      group="rooms"
+      index={5}
+      focus="bottom"
+      label="The entry lantern beside a stone waymarker"
+    />
+  ) : (
+    <EnvironmentArt
+      floor={floor}
+      route={route}
+      label="The entry passage on this floor"
+    />
+  );
 }
 
 export function EventArt({ floor, label }: { floor: number; label?: string }) {

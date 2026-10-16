@@ -2,7 +2,7 @@
 
 Every floor is a north-up spatial graph with compass connections. A saved world seed generates the same room coordinates and passages on every expedition. Branches grow from a seeded spine; extra edges form real loops without shortening the portal outside its distance band. Distances are 5–8 edges on Floors 1–4, 7–10 on Floors 5–8 and 9–12 on Floors 9–12. Each floor has landmarks, dead ends and exactly one permanent sanctuary.
 
-`journey.maps` stores permanent geography, visited rooms and reports. Keys are floor numbers except routed Floors 5–7, which use `floor:route`. `journey.occupants` is generated independently for each expedition. Monthly resolutions, combat records, forage attempts and unsecured rewards reset on entry. Geography, discoveries and source-attributed route notes remain.
+`journey.maps` stores permanent geography, visited rooms and reports. Keys are floor numbers except routed Floors 5–7, which use `floor:route`. `journey.occupants` is generated independently for each expedition. Monthly resolutions, combat records and unsecured rewards reset on entry. Geography, discoveries and source-attributed route notes remain.
 
 ## Directions
 
@@ -26,8 +26,8 @@ Selecting a room opens an Expo UI inspection sheet. It never moves the party. An
 
 ## Time and survival
 
-Movement, substantial investigation, foraging and ascent cost one watch. Six watches form a day. Three completed rounds of combat, accumulated across encounters, cost one watch. Daily food consumes one party ration, with no entry or floor ration charge. Supplied rest restores 25% maximum HP/MP and removes 35 exhaustion from standing characters. Unfed days grant no recovery, add 15 exhaustion and remove 10% maximum HP.
+Every movement, substantial event decision, completed combat round, shortcut opening and ascent costs one day. Maps and other reading screens use no time. The saved clock retains six legacy units per day for existing-save compatibility; new actions always advance six units. Daily food consumes one party ration, with no entry or floor ration charge. Supplied rest restores 25% maximum HP/MP and removes 35 exhaustion from standing characters. Unfed days grant no recovery, add 15 exhaustion and remove 10% maximum HP.
 
-Sanctuaries are safe from ambush. Their three-ration cache can be collected once per expedition. Wild camps consume a camping kit; daily interruption risks are 20%, 30% and 40% in the three floor bands. Waiting applies ordinary daily checks and stops for hunger, combat or the return gate. Suitable rooms permit one saved forage attempt: 50% one or two rations, 25% nothing, 25% danger.
+Sanctuaries are safe from ambush. Their three-ration cache can be collected once per expedition. Wild camps consume a camping kit; daily interruption risks are 20%, 30% and 40% in the three floor bands. Waiting applies ordinary daily checks and stops for hunger, combat or the return gate. Reach sanctuaries through normal connected passages; there is no adjacent-sanctuary shortcut or room-foraging action.
 
 The month closes only after the accepted round or decision finishes. A final-watch victory retains its loot receipt before extraction. Defeat loses unsecured rewards and provisional skills. Fallen characters receive an injury on rescue, up to two. Each removes 10% maximum HP and one speed. Three town days heal one injury; treatment costs 100 gold per level. Inn rest restores HP/MP while injury recovery follows its own calendar.

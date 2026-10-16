@@ -25,7 +25,7 @@ const create = (seed = 42) =>
     seed,
   });
 function battle(seed = 42) {
-  let s = act({ ...create(seed), day: 30 }, { type: "ENTER" });
+  let s = act({ ...create(seed), day: 30, food: 40 }, { type: "ENTER" });
   s = act(s, { type: "MISSION", id: "survey" });
   s = { ...s, journey: { ...s.journey, defender: true, room: "portal" } };
   s = act(s, { type: "APPROACH", choice: "listen", roll: 0.5 });
@@ -67,6 +67,7 @@ function fail(s) {
     {
       ...s,
       phase: "combat",
+      inventory: { ...s.inventory, ether: 1 },
       enemy: { ...e.enemyFor(1), atk: 5000 },
       party: s.party.map((c) => ({
         ...c,
@@ -108,16 +109,20 @@ test("100000 independent essence rolls meet the 30% rate for ordinary and boss s
     console.log(`  ${spec.name}: ${drops}/100000`);
   }
 });
-test("Victory records exact gross, escrow, net, items and individual XP once", () => {
+test("Victory records cores, no loose gold, items and individual XP once", () => {
   let s = act(create(), { type: "RECRUIT", id: "kael" });
   s = { ...battle(), party: s.party, runContracts: { kael: 14 } };
   const won = win(s);
   assert.equal(won.phase, "loot");
-  assert.equal(won.lootReceipt.gross, 65);
-  assert.equal(won.lootReceipt.shares.kael, 9);
-  assert.equal(won.lootReceipt.net, 56);
-  assert.equal(won.gold - s.gold, 56);
-  assert.equal(won.expedition.accruedShares.kael, 9);
+  assert.equal(won.lootReceipt.gross, 0);
+  assert.equal(won.lootReceipt.shares.kael, 0);
+  assert.equal(won.lootReceipt.net, 0);
+  assert.equal(won.gold, s.gold);
+  assert.equal(
+    won.lootReceipt.items["beast-core"],
+    m.monsterCoreYield(m.MONSTERS[0]),
+  );
+  assert.equal(won.expedition.accruedShares.kael || 0, 0);
   assert.equal(won.runPaid.kael, undefined);
   assert.equal(won.lootReceipt.xp.length, 2);
   assert.equal(
@@ -140,7 +145,7 @@ test("Drops differ by species, include genuine misses, and never give a guarante
     const won = win({ ...s, floor: 3, enemy: e.enemyFor(3) });
     if (won.inventory[m.essenceId(spec.id)]) found++;
     else missed++;
-    assert.ok(won.inventory[spec.material] >= spec.quantity);
+    assert.ok(won.inventory["beast-core"] >= m.monsterCoreYield(spec));
     assert.equal(won.essence, undefined);
   }
   assert.ok(found > 0 && missed > 0);
@@ -300,8 +305,19 @@ test("Unsecured essences are consumed before secured duplicates", () => {
   assert.equal(fail(s).inventory["essence-goblin"], 1);
 });
 test("Accrued companion shares settle only on successful extraction", () => {
-  const s = win({ ...battle(), runContracts: { kael: 14 } });
-  assert.equal(extract(s).runPaid.kael, 9);
+  const won = win({ ...battle(), runContracts: { kael: 14 } });
+  const s = act(
+    {
+      ...won,
+      phase: "branch",
+      journey: {
+        ...won.journey,
+        branch: { id: "share-cache", kind: "cache", direction: "left" },
+      },
+    },
+    { type: "BRANCH_CHOICE", choice: "careful", roll: 1 },
+  );
+  assert.equal(extract(s).runPaid.kael, 2);
   assert.equal(extract(fail(s)).runPaid.kael, undefined);
 });
 test("Duplicate essences teach another companion, craft equipment or sell without changing mastery", () => {
@@ -317,6 +333,7 @@ test("Duplicate essences teach another companion, craft equipment or sell withou
     const before = {
       ...essence(create(), recipe.essence, false),
       bestFloor: 12,
+      gold: 10000,
     };
     const crafted = act(before, {
       type: "CRAFT",
@@ -460,7 +477,7 @@ test("Rank potency and new effects are real combat behavior", () => {
 });
 
 test("Crystals refine equipped protection once without buying or occupying a skill", () => {
-  let s = create();
+  let s = { ...create(), gold: 1000, gems: 60 };
   assert.equal(
     act(s, { type: "REFINE_GEAR", id: "hero", element: "fire" }).gems,
     s.gems,
@@ -477,7 +494,13 @@ test("Crystals refine equipped protection once without buying or occupying a ski
   assert.equal(e.resist(e.normalizeSave(plain(s)).party[0], "fire"), 10);
 });
 test("Secured gold buys secured field supplies; mixed expedition gold keeps the bundle at risk", () => {
-  const base = { ...battle(), phase: "event", floor: 11, eventResolved: false };
+  const base = {
+    ...battle(),
+    gold: 500,
+    phase: "event",
+    floor: 11,
+    eventResolved: false,
+  };
   const bought = act(base, { type: "EVENT", choice: "supplies", roll: 0.5 });
   assert.equal(bought.expedition.unsecured.potions, 0);
   assert.equal(bought.expedition.unsecured.food, 0);

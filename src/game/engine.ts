@@ -71,7 +71,7 @@ import {
   walkthroughTip,
   type Walkthrough,
 } from "./walkthrough";
-import { tire, maybeComplain, exertForAction } from "./exhaustion";
+import { maybeComplain, exertForAction } from "./exhaustion";
 import {
   Element,
   EVENTS,
@@ -87,6 +87,17 @@ import {
 } from "./world";
 import { RECRUITS, RECIPES, type Recruit } from "./town-content";
 import { ARRIVALS } from "./story";
+import {
+  recruitShare,
+  recruitmentReply,
+  type RecruitReply,
+} from "./recruitment";
+import {
+  newTownLife,
+  resolveTownLife,
+  STARTING_GOLD,
+  type TownLife,
+} from "./town-life";
 import {
   newJourney,
   resolveExploration,
@@ -107,6 +118,7 @@ import {
 export { daysRemaining, MISSIONS, missionProgress } from "./exploration";
 export { SKILLS, resist } from "./combat-data";
 export { battleIntent, battleForecast } from "./battle";
+export { recruitShare } from "./recruitment";
 export type Race = "barbarian" | "human" | "elf" | "dwarf";
 export type Phase =
   | "town"
@@ -226,6 +238,8 @@ export interface BattleEffect {
   broken: boolean;
 }
 export interface Game {
+  recruitReply?: RecruitReply | null;
+  townLife?: TownLife;
   lastReport?: ExpeditionReport;
   challengeCompletions?: number;
   npcs?: Partial<Record<WorldNpcId, NpcMemory>>;
@@ -237,6 +251,14 @@ export interface Game {
   expedition: Expedition;
   rng: { combat: number; loot: number; encounters: number };
   lootReceipt: LootReceipt | null;
+  discoveryReceipt?: {
+    title: string;
+    gold: number;
+    food: number;
+    potions: number;
+    gems: number;
+    items: Record<string, number>;
+  } | null;
   trial: boolean;
   combat: CombatState | null;
   roundPlayback: { before: Game; events: RoundEvent[] } | null;
@@ -327,7 +349,10 @@ export const RACES = [
     name: "Barbarian",
     job: "Berserker",
     portrait: 3,
-    description: "Starter skill: Twin Strike.",
+    description:
+      "First through the door. Last to admit it hurt. You solve most arguments with Twin Strike.",
+    quote: "A locked door is just a door that hasn’t met me.",
+    style: "Bold brawler",
     trait: "Blood rage · +25% attack below 40% HP",
     hp: 180,
     atk: 32,
@@ -340,7 +365,10 @@ export const RACES = [
     name: "Human",
     job: "Knight",
     portrait: 0,
-    description: "Starter skill: Shield Bash. 5% chance to awaken as a Mage.",
+    description:
+      "A stubborn heart under battered steel. Shield Bash buys your friends breathing room. A rare few awaken as mages.",
+    quote: "Someone has to get everyone home.",
+    style: "Loyal protector",
     trait: "Last stand · +8 defense below 35% HP",
     hp: 140,
     atk: 25,
@@ -353,7 +381,10 @@ export const RACES = [
     name: "Elf",
     job: "Ranger",
     portrait: 1,
-    description: "Starter skill: Venom Fang.",
+    description:
+      "Sharp eyes. Sharper wit. You find the weak spot, then let Venom Fang do the talking.",
+    quote: "Try to keep up. Quietly, if possible.",
+    style: "Quick, precise hunter",
     trait: "Moon sight · attacks ignore half enemy armor",
     hp: 110,
     atk: 29,
@@ -366,7 +397,10 @@ export const RACES = [
     name: "Dwarf",
     job: "Guardian",
     portrait: 2,
-    description: "Starter skill: Shield Bash.",
+    description:
+      "Stone steady and gloriously hard to move. You lead with Shield Bash and complain about the craftsmanship.",
+    quote: "I’ve seen sturdier dungeons. Built a few, too.",
+    style: "Unshakeable guardian",
     trait: "Iron will · immune to paralysis",
     hp: 165,
     atk: 24,
@@ -470,10 +504,10 @@ export function initialGame(): Game {
     playback: null,
     started: false,
     day: 24,
-    gold: 2340,
-    gems: 120,
-    food: 6,
-    potions: 3,
+    gold: STARTING_GOLD,
+    gems: 0,
+    food: 1,
+    potions: 0,
     party: [],
     phase: "town",
     floor: 1,
@@ -498,7 +532,9 @@ export function initialGame(): Game {
     relic: false,
     encounterExamined: false,
     lastOutcome: "",
-    inventory: { antidote: 1, ether: 1 },
+    inventory: {},
+    recruitReply: null,
+    townLife: newTownLife(),
     route: null,
     checkpoints: [1],
     discoveredRoutes: [],
@@ -531,6 +567,11 @@ export function initialGame(): Game {
 export function normalizeSave(raw: Game): Game {
   raw = deserializeSave(raw);
   const s = { ...initialGame(), ...raw };
+  s.townLife = {
+    ...newTownLife(),
+    ...raw.townLife,
+    introSeen: raw.townLife?.introSeen ?? raw.started,
+  };
   s.rulesVersion = 4;
   s.stories = { ...newStoryState(), ...raw.stories };
   // Existing journeys do not suddenly acquire a first-play tutorial.
@@ -659,16 +700,7 @@ export function normalizeSave(raw: Game): Game {
 export const daysToGate = (day: number) => (30 - (day % 30)) % 30;
 export const gateOpen = (day: number) => day % 30 === 0;
 const validShare = (n: number | undefined): n is number =>
-  typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= 35;
-export const recruitShare = (
-  s: Game,
-  r: Recruit,
-  trust = s.rapport[r.id]?.trust || 0,
-) =>
-  Math.max(
-    6,
-    r.share - trust * 2 - Math.min(3, Math.floor(s.faction.guild / 10)),
-  );
+  typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= 50;
 export const TOWN_RUMOURS = [
   {
     id: "camp-watch",
@@ -839,18 +871,22 @@ export type Action =
   | RoundRequest
   | { type: "CREATE"; race: Race; name: string; roll: number; seed?: number }
   | { type: "RECRUIT"; id: string; offer?: number }
+  | { type: "ACK_RECRUIT_REPLY" }
+  | { type: "ACK_OPENING" }
+  | { type: "OPEN_TOWN_MOMENT"; id: string; companion: string }
+  | { type: "TOWN_MOMENT_CHOICE"; choice: "join" | "leave" }
+  | { type: "CLOSE_TOWN_MOMENT" }
+  | { type: "ACK_TOWN_RESULT" }
   | { type: "RUMOUR"; id: string }
   | { type: "MISSION"; id: Mission }
   | { type: "LEAD"; id: string }
-  | { type: "NAG_DECISION"; rest: boolean }
+  | { type: "NAG_DECISION" }
   | { type: "SEARCH_PORTAL" }
   | { type: "MOVE"; direction: Direction }
   | { type: "MOVE_BACK" }
   | { type: "AT_PORTAL" }
   | { type: "BRANCH_CHOICE"; choice: string; roll: number }
-  | { type: "SEEK_SHELTER" }
   | { type: "WILD_CAMP" }
-  | { type: "FORAGE" }
   | { type: "TREAT_INJURY"; id: string }
   | { type: "CAMP_REST"; untilClose?: boolean }
   | { type: "LEAVE_CAMP" }
@@ -889,6 +925,7 @@ export type Action =
       animate?: boolean;
     }
   | { type: "COLLECT" }
+  | { type: "ACK_DISCOVERY" }
   | { type: "FINISH_PLAYBACK" }
   | { type: "ENCOUNTER"; choice: "take" | "examine" | "leave"; roll: number }
   | { type: "EVENT"; choice: string; roll: number }
@@ -954,7 +991,6 @@ function battleWon(
     const reward = monsterFor(foe, s.floor),
       drop = monsterDrops(reward, seed);
     seed = drop.seed;
-    gold += reward.gold;
     xp += reward.xp;
     for (const [id, qty] of Object.entries(drop.items)) {
       items[id] = (items[id] || 0) + qty;
@@ -1057,6 +1093,10 @@ export function needsGateConfirmation(s: Game, a: Action) {
   );
 }
 export function reducer(s: Game, a: Action): Game {
+  if (a.type === "ACK_RECRUIT_REPLY")
+    return { ...s, recruitReply: null, message: "" };
+  if (a.type === "ACK_DISCOVERY")
+    return { ...s, discoveryReceipt: null, message: "" };
   if (a.type === "FINISH_PLAYBACK")
     return { ...s, playback: null, roundPlayback: null };
   if (s.playback || s.roundPlayback) return s;
@@ -1085,7 +1125,12 @@ export function reducer(s: Game, a: Action): Game {
         type: "MOVE",
         direction: relativeDirection(next.journey.facing, heading),
       });
-      if (next.phase !== "exploration" || next.playback || next.roundPlayback)
+      if (
+        next.phase !== "exploration" ||
+        next.playback ||
+        next.roundPlayback ||
+        next.discoveryReceipt
+      )
         break;
     }
     return next;
@@ -1213,9 +1258,7 @@ export function reducer(s: Game, a: Action): Game {
       a.choice !== "leave" &&
       next.journey.resolvedBranches.length >
         s.journey.resolvedBranches.length) ||
-      (a.type === "EVENT" && next.eventResolved && !s.eventResolved) ||
-      (a.type === "FORAGE" &&
-        next.expedition.foraged.length > s.expedition.foraged.length))
+      (a.type === "EVENT" && next.eventResolved && !s.eventResolved))
   ) {
     const id = `${encounterKey(s)}:${a.type}`;
     const items = Object.fromEntries(
@@ -1263,6 +1306,29 @@ export function reducer(s: Game, a: Action): Game {
     next = loseSpoils(next);
   next = storyConsequences(s, next, a);
   if (
+    a.type === "STORY_CHOICE" &&
+    s.stories.active?.resume === "town" &&
+    next.stories.history.length > s.stories.history.length
+  ) {
+    const entry = next.stories.history.at(-1)!;
+    next = {
+      ...next,
+      townLife: {
+        ...(next.townLife || newTownLife()),
+        result: {
+          title: entry.title,
+          body: entry.outcome,
+          bonds: [...next.party, ...next.reserve].flatMap((c) => {
+            const change =
+              (next.stories.loyalty[c.id] ?? B.loyaltyStart) -
+              (s.stories.loyalty[c.id] ?? B.loyaltyStart);
+            return change ? [{ name: c.name, change }] : [];
+          }),
+        },
+      },
+    };
+  }
+  if (
     a.type === "RETURN" &&
     s.journey.startDay !== null &&
     next.phase === "town" &&
@@ -1277,6 +1343,53 @@ export function reducer(s: Game, a: Action): Game {
     };
   }
   next = advanceWalkthrough(s, next, a);
+  if (a.type === "ENTER" || a.type === "RETURN")
+    next = { ...next, discoveryReceipt: null };
+  // Discoveries are already awarded. This receipt only pauses the UI, so reopening
+  // or dismissing it cannot reroll a chest or award the same coins twice.
+  if (
+    s.journey.startDay !== null &&
+    !s.expedition.lost &&
+    !["town", "loot", "combat"].includes(s.phase) &&
+    !["town", "defeat", "combat"].includes(next.phase) &&
+    [
+      "BRANCH_CHOICE",
+      "EVENT",
+      "ENCOUNTER",
+      "GENERIC_CHOICE",
+      "STORY_CHOICE",
+      "USE_SUPPLY",
+      "MOVE",
+      "MOVE_BACK",
+    ].includes(a.type)
+  ) {
+    const items = Object.fromEntries(
+      Object.entries(next.inventory)
+        .map(
+          ([id, quantity]) => [id, quantity - (s.inventory[id] || 0)] as const,
+        )
+        .filter(([, quantity]) => quantity > 0),
+    );
+    const found = {
+      title:
+        s.journey.branch?.kind === "cache"
+          ? "Chest opened"
+          : "Treasure collected",
+      gold: Math.max(0, next.gold - s.gold),
+      food: Math.max(0, next.food - s.food),
+      potions: Math.max(0, next.potions - s.potions),
+      gems: Math.max(0, next.gems - s.gems),
+      items,
+    };
+    if (
+      Object.keys(items).length ||
+      found.gold ||
+      found.food ||
+      found.potions ||
+      found.gems
+    )
+      next = { ...next, discoveryReceipt: found };
+  }
   return next;
 }
 function resolveGameAction(s: Game, a: Action): Game {
@@ -1312,7 +1425,7 @@ function resolveGameAction(s: Game, a: Action): Game {
     next = beginCombat(
       next,
       s.phase === "camp" ? "camp" : "exploration",
-      a.type === "FORAGE" ? "forage" : "roamer",
+      "roamer",
     );
   if (
     next.combat &&
@@ -1368,9 +1481,8 @@ function resolveGameAction(s: Game, a: Action): Game {
         next.journey.room !== s.journey.room) ||
       (a.type === "BRANCH_CHOICE" &&
         (next.phase !== s.phase || next.journey.room !== s.journey.room)) ||
-      (a.type === "ROUND" &&
-        next.expedition.rounds > s.expedition.rounds &&
-        next.expedition.rounds % 3 === 0) ||
+      (a.type === "ROUND" && next.expedition.rounds > s.expedition.rounds) ||
+      (a.type === "MISSION" && next.phase === "arrival") ||
       (a.type === "APPROACH" && next.arrivalChoice !== s.arrivalChoice) ||
       (a.type === "EVENT" &&
         (next.eventResolved !== s.eventResolved ||
@@ -1382,11 +1494,19 @@ function resolveGameAction(s: Game, a: Action): Game {
       (a.type === "STORY_CHOICE" &&
         next.stories.history.length > s.stories.history.length) ||
       (a.type === "CONTINUE" && next.floor > s.floor) ||
-      (a.type === "SEEK_SHELTER" && next.phase === "camp");
+      (a.type === "WILD_CAMP" && next.phase === "camp") ||
+      (a.type === "USE_SUPPLY" &&
+        a.id === "labyrinth-key" &&
+        next.eventResolved &&
+        !s.eventResolved) ||
+      (a.type === "ENCOUNTER" &&
+        (next.phase !== s.phase ||
+          next.encounterExamined !== s.encounterExamined));
     if (timed)
       next = spendWatches(
         a.type === "ROUND" ? next : exertForAction(s, next, a),
-        1,
+        B.watchesPerDay,
+        { rest: false },
       );
   }
   if (a.type === "BATTLE" && next.effects.id !== s.effects.id)
@@ -1438,6 +1558,8 @@ function resolveGameAction(s: Game, a: Action): Game {
   };
 }
 function reduceGame(s: Game, a: Action): Game {
+  const townLifeAction = resolveTownLife(s, a);
+  if (townLifeAction) return townLifeAction;
   const genericAction = resolveGenericAction(s, a);
   if (genericAction) return genericAction;
   const factionAction = resolveFactionAction(s, a);
@@ -1466,12 +1588,10 @@ function reduceGame(s: Game, a: Action): Game {
       phase: s.journey.nag.resume,
       journey: { ...s.journey, nag: null },
     };
-    return a.rest
-      ? reducer(resumed, { type: "SEEK_SHELTER" })
-      : note(
-          tire(resumed, 4),
-          "You promise to stop at the next safe room. The party shoulders its packs again.",
-        );
+    return note(
+      resumed,
+      "Find a sanctuary on the map or make camp with a camping kit.",
+    );
   }
   const exploration = resolveExploration(s, a, (floor, partySize) =>
     enemyFor(floor, s.route, partySize, "regular"),
@@ -1977,52 +2097,55 @@ function reduceGame(s: Game, a: Action): Game {
     if (a.type === "RECRUIT") {
       const r = RECRUITS.find((r) => r.id === a.id);
       if (!r || s.party.some((c) => c.id === a.id)) return s;
-      if (!recruitAvailable(s, r))
-        return note(
-          s,
-          "Reach Floor " + r.floor + " before recruiting " + r.name + ".",
-        );
-      if (s.party.length >= 4)
-        return note(
-          s,
-          "Your party holds four. Choose your companions carefully.",
-        );
       const rp = s.rapport[a.id] || {
         trust: 0,
         asked: false,
         inspected: false,
-        offer: r.share,
+        offer: recruitShare(s, r),
         reply: r.quote,
       };
       const minimum = recruitShare(s, r, rp.trust);
-      const offer = a.offer ?? r.share;
-      if (!validShare(offer))
-        return note(s, "Choose a whole-number loot share between 1% and 35%.");
-      if (offer < minimum)
+      const offer = a.offer ?? minimum;
+      const respond = (outcome: RecruitReply["outcome"], reason?: string) => {
+        const reply = recruitmentReply(s, r, offer, outcome, reason);
         return {
           ...s,
-          message: `${r.name} asks for at least ${minimum}% of expedition gold. Build trust or raise your offer.`,
+          recruitReply: reply,
+          message: "",
           rapport: {
             ...s.rapport,
-            [a.id]: {
-              ...rp,
-              offer: minimum,
-              reply: `“${minimum}% of what we find, and I’ll walk with you.”`,
-            },
+            [a.id]: { ...rp, offer: minimum, reply: reply.line },
           },
         };
+      };
+      if (!recruitAvailable(s, r))
+        return respond(
+          "blocked",
+          `Reach Floor ${r.floor} and come back. I need to know you can handle what’s down there.`,
+        );
+      if (s.party.length >= 4)
+        return respond(
+          "blocked",
+          "You’ve already got four in your company. Make room for me, and we can talk.",
+        );
+      if (!validShare(offer))
+        return respond(
+          "declined",
+          `Contracts run from 10% to 50%. My asking share is ${minimum}%.`,
+        );
+      if (offer < minimum) return respond("declined");
       const total =
         s.party.reduce((n, c) => n + (s.contracts[c.id] || 0), 0) + offer;
       if (total > 75)
-        return note(
-          s,
-          "Your companions’ shares cannot exceed 75%. Negotiate or change the party.",
+        return respond(
+          "blocked",
+          "That promises more than the company can pay. Keep at least 25% for yourself; change the other contracts or the line-up first.",
         );
       const c = makeCharacter(r.race, r.id, r.name);
       c.traitRevealed = rp.trust >= 2;
       return note(
         {
-          ...s,
+          ...respond("accepted"),
           contracts: { ...s.contracts, [a.id]: offer },
           party: [...s.party, c],
           townProgress: {
@@ -2030,7 +2153,7 @@ function reduceGame(s: Game, a: Action): Game {
             signed: [...new Set([...s.townProgress.signed, c.id])],
           },
         },
-        `${r.name} joined for ${offer}% of expedition gold. No upfront payment.`,
+        `${r.name} joined for ${offer}% of expedition gold.`,
       );
     }
     if (a.type === "REST")

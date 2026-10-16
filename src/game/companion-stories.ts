@@ -113,17 +113,17 @@ export const COMPANION_STORIES: StoryChain[] = [
       stage(
         "lyria.ink",
         "Ink that keeps moving",
-        "Lyria’s childhood map shows a tree where Stormhold now stands. Its ink still grows a little each month. She asks you to compare it with the living roots below, without cutting them for a specimen.",
+        "At a quiet tavern table, Lyria pins down an old map with two mugs. A green ink line creeps across the page. ‘Enchanted sap,’ she explains. ‘It follows living roots under Stormhold. My mother drew it. I think it can show us a safe way through the labyrinth.’ She looks up. ‘Will you help me trace the roots without cutting them? This is all I have left of her.’",
         "town",
         0,
         [
           decision(
-            "Offer to record the roots where they grow",
-            "Lyria gives you a page of translucent bark. Observation, she insists, can be a kind of care.",
+            "Promise to help her finish her mother’s map",
+            "‘Then we’ll finish it together,’ Lyria says, sliding you a sheet of tracing bark. For the first time, she lets you hold the map. She trusts you with something precious.",
           ),
           decision(
-            "Insist that a useful discovery must be harvested",
-            "Lyria folds the bark away. She will accompany you, but she will watch your hands.",
+            "Say you’re here for treasure, not family keepsakes",
+            "Lyria rolls the map up. ‘Understood. We’ll keep this professional.’ She stays with the company, but the conversation closes.",
             { id: "harvest", approved: false, harmful: true },
           ),
         ],

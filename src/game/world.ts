@@ -1,6 +1,6 @@
 import { HUNT_ITEMS, GEAR_TRAITS } from "./build-equipment";
 import { FACTION_ITEMS, type FactionId } from "./faction-opportunities";
-import { MONSTERS, essenceId } from "./monsters";
+import { MONSTERS, essenceId, CORE_TRADE_VALUE } from "./monsters";
 import { TOWN_ITEMS, TOWN_QUESTS } from "./town-content";
 export type Element = "physical" | "fire" | "frost" | "venom";
 export type Route = "roots" | "frost" | "forge" | "crypt";
@@ -253,6 +253,18 @@ export const GEAR_KINDS = [
 ] as const;
 export const ITEMS: Item[] = [
   {
+    id: "chipped-blade",
+    name: "Chipped shortsword",
+    icon: "sword",
+    kind: "weapon",
+    quality: "common",
+    price: 45,
+    sell: 12,
+    vendor: "provisioner",
+    atk: 3,
+    description: "+3 ATK. Barely sharp. Better than brave words.",
+  },
+  {
     id: "rations",
     name: "Trail rations ×3",
     icon: "sack",
@@ -397,7 +409,7 @@ export const ITEMS: Item[] = [
     price: 0,
     sell: 42,
     vendor: "guild",
-    description: "The guild pays a premium for verified monster cores.",
+    description: `Crystallised monster energy. Trade at the town guild for ${CORE_TRADE_VALUE} gold each.`,
   },
   {
     id: "night-herb",

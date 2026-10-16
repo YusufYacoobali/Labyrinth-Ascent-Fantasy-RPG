@@ -2,7 +2,7 @@ import type { Action, Game } from "./engine";
 import { GENERIC_ENCOUNTERS } from "./generic-encounters";
 import { nextRandom } from "./monsters";
 import { directedEncounter } from "./encounter-director";
-import { encounterKey } from "./exploration";
+import { encounterKey } from "./exploration-state";
 
 export interface GenericRecord {
   id: string;

@@ -27,7 +27,7 @@ function sign(s, id) {
   });
 }
 const arrival = () =>
-  reduce(reduce({ ...create(), day: 30 }, { type: "ENTER" }), {
+  reduce(reduce({ ...create(), day: 30, food: 40 }, { type: "ENTER" }), {
     type: "MISSION",
     id: "survey",
   });
@@ -137,6 +137,7 @@ test("Each recipe consumes exactly its materials and gold; locked recipes are at
     const s = {
       ...create(),
       bestFloor: recipe.floor || 0,
+      gold: 10000,
       inventory: Object.fromEntries(
         recipe.materials.map((m) => [m.id, m.quantity]),
       ),
@@ -160,7 +161,7 @@ test("Each recipe consumes exactly its materials and gold; locked recipes are at
   }
 });
 test("Town contracts track unique recruits, training, crafting and actual kills", () => {
-  let s = create();
+  let s = { ...create(), gold: 500 };
   for (const id of ["elowen", "mira", "finn"]) s = sign(s, id);
   assert.equal(e.questProgress(s, "trusted-company"), 3);
   s = reduce(s, { type: "TRAIN" });
@@ -264,14 +265,14 @@ test("Legacy saves gain town defaults without resetting names, jobs, inventories
   assert.deepEqual(Array.from(migrated.townProgress.signed), ["mira"]);
   assert.deepEqual(Array.from(migrated.usedSupplies), []);
 });
-test("Negotiated loot shares pay actual gold finds and never charge town work or upfront fees", () => {
+test("Monster cores defer currency to town and never charge town work or upfront fees", () => {
   let s = sign(create(), "kael");
   s = sign(s, "mira");
-  assert.equal(s.gold, 2340);
-  assert.equal(s.contracts.kael, 8);
-  assert.equal(s.contracts.mira, 11);
+  assert.equal(s.gold, 80);
+  assert.equal(s.contracts.kael, 18);
+  assert.equal(s.contracts.mira, 22);
   s = reduce(s, { type: "WORK" });
-  assert.equal(s.gold, 2465);
+  assert.equal(s.gold, 205);
   s = reduce({ ...s, day: 30 }, { type: "ENTER" });
   s = reduce(s, { type: "MISSION", id: "survey" });
   s = reduce(portalArrival(s), {
@@ -284,11 +285,12 @@ test("Negotiated loot shares pay actual gold finds and never charge town work or
   s.enemy.species = "goblin";
   const before = s.gold;
   s = reduce(s, { type: "BATTLE", kind: "attack", roll: 0.5 });
-  assert.equal(s.runGross, 65);
-  assert.equal(s.expedition.accruedShares.kael, 5);
-  assert.equal(s.expedition.accruedShares.mira, 7);
-  assert.equal(s.runGold, 53);
-  assert.equal(s.gold - before, 53);
+  assert.equal(s.runGross, 0);
+  assert.equal(s.expedition.accruedShares.kael || 0, 0);
+  assert.equal(s.expedition.accruedShares.mira || 0, 0);
+  assert.equal(s.runGold, 0);
+  assert.equal(s.gold, before);
+  assert.ok(s.inventory["beast-core"] > 0);
   assert.deepEqual(Object.keys(s.runPaid), []);
   const loaded = e.normalizeSave(JSON.parse(JSON.stringify(s)));
   assert.equal(JSON.stringify(loaded.runPaid), JSON.stringify(s.runPaid));
@@ -298,7 +300,7 @@ test("Share negotiation rejects invalid offers and keeps waiting companions on a
   const penniless = sign({ ...create(), gold: 0 }, "mira");
   assert.equal(penniless.party.length, 2);
   assert.equal(penniless.gold, 0);
-  for (const offer of [-1, 0, 36, 14.5, NaN, Infinity]) {
+  for (const offer of [-1, 0, 51, 14.5, NaN, Infinity]) {
     const s = create();
     assert.equal(
       reduce(s, { type: "RECRUIT", id: "kael", offer }).party.length,
@@ -308,12 +310,18 @@ test("Share negotiation rejects invalid offers and keeps waiting companions on a
   let s = sign(create(), "kael");
   s = reduce(s, { type: "BENCH", id: "kael" });
   s = reduce(s, { type: "RECRUIT", id: "kael", offer: 35 });
-  assert.equal(s.contracts.kael, 8);
+  assert.equal(s.contracts.kael, 18);
   const raw = JSON.parse(JSON.stringify(s));
   delete raw.contracts;
   raw.rapport.kael.offer = 365;
   const loaded = e.normalizeSave(raw);
-  assert.equal(loaded.contracts.kael, 8);
+  assert.equal(
+    loaded.contracts.kael,
+    e.recruitShare(
+      s,
+      e.RECRUITS.find((r) => r.id === "kael"),
+    ),
+  );
   assert.equal(loaded.rapport.kael.offer, 14);
   const richShares = {
     ...create(),
@@ -346,7 +354,7 @@ test("Town conversations reveal only learned floor information, persist and cann
   );
 });
 test("Spending a day at an opening requires an explicit skip decision", () => {
-  const s = { ...create(), day: 30 };
+  const s = { ...create(), day: 30, food: 40 };
   for (const type of ["REST", "WORK", "TRAIN"]) {
     assert.ok(e.needsGateConfirmation(s, { type }));
     const blocked = reduce(s, { type });

@@ -39,26 +39,34 @@ export function walkthroughTip(s: Game): Guidance | null {
         "Visit the Tavern. Talk to a recruit, then agree on a share of expedition gold. No fee is paid up front.",
         { destination: "/tavern", button: "Visit Tavern" },
       );
-    if (s.food < 30 && !done("supplies"))
+    if (s.food < 4 && !done("supplies"))
       return tip(
         "supplies",
-        "Pack for the month",
-        "Buy 30 party rations for the sealed month. One is used per elapsed day. Bring healing potions and camping kits too.",
+        "Pack a few rations",
+        "Buy a bundle of trail rations. Each move, combat round and event uses one day and one ration. Sanctuary caches and travelling merchants can replenish food.",
         { destination: "/shop", button: "Visit Shop" },
-      );
-    if (!s.townProgress.trained && !done("train"))
-      return tip(
-        "train",
-        "Train before the gate",
-        "Open Prepare at the Guild, then Train. It costs 60 gold and one day and helps companions catch up to level 2 initially. Clearing deeper floors raises that ceiling. Stop when the gate opens.",
-        { destination: "/guild", button: "Visit Guild" },
       );
     if (!done("equipment"))
       return tip(
         "equipment",
-        "Check your equipment",
-        "Open Party, select a member, then Equipment. Tap a slot to equip owned gear; each member has separate equipment.",
-        { destination: "/party", button: "Open Party", acknowledge: true },
+        "A blade is a start",
+        "The chipped shortsword costs 45 gold. Buy it in the Shop, then equip it under Party → Equipment.",
+        {
+          destination:
+            (s.inventory["chipped-blade"] || 0) > 0 ? "/party" : "/shop",
+          button:
+            (s.inventory["chipped-blade"] || 0) > 0
+              ? "Equip your blade"
+              : "Find a cheap weapon",
+          acknowledge: true,
+        },
+      );
+    if (s.gold >= 60 && !s.townProgress.trained && !done("train"))
+      return tip(
+        "train",
+        "Training is optional",
+        "Got gold to spare? Guild training costs 60 gold and one day. Keep enough for food, and don’t miss the gate.",
+        { destination: "/guild", button: "Visit Guild", acknowledge: true },
       );
     return tip(
       "gate",
@@ -87,7 +95,7 @@ export function walkthroughTip(s: Game): Guidance | null {
     return tip(
       "round",
       "Plan the whole round",
-      "Select each standing companion, queue one action and choose its target. Check initiative and every enemy intent, then Confirm round. Guard, Focus and items use that companion's action; potions affect one ally. Retreat spends the round before following a connected passage.",
+      "Choose one action for each standing companion. The last choice starts the round. Attack is free; skills use MP. Find potions and Focus under Others. Guard before a heavy hit.",
     );
   if (s.phase === "combat") {
     const living = s.party.filter((c) => c.hp > 0);
@@ -175,7 +183,7 @@ export function walkthroughTip(s: Game): Guidance | null {
     return tip(
       "essence",
       "Victory rewards are recorded",
-      "Review gold, items and individual XP, then continue. Bind any monster essence later in town or shelter.",
+      "Review cores, essence and XP. Trade cores for gold in town; bind essences in town or shelter.",
     );
   if (s.phase === "event" || s.phase === "encounter")
     return tip(
@@ -219,7 +227,7 @@ export function advanceWalkthrough(
   if (!after.walkthrough.active || action.type === "CREATE") return after;
   const learned: string[] = [];
   if (after.party.length > before.party.length) learned.push("recruit");
-  if (after.food >= 30 && after.food > before.food) learned.push("supplies");
+  if (after.food >= 4 && after.food > before.food) learned.push("supplies");
   if (after.townProgress.trained > before.townProgress.trained)
     learned.push("train");
   if (

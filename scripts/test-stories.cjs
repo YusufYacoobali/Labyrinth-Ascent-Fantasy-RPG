@@ -24,7 +24,7 @@ function party() {
   });
   for (const id of ["kael", "lyria", "bram"])
     s = e.reducer(s, { type: "RECRUIT", id });
-  return s;
+  return { ...s, gold: 10000, food: 30, potions: 3 };
 }
 function place(s, stage, route) {
   return {
@@ -384,7 +384,7 @@ test("Every generic variant has payable choices, durable outcomes and at most on
         };
         const next = e.reducer(s, request);
         assert.equal(next.expedition.generic[room].resolved, true);
-        assert.equal(next.journey.watches, 1);
+        assert.equal(next.journey.watches, 6);
         const loaded = e.normalizeSave(JSON.parse(JSON.stringify(next)));
         const repeated = e.reducer(loaded, request);
         assert.equal(repeated.gold, next.gold);

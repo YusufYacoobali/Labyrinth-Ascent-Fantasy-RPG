@@ -1,4 +1,5 @@
 import { factionSupplyBonus } from "./relationships";
+import { gearFloor } from "./build-equipment";
 import { directedEncounter, lockEncounter } from "./encounter-director";
 import { openShortcut, shortcutReason } from "./shortcuts";
 import { npcAt, WORLD_NPCS } from "./world-npcs";
@@ -7,9 +8,16 @@ import { assignGeneric } from "./generic-stories";
 import { principalResolved, principalAftermath } from "./stories";
 import { passTime } from "./survival";
 import { BALANCE } from "./balance";
-import { nextRandom } from "./monsters";
+import { nextRandom, CORE_TRADE_VALUE } from "./monsters";
 import type { Action, Enemy, Game, Phase } from "./engine";
-import { FLOORS } from "./world";
+import { FLOORS, ITEMS } from "./world";
+import {
+  currentMapKey,
+  floorMap,
+  currentRoom,
+  encounterKey,
+  roomOccupant,
+} from "./exploration-state";
 import {
   generateFloor,
   reveal,
@@ -26,6 +34,13 @@ import {
   type FloorMap,
 } from "./floor-map";
 
+export {
+  currentMapKey,
+  floorMap,
+  currentRoom,
+  encounterKey,
+  roomOccupant,
+} from "./exploration-state";
 export type Direction = RelativeDirection;
 export type Mission = "survey" | "salvage" | "survivors";
 export type BranchKind = "cache" | "company" | "spring" | "beast";
@@ -82,20 +97,6 @@ export const newJourney = (): Journey => ({
   history: [],
   leaderId: "hero",
 });
-export const currentMapKey = (s: Game) => mapKey(s.floor, s.route);
-export const floorMap = (s: Game) =>
-  s.journey.maps[currentMapKey(s)] ||
-  generateFloor(
-    s.floor,
-    s.journey.seed,
-    s.floor >= 5 && s.floor <= 7 ? s.route || "roots" : "",
-  );
-export const currentRoom = (s: Game) =>
-  floorMap(s).nodes[s.journey.room] || floorMap(s).nodes.entrance;
-export const encounterKey = (s: Game, id = s.journey.room) =>
-  `${currentMapKey(s)}:${id}`;
-export const roomOccupant = (s: Game, id = s.journey.room) =>
-  s.journey.occupants[currentMapKey(s)]?.[id] || "quiet";
 export const exitsFor = (s: Game) =>
   HEADINGS.flatMap((heading) => {
     const to = currentRoom(s).exits[heading];
@@ -301,8 +302,8 @@ export const MISSIONS = [
   },
   {
     id: "salvage" as Mission,
-    title: "Bring home supplies",
-    body: "Recover 400 gold before shares. Search side passages; your team needs more than glory.",
+    title: "Recover valuable spoils",
+    body: "Bring home 400 gold worth of cores and coins.",
     target: 400,
     reward: 200,
   },
@@ -324,7 +325,8 @@ export function missionProgress(s: Game) {
         ? Math.min(5, s.journey.step)
         : 0
     : s.journey.mission === "salvage"
-      ? s.runGross
+      ? s.runGross +
+        (s.expedition.unsecured.inventory["beast-core"] || 0) * CORE_TRADE_VALUE
       : s.journey.met;
 }
 export function chartRumour(
@@ -441,7 +443,7 @@ export function resolveExploration(
           },
         },
       },
-      "The stone latch opens onto a permanent shortcut. Opening it takes one watch; movement remains an explicit choice.",
+      "The stone latch opens onto a permanent shortcut. Opening it takes one day; movement remains an explicit choice.",
     );
   }
   if (
@@ -498,21 +500,47 @@ export function resolveExploration(
       );
     if (b.kind === "cache" && ["careful", "risk"].includes(a.choice)) {
       const safe = a.choice === "careful" || a.roll >= 0.4;
-      const gold = safe ? 60 + s.floor * 12 : 30;
+      const plannedItem = directedEncounter(s)?.rewardItem;
+      const treasures = ITEMS.filter(
+        (i) =>
+          ["weapon", "armor", "helmet", "boots", "charm"].includes(i.kind) &&
+          !i.faction &&
+          gearFloor(i) <= s.floor &&
+          i.price > 0 &&
+          i.price <= 180 + s.floor * 45,
+      );
+      const roomSeed = [...s.journey.room].reduce(
+        (n, c) => n + c.charCodeAt(0),
+        s.journey.seed + s.expedition.number,
+      );
+      const treasure =
+        plannedItem ||
+        treasures[roomSeed % treasures.length]?.id ||
+        "relic-fragment";
+      const materials =
+        s.route === "roots"
+          ? ["night-herb"]
+          : s.route === "frost"
+            ? ["frost-shard"]
+            : s.route === "forge"
+              ? ["ancient-ore"]
+              : ["relic-fragment", "ancient-ore", "night-herb"];
+      const material = materials[(roomSeed >>> 2) % materials.length];
+      const gold = safe ? 12 + s.floor * 3 : 8;
       return say(
         {
           ...next,
           gold: s.gold + gold,
           inventory: {
             ...s.inventory,
-            ...(directedEncounter(s)?.rewardItem && safe
+            ...(safe
               ? {
-                  [directedEncounter(s)!.rewardItem!]:
-                    (s.inventory[directedEncounter(s)!.rewardItem!] || 0) + 1,
+                  [treasure]: (s.inventory[treasure] || 0) + 1,
+                  [material]:
+                    (s.inventory[material] || 0) +
+                    (treasure === material ? 3 : 2),
                 }
               : {}),
-            "relic-fragment":
-              (s.inventory["relic-fragment"] || 0) + (safe ? 1 : 0),
           },
           party: safe
             ? s.party
@@ -533,8 +561,8 @@ export function resolveExploration(
               ),
         },
         safe
-          ? `Under the loose stone: ${gold} gold and a relic fragment. You share the find under your agreed contracts.`
-          : `The catch snaps. Standing companions lose ${s.route === "forge" ? 22 : 15} HP${s.route === "roots" ? " and are poisoned" : s.route === "frost" ? " and are chilled" : s.route === "crypt" ? " and lose 12 MP" : ""}, but you recover 30 gold.`,
+          ? `You recover ${ITEMS.find((i) => i.id === treasure)?.name || treasure} and ${gold} coins from the chest.`
+          : `The trapped lock snaps. The party is hurt, but you recover ${gold} coins.`,
       );
     }
     if (
@@ -709,51 +737,6 @@ export function resolveExploration(
     }
     return s;
   }
-  if (
-    a.type === "SEEK_SHELTER" &&
-    ["victory", "exploration", "defeat", "arrival", "event", "branch"].includes(
-      s.phase,
-    )
-  ) {
-    const fleeing = s.phase === "combat";
-    const target = Object.values(currentRoom(s).exits).find(
-      (id) => floorMap(s).nodes[id].kind === "camp",
-    );
-    if (!target)
-      return say(
-        s,
-        "The sanctuary is a real room. Follow connected passages to reach it; inspect your map for known routes.",
-      );
-    const sheltered = moveRoom(s, target);
-    return say(
-      {
-        ...sheltered,
-        phase: "camp",
-        party: fleeing
-          ? s.party.map((c) =>
-              c.hp > 0 ? { ...c, hp: Math.max(1, c.hp - (8 + s.floor)) } : c,
-            )
-          : s.party,
-        journey: {
-          ...sheltered.journey,
-          campReturn: fleeing
-            ? "combat"
-            : s.phase === "event"
-              ? "event"
-              : s.phase === "branch"
-                ? "branch"
-                : s.phase === "exploration"
-                  ? "exploration"
-                  : s.phase === "arrival"
-                    ? "arrival"
-                    : "victory",
-        },
-      },
-      fleeing
-        ? "You fall back to a defensible alcove. Standing allies lose HP covering the retreat. The enemy still guards the crossing."
-        : "You find a sealed watch room. One companion tends the lantern while the others rest. The town gate remains shut.",
-    );
-  }
   if (a.type === "WILD_CAMP" && ["exploration", "branch"].includes(s.phase)) {
     if (!(s.inventory["camp-kit"] > 0))
       return say(
@@ -775,68 +758,6 @@ export function resolveExploration(
         "A supplied wild camp is ready. It can be interrupted while you rest.",
     };
   }
-  if (a.type === "FORAGE" && ["exploration", "branch"].includes(s.phase)) {
-    const key = encounterKey(s),
-      suitable =
-        currentRoom(s).kind === "landmark" ||
-        roomOccupant(s) === "spring" ||
-        currentRoom(s).kind === "dead-end";
-    if (!suitable || s.expedition.foraged.includes(key))
-      return say(s, "No fresh foraging remains in this room.");
-    const draw = nextRandom(s.rng.encounters),
-      next = {
-        ...s,
-        rng: { ...s.rng, encounters: draw.seed },
-        expedition: {
-          ...s.expedition,
-          foraged: [...s.expedition.foraged, key],
-        },
-      };
-    if (draw.roll < 0.5)
-      return spendWatches(
-        say(
-          { ...next, food: next.food + (draw.roll < 0.25 ? 1 : 2) },
-          "You gather edible roots: " +
-            (draw.roll < 0.25 ? 1 : 2) +
-            " party rations.",
-        ),
-        1,
-      );
-    if (draw.roll < 0.75)
-      return spendWatches(
-        say(next, "You find nothing edible. This room has been searched."),
-        1,
-      );
-    const danger = nextRandom(draw.seed),
-      state = { ...next, rng: { ...next.rng, encounters: danger.seed } };
-    return spendWatches(
-      danger.roll < 0.5
-        ? say(
-            {
-              ...state,
-              party: state.party.map((c) =>
-                c.hp > 0
-                  ? { ...c, hp: Math.max(0, c.hp - Math.round(c.maxHp * 0.08)) }
-                  : c,
-              ),
-            },
-            "A hidden hazard costs each standing ally 8% maximum HP.",
-          )
-        : {
-            ...state,
-            phase: "combat",
-            enemy: enemyFor(s.floor, s.party.length),
-            journey: {
-              ...state.journey,
-              defender: false,
-              branchFight: true,
-              branch: null,
-            },
-            message: "Foraging disturbs a hungry creature.",
-          },
-      1,
-    );
-  }
   if (a.type === "CAMP_REST" && ["camp", "defeat"].includes(s.phase)) {
     if (s.phase === "defeat") return spendWatches(s, 180 - s.journey.watches);
     let next = s;
@@ -844,7 +765,7 @@ export function resolveExploration(
       const unfed = next.food === 0;
       next = spendWatches(
         next,
-        Math.min(6 - (next.journey.watches % 6), 180 - next.journey.watches),
+        Math.min(BALANCE.watchesPerDay, 180 - next.journey.watches),
       );
       if (next.phase !== "camp" || unfed) break;
       if (next.journey.wildCamp) {

@@ -65,23 +65,25 @@ export function PartyScreen() {
       <Frame active="Party" title="Your Party">
         {["town", "camp", "exploration", "victory"].includes(state.phase) && (
           <Panel style={{ margin: 10, gap: 6 }}>
-            <Copy>
-              {c.name} · {formationOf(c)} rank. Ordinary front attacks prefer
-              standing front companions; hunters and area attacks can reach the
-              back.
+            <Copy muted style={{ fontSize: 13 }}>
+              Front draws most attacks. Back is safer for healers and ranged
+              allies.
             </Copy>
-            <Button
-              small
-              tone="dark"
-              label={`Move ${c.name} to ${formationOf(c) === "front" ? "Back" : "Front"}`}
-              onPress={() =>
-                dispatch({
-                  type: "SET_FORMATION",
-                  id: c.id,
-                  formation: formationOf(c) === "front" ? "back" : "front",
-                })
-              }
-            />
+            <View style={{ flexDirection: "row", gap: 6 }}>
+              {(["front", "back"] as const).map((formation) => (
+                <Button
+                  key={formation}
+                  small
+                  icon={formation === "front" ? "shield" : "bow-arrow"}
+                  style={{ flex: 1 }}
+                  tone={formationOf(c) === formation ? "blue" : "dark"}
+                  label={formation === "front" ? "Front" : "Back"}
+                  onPress={() =>
+                    dispatch({ type: "SET_FORMATION", id: c.id, formation })
+                  }
+                />
+              ))}
+            </View>
           </Panel>
         )}
         {state.phase === "story" ? (

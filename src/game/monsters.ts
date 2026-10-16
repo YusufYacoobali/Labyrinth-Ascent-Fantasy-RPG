@@ -358,20 +358,18 @@ export function nextRandom(seed: number) {
   const next = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
   return { seed: next, roll: next / 4294967296 };
 }
+export const CORE_TRADE_VALUE = 55;
+export const monsterCoreYield = (spec: MonsterSpec) =>
+  Math.max(1, Math.ceil(spec.gold / CORE_TRADE_VALUE));
+
 export function monsterDrops(spec: MonsterSpec, seed: number) {
   const essence = nextRandom(seed);
   const material = nextRandom(essence.seed);
   return {
     seed: material.seed,
     items: {
-      [spec.material]: spec.quantity,
+      "beast-core": monsterCoreYield(spec),
       ...(spec.trophy ? { [spec.trophy]: 1 } : {}),
-      ...(material.roll < 0.25
-        ? {
-            "beast-core":
-              (spec.material === "beast-core" ? spec.quantity : 0) + 1,
-          }
-        : {}),
       ...(essence.roll < 0.3 ? { [essenceId(spec.id)]: 1 } : {}),
     },
   };

@@ -1,6 +1,6 @@
 import React from "react";
 import { View } from "react-native";
-import { ArrivalArt } from "@/components/story-art";
+import { ArrivalArt, EntryArt } from "@/components/story-art";
 import { StoryCard } from "@/components/story-card";
 import { Button, Choice, Copy } from "@/components/game-ui";
 import { Reveal } from "@/components/combat-motion";
@@ -16,7 +16,7 @@ export function Arrival() {
   if (!state.journey.defender)
     return (
       <View style={{ gap: 12, paddingBottom: 20 }}>
-        <ArrivalArt floor={state.floor} label="A new floor" />
+        <EntryArt floor={state.floor} route={state.route} />
         <StoryCard
           title={"Floor " + state.floor + " · " + scene.cue}
           body="The entry lantern burns behind you. Find a route through the passages; a defender guards the upward portal."
@@ -103,13 +103,6 @@ export function Arrival() {
               {state.enemy.name} · ATK {state.enemy.atk} · {state.enemy.element}
             </Copy>
           )}
-          <Choice
-            label="Find a sheltered place"
-            detail="Step into a defensible watch room"
-            icon="tent"
-            tone="dark"
-            onPress={() => dispatch({ type: "SEEK_SHELTER" })}
-          />
         </StoryCard>
       </Reveal>
     </View>

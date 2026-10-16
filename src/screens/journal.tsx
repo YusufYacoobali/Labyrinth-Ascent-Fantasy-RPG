@@ -616,7 +616,7 @@ export function MoreScreen() {
                     }}
                   />
                   <Button
-                    label="Try pixel combat"
+                    label="Practice combat"
                     tone="blue"
                     onPress={() => router.push("/combat-trial")}
                   />

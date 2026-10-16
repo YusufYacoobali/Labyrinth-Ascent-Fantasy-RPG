@@ -16,7 +16,7 @@ function start() {
     name: "Rowan",
     roll: 0.5,
   });
-  s = act({ ...s, day: 30 }, { type: "ENTER" });
+  s = act({ ...s, day: 30, food: 40 }, { type: "ENTER" });
   return s;
 }
 function explore() {
@@ -57,14 +57,14 @@ test("Mission seals the month and peaceful arrival opens exploration before the 
   assert.equal(s.kills, 0);
   assert.equal(s.journey.room, "entrance");
 });
-test("Substantial travel costs watches and cannot return through a closed gate", () => {
+test("Every movement costs a full day and cannot return through a closed gate", () => {
   let s = explore();
   for (let i = 0; i < 6; i++) {
     s = { ...s, phase: "exploration" };
     s = act(s, toward(s, i % 2 ? "entrance" : "loop-west"));
   }
-  assert.equal(s.journey.watches, 6);
-  assert.equal(e.daysRemaining(s), 29);
+  assert.equal(s.journey.watches, 42);
+  assert.equal(e.daysRemaining(s), 23);
   assert.equal(act(s, { type: "RETURN" }).phase, s.phase);
 });
 test("Cache outcomes are recorded once in this expedition and survive reload", () => {
@@ -99,12 +99,12 @@ test("Spring rewards and companion encounters are one-time monthly outcomes", ()
   let s = branch("spring"),
     food = s.food;
   s = act(s, { type: "BRANCH_CHOICE", choice: "gather", roll: 0.5 });
-  assert.equal(s.food, food + 2);
-  assert.equal(s.expedition.unsecured.food, 2);
+  assert.equal(s.food, food + 1);
+  assert.equal(s.expedition.unsecured.food, 1);
   s = branch("company");
   const before = s.food;
   s = act(s, { type: "BRANCH_CHOICE", choice: "help", roll: 0.5 });
-  assert.equal(s.food, before - 1);
+  assert.equal(s.food, before - 2);
   assert.equal(s.journey.met, 1);
   const receipt = Object.values(s.expedition.generic).find(
     (record) => record.resolved,

@@ -16,8 +16,10 @@ function start(seed = 42) {
     name: "Map test",
     roll: 0.5,
   });
-  s.journey.maps[1] = JSON.parse(JSON.stringify(require("./fixtures/floor-v2-6da6d25.json")));
-  s = campaignAction({ ...s, day: 30 }, { type: "ENTER" });
+  s.journey.maps[1] = JSON.parse(
+    JSON.stringify(require("./fixtures/floor-v2-6da6d25.json")),
+  );
+  s = campaignAction({ ...s, day: 30, food: 40 }, { type: "ENTER" });
   s = campaignAction(s, { type: "MISSION", id: "survey" });
   return campaignAction(s, { type: "ENGAGE" });
 }
@@ -177,24 +179,16 @@ test("Monthly occupants are deterministic per expedition and regenerate without 
   assert.equal(s.journey.resolvedBranches.length, 0);
   assert.equal(s.journey.facing, "north");
 });
-test("Sanctuary access follows a neighbouring compass edge and cannot teleport from a distant portal", () => {
+test("Sanctuary access and departure use ordinary neighbouring map passages", () => {
   let s = start();
-  assert.equal(
-    campaignAction(s, { type: "SEEK_SHELTER" }).journey.room,
-    "entrance",
-  );
   s = campaignAction(s, toward(s, "loop-west"));
-  s = campaignAction(s, { type: "SEEK_SHELTER" });
+  s = campaignAction(s, toward(s, "sanctuary"));
   assert.equal(s.journey.room, "sanctuary");
+  assert.equal(s.phase, "camp");
   assert.equal(s.journey.facing, "west");
   s = campaignAction(s, { type: "LEAVE_CAMP" });
   assert.equal(s.journey.room, "loop-west");
   assert.equal(s.journey.facing, "east");
-  s = travel(s, "portal");
-  assert.equal(
-    campaignAction(s, { type: "SEEK_SHELTER" }).journey.room,
-    "portal",
-  );
 });
 test("Portal discovery requires a defender victory, rewards once, and retains the actual room", () => {
   let s = travel(start(), "portal");
