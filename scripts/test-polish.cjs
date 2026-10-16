@@ -73,9 +73,11 @@ test("All major story stages have stable panel mappings and bundled artwork", ()
   const completed = JSON.parse(
     fs.readFileSync("assets/art-production-manifest.json", "utf8"),
   ).stories;
+  const layouts = require("./engine-loader.cjs").illustrationLayouts
+    .ILLUSTRATION_LAYOUTS;
   assert.equal(completed.length, stages.length);
   for (const chain of stages) {
-    const path = "assets/story/" + chain.id.replace(".", "-") + "-stages.png";
+    const path = "assets/story/" + layouts[chain.id].file;
     if (completed.some((a) => a.id === chain.id)) {
       assert.ok(bindings.includes("../../" + path));
       const data = fs.readFileSync(path);

@@ -16,11 +16,7 @@ import {
   Icon,
   Panel,
 } from "@/components/game-ui";
-import {
-  Reveal,
-  useCombatFeedback,
-  useExpeditionAmbience,
-} from "@/components/combat-motion";
+import { Reveal } from "@/components/combat-motion";
 import {
   daysToGate,
   floorEnvironment,
@@ -262,11 +258,7 @@ export function LabyrinthScreen() {
   );
 }
 
-function FloorEvent({
-  feedback,
-}: {
-  feedback: ReturnType<typeof useCombatFeedback>;
-}) {
+function FloorEvent() {
   const { state, dispatch } = useGame();
   const event = EVENTS[FLOORS[state.floor - 1].event];
   return (
@@ -278,7 +270,7 @@ function FloorEvent({
         backgroundColor: t.color.bg,
       }}
     >
-      <EventArt floor={state.floor} label={event.title} />
+      <EventArt id={FLOORS[state.floor - 1].event} />
       <StoryCard title={event.title} body={event.body}>
         {state.floor === 8 && state.encounterExamined && (
           <Copy style={{ color: t.color.green, textAlign: "center" }}>
@@ -300,7 +292,6 @@ function FloorEvent({
               tone={choice.tone || "gold"}
               disabled={examined}
               onPress={() => {
-                feedback("reward");
                 dispatch({
                   type: "EVENT",
                   choice: choice.id,
@@ -391,6 +382,12 @@ function Victory() {
   const { state, dispatch } = useGame();
   const extracted = state.phase === "extraction";
   const final = state.floor === 12 && !!state.ending;
+  if (!extracted && !final && state.journey.portal)
+    return (
+      <View style={{ padding: 20, flex: 1, justifyContent: "flex-end" }}>
+        <Button label="Portal" onPress={() => dispatch({ type: "CONTINUE" })} />
+      </View>
+    );
   const summary: [string, string, number][] = [
     ["sword", "Enemies defeated", state.runKills],
     [
@@ -425,22 +422,14 @@ function Victory() {
             title
             style={{ fontSize: 42, lineHeight: 52, color: t.color.goldLight }}
           >
-            {extracted
-              ? "Homeward"
-              : final
-                ? "Legend"
-                : state.journey.portal
-                  ? "Portal Found"
-                  : "Battle Won"}
+            {extracted ? "Homeward" : final ? "Legend" : "Battle Won"}
           </Copy>
           <Copy title style={{ fontSize: 16, color: t.color.gold }}>
             {extracted
               ? "The return gate is open"
               : final
                 ? state.ending
-                : state.journey.portal
-                  ? `Floor ${state.floor} · the next ascent awaits`
-                  : "The team catches its breath"}
+                : "The team catches its breath"}
           </Copy>
         </View>
       </Reveal>
@@ -455,9 +444,7 @@ function Victory() {
               : "Your spoils are packed. Stormhold is waiting."
           : final
             ? "The crown is yours. Find shelter while the last days pass, then take your story home."
-            : state.journey.portal
-              ? "Climb through the portal, or rest before the next floor."
-              : "Keep exploring to find the upward portal."}
+            : "Keep exploring to find the upward portal."}
       </Copy>
       {earned.length > 0 && (
         <Panel style={{ padding: 13, gap: 8 }}>
@@ -492,7 +479,7 @@ function Victory() {
               onPress={() => dispatch({ type: "SEARCH_PORTAL" })}
             />
           )}
-          {!final && !state.journey.portal && (
+          {!final && (
             <Choice
               label="Search for the upward portal"
               detail="Follow connected rooms; discoveries remain on your chart"
@@ -500,21 +487,6 @@ function Victory() {
               tone="blue"
               onPress={() => dispatch({ type: "SEARCH_PORTAL" })}
             />
-          )}
-          {!final && state.journey.portal && (
-            <>
-              <Button
-                label="Step through the upward portal"
-                small
-                onPress={() => dispatch({ type: "CONTINUE" })}
-              />
-              <Button
-                label="Search more side passages"
-                small
-                tone="dark"
-                onPress={() => dispatch({ type: "SEARCH_PORTAL" })}
-              />
-            </>
           )}
         </View>
       )}
@@ -528,25 +500,25 @@ function Victory() {
   );
 }
 export function ExpeditionScreen() {
-  useExpeditionAmbience();
   const { state, dispatch, ready } = useGame();
-  const feedback = useCombatFeedback();
   if (!ready) return null;
   if (state.phase === "town") return <Redirect href="/labyrinth" />;
   const battleFocus =
     !state.discoveryReceipt &&
     (!!state.roundPlayback || state.phase === "combat");
-  const event = EVENTS[FLOORS[state.floor - 1]?.event || "camp"];
+  const portalFound =
+    !state.discoveryReceipt &&
+    state.phase === "victory" &&
+    state.journey.portal &&
+    !(state.floor === 12 && state.ending);
   const background =
-    state.phase === "event"
-      ? art[event.art as keyof typeof art]
-      : state.phase === "victory" || state.phase === "extraction"
-        ? state.phase === "victory" && state.journey.portal
-          ? art.portal
-          : art.sanctuary
-        : state.phase === "essence"
-          ? art.treasure
-          : art[floorEnvironment(state.floor, state.route) as keyof typeof art];
+    state.phase === "victory" || state.phase === "extraction"
+      ? state.phase === "victory" && state.journey.portal
+        ? art.portal
+        : art.sanctuary
+      : state.phase === "essence"
+        ? art.treasure
+        : art[floorEnvironment(state.floor, state.route) as keyof typeof art];
   const title =
     state.phase === "extraction"
       ? "Expedition Complete"
@@ -564,12 +536,13 @@ export function ExpeditionScreen() {
             "branch",
             "camp",
             "nag",
+            "story",
           ].includes(state.phase)
             ? undefined
             : background
         }
         active="Labyrinth"
-        title={battleFocus ? undefined : title}
+        title={battleFocus || portalFound ? undefined : title}
         fullBleed={battleFocus}
         subtitle={
           daysRemaining(state) === 0
@@ -579,6 +552,7 @@ export function ExpeditionScreen() {
         back={false}
         expedition
         hideNav
+        hideWalkthrough={portalFound}
         scroll={!battleFocus}
       >
         {state.discoveryReceipt ? (
@@ -602,7 +576,7 @@ export function ExpeditionScreen() {
         ) : state.phase === "combat" ? (
           <TacticalCombat key={state.combat?.id} />
         ) : state.phase === "event" ? (
-          <FloorEvent feedback={feedback} />
+          <FloorEvent />
         ) : state.phase === "loot" ? (
           <Loot />
         ) : state.phase === "victory" || state.phase === "extraction" ? (

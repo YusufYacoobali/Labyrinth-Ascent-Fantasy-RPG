@@ -5,6 +5,8 @@ const {
   monsters,
   exploration: ex,
   trial,
+  characterStats: { characterStat },
+  survival,
 } = require("./engine-loader.cjs");
 const plain = (value) => JSON.parse(JSON.stringify(value));
 let count = 0;
@@ -259,5 +261,110 @@ test("Game modules have no runtime circular imports after TypeScript erases type
     complete.add(file);
   }
   for (const file of graph.keys()) visit(file);
+});
+function equippedFixture() {
+  return e.reducer(e.initialGame(), {
+    type: "CREATE",
+    race: "human",
+    name: "Smith",
+    roll: 0.5,
+    seed: 42,
+  });
+}
+function equip(state, item) {
+  return e.reducer(
+    { ...state, inventory: { ...state.inventory, [item]: 1 } },
+    { type: "EQUIP", character: "hero", item },
+  );
+}
+test("Stat presentation preserves bare stats and combat totals", () => {
+  const c = equippedFixture().party[0];
+  for (const stat of ["atk", "def", "speed", "maxHp", "maxMp"])
+    assert.deepEqual(plain(characterStat(c, stat)), {
+      base: c[stat],
+      bonus: 0,
+      total: c[stat],
+    });
+});
+test("Weapon swaps replace the green bonus without changing base attack", () => {
+  const start = equippedFixture();
+  const base = start.party[0].atk;
+  const first = equip(start, "chipped-blade");
+  const second = equip(first, "iron-blade");
+  assert.deepEqual(plain(characterStat(first.party[0], "atk")), {
+    base,
+    bonus: 3,
+    total: base + 3,
+  });
+  assert.deepEqual(plain(characterStat(second.party[0], "atk")), {
+    base,
+    bonus: 7,
+    total: base + 7,
+  });
+});
+test("Multiple armor slots and boots split defense and speed independently", () => {
+  const start = equippedFixture();
+  const state = ["leather", "warden-helm", "scout-boots"].reduce(equip, start);
+  for (const [stat, bonus] of [
+    ["def", 14],
+    ["speed", 3],
+    ["maxHp", 15],
+  ])
+    assert.deepEqual(plain(characterStat(state.party[0], stat)), {
+      base: start.party[0][stat],
+      bonus,
+      total: state.party[0][stat],
+    });
+});
+test("Tempering stacks with the weapon bonus and survives reload", () => {
+  const start = equippedFixture();
+  let state = equip(start, "iron-blade");
+  state = e.reducer(
+    { ...state, gold: 120, inventory: { ...state.inventory, "beast-core": 2 } },
+    { type: "FORGE", id: "hero" },
+  );
+  const c = e.normalizeSave(plain(state)).party[0];
+  assert.equal(c.gear, 1);
+  assert.deepEqual(plain(characterStat(c, "atk")), {
+    base: start.party[0].atk,
+    bonus: 13,
+    total: c.atk,
+  });
+  assert.deepEqual(plain(characterStat(c, "def")), {
+    base: start.party[0].def,
+    bonus: 2,
+    total: c.def,
+  });
+});
+test("Heavy equipment shows a negative speed modifier without hiding its attack bonus", () => {
+  const start = equippedFixture();
+  const c = equip(start, "iron-pike").party[0];
+  assert.deepEqual(plain(characterStat(c, "speed")), {
+    base: start.party[0].speed,
+    bonus: -2,
+    total: c.speed,
+  });
+  assert.ok(characterStat(c, "atk").bonus > 0);
+});
+test("MP gear stacks across slots while base MP stays unchanged", () => {
+  const start = equippedFixture();
+  const c = ["spark-focus", "moon-robe", "dawn-amulet"].reduce(equip, start)
+    .party[0];
+  assert.deepEqual(plain(characterStat(c, "maxMp")), {
+    base: start.party[0].maxMp,
+    bonus: 60,
+    total: c.maxMp,
+  });
+});
+test("Equipment HP bonuses reflect injury scaling and rounding", () => {
+  const start = equippedFixture();
+  const injured = survival.setInjuries(start.party[0], 2);
+  const state = equip({ ...start, party: [injured] }, "warden-helm");
+  const c = state.party[0];
+  const split = characterStat(c, "maxHp");
+  assert.equal(split.base, injured.maxHp);
+  assert.equal(split.bonus, c.maxHp - injured.maxHp);
+  assert.equal(split.base + split.bonus, c.maxHp);
+  assert.ok(split.bonus > 0 && split.bonus < 15);
 });
 console.log(`${count} polish regression checks passed.`);

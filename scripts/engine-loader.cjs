@@ -27,6 +27,10 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  sceneIllustrations: load("src/game/scene-illustrations.ts"),
+  illustrationBounds: load("src/game/illustration-bounds.ts"),
+  illustrationLayouts: load("src/game/illustration-layouts.ts"),
+  characterStats: load("src/game/character-stats.ts"),
   townLife: load("src/game/town-life.ts"),
   recruitment: load("src/game/recruitment.ts"),
   battle: load("src/game/battle.ts"),

@@ -34,6 +34,7 @@ import {
 import { theme as t } from "@/theme";
 import { SceneImage } from "@/components/scene-motion";
 import { temperingOffer } from "@/game/town-progression";
+import { CharacterStatValue } from "@/components/character-stat-value";
 export function PartyScreen() {
   const { state, dispatch } = useGame();
   const [selected, setSelected] = useState(state.party[0]?.id);
@@ -198,21 +199,72 @@ export function PartyScreen() {
                       label={`Lv. ${c.level} · EXP ${c.xp}/${c.level * 70}`}
                     />
                     <Divider />
-                    {[
-                      ["heart", "HP", `${c.hp}/${c.maxHp}`],
-                      ["sword", "ATK", c.atk],
-                      ["shield", "DEF", c.def],
-                      ["run-fast", "SPD", c.speed],
-                      ["creation", "MP", `${c.mp}/${c.maxMp}`],
+                    {(
                       [
-                        "star-four-points",
-                        "CRIT",
-                        Math.round(
-                          Math.min(0.26, 0.06 + Math.max(0, c.speed) * 0.005) *
-                            100,
-                        ) + "%",
-                      ],
-                    ].map(([icon, label, n]) => (
+                        [
+                          "heart",
+                          "HP",
+                          <CharacterStatValue
+                            key="hp"
+                            character={c}
+                            stat="maxHp"
+                            current={c.hp}
+                            style={{ fontSize: 13 }}
+                          />,
+                        ],
+                        [
+                          "sword",
+                          "ATK",
+                          <CharacterStatValue
+                            key="atk"
+                            character={c}
+                            stat="atk"
+                            style={{ fontSize: 13 }}
+                          />,
+                        ],
+                        [
+                          "shield",
+                          "DEF",
+                          <CharacterStatValue
+                            key="def"
+                            character={c}
+                            stat="def"
+                            style={{ fontSize: 13 }}
+                          />,
+                        ],
+                        [
+                          "run-fast",
+                          "SPD",
+                          <CharacterStatValue
+                            key="speed"
+                            character={c}
+                            stat="speed"
+                            style={{ fontSize: 13 }}
+                          />,
+                        ],
+                        [
+                          "creation",
+                          "MP",
+                          <CharacterStatValue
+                            key="mp"
+                            character={c}
+                            stat="maxMp"
+                            current={c.mp}
+                            style={{ fontSize: 13 }}
+                          />,
+                        ],
+                        [
+                          "star-four-points",
+                          "CRIT",
+                          Math.round(
+                            Math.min(
+                              0.26,
+                              0.06 + Math.max(0, c.speed) * 0.005,
+                            ) * 100,
+                          ) + "%",
+                        ],
+                      ] as const
+                    ).map(([icon, label, n]) => (
                       <View
                         key={String(label)}
                         style={{
@@ -633,11 +685,13 @@ export function BlacksmithScreen() {
                   </View>
                 </View>
                 <Ornament />
-                {[
-                  ["ATK", c.atk, c.atk + offer.attack],
-                  ["DEF", c.def, c.def + offer.defense],
-                  ["SPD", c.speed, c.speed],
-                ].map(([label, before, after]) => (
+                {(
+                  [
+                    ["ATK", "atk", offer.attack],
+                    ["DEF", "def", offer.defense],
+                    ["SPD", "speed", 0],
+                  ] as const
+                ).map(([label, stat, increase]) => (
                   <View
                     key={label}
                     style={{
@@ -646,17 +700,25 @@ export function BlacksmithScreen() {
                     }}
                   >
                     <Copy>{label}</Copy>
-                    <Copy>
-                      {before} →{" "}
-                      <Copy
-                        style={{
-                          color:
-                            before === after ? t.color.text : t.color.green,
-                        }}
-                      >
-                        {after}
-                      </Copy>
-                    </Copy>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        gap: 7,
+                        alignItems: "center",
+                      }}
+                    >
+                      <CharacterStatValue character={c} stat={stat} />
+                      {increase > 0 && (
+                        <>
+                          <Copy muted>→</Copy>
+                          <CharacterStatValue
+                            character={c}
+                            stat={stat}
+                            additionalBonus={increase}
+                          />
+                        </>
+                      )}
+                    </View>
                   </View>
                 ))}
                 <Ornament />

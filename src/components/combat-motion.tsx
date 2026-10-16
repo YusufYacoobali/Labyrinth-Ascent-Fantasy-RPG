@@ -47,6 +47,7 @@ export function useCombatFeedback() {
         .seekTo(0)
         .then(() => {
           player.volume = 0.28;
+          player.loop = false;
           player.play();
         })
         .catch(() => {});
@@ -251,18 +252,4 @@ export function Sparks() {
       ))}
     </View>
   );
-}
-
-export function useExpeditionAmbience() {
-  const { state } = useGame(),
-    player = useAudioPlayer(require("../../assets/audio/cave.wav")),
-    active = state.journey.startDay !== null && state.phase !== "town";
-  useEffect(() => {
-    // expo-audio native SharedObject setters configure playback, not React state.
-    // eslint-disable-next-line react-hooks/immutability
-    player.volume = 0.055;
-    player.loop = true;
-    if (active && state.sound) player.play();
-    else player.pause();
-  }, [player, active, state.sound]);
 }

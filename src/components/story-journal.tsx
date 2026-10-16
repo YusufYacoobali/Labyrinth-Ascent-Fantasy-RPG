@@ -1,5 +1,6 @@
 import { optionalGoals } from "@/game/expedition-report";
 import { StoryStageArt } from "./story-art";
+import { StoryCard } from "./story-card";
 import { NpcPortrait } from "./npc-portrait";
 import { WORLD_NPCS, type WorldNpcId } from "@/game/world-npcs";
 import { reconciliationStage } from "@/game/reconciliation";
@@ -7,7 +8,7 @@ import { ROUTE_FACTIONS } from "@/game/route-stories";
 import React from "react";
 import { router } from "expo-router";
 import { View } from "react-native";
-import { Button, Copy, Panel } from "./game-ui";
+import { Atlas, Button, Copy, Panel } from "./game-ui";
 import { useGame } from "@/game/provider";
 import {
   loyalty,
@@ -86,31 +87,47 @@ export function StoryScene() {
     reconciliationStage(state) ||
     (base ? presentStoryStage(state, base) : undefined);
   if (!stage) return null;
+  const companionId = active?.chain.startsWith("reconcile.")
+    ? active.chain.slice(10)
+    : chain?.companion;
+  const companion = [...state.party, ...state.reserve].find(
+    (c) => c.id === companionId,
+  );
   return (
-    <View style={{ padding: 18, gap: 16 }}>
-      <Copy muted>{chain?.title}</Copy>
-      <Copy title style={{ fontSize: 28, color: t.color.goldLight }}>
-        {stage.title}
-      </Copy>
+    <View
+      style={{
+        flex: 1,
+        gap: 12,
+        paddingBottom: 20,
+        backgroundColor: t.color.bg,
+      }}
+    >
       <StoryStageArt stage={stage} />
-      <Copy>{stage.body}</Copy>
-      {stage.choices.map((c) => (
+      <StoryCard
+        title={stage.title}
+        body={stage.body}
+        portrait={
+          companion ? <Atlas index={companion.portrait} size={48} /> : undefined
+        }
+      >
+        {stage.choices.map((c) => (
+          <Button
+            key={c.id}
+            label={c.label}
+            tone="dark"
+            onPress={() => {
+              dispatch({ type: "STORY_CHOICE", stage: stage.id, choice: c.id });
+              if (stage.location === "town") router.replace("/town");
+            }}
+          />
+        ))}
         <Button
-          key={c.id}
-          label={c.label}
+          small
+          label="Continue later"
           tone="dark"
-          onPress={() => {
-            dispatch({ type: "STORY_CHOICE", stage: stage.id, choice: c.id });
-            if (stage.location === "town") router.replace("/town");
-          }}
+          onPress={() => dispatch({ type: "CLOSE_STORY" })}
         />
-      ))}
-      <Button
-        small
-        label="Leave this conversation for later"
-        tone="blue"
-        onPress={() => dispatch({ type: "CLOSE_STORY" })}
-      />
+      </StoryCard>
     </View>
   );
 }

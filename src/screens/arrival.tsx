@@ -6,6 +6,7 @@ import { Button, Choice, Copy } from "@/components/game-ui";
 import { Reveal } from "@/components/combat-motion";
 import { FieldSupplies } from "@/components/field-supplies";
 import { ARRIVALS } from "@/game/story";
+import { FLOORS } from "@/game/world";
 import { useGame } from "@/game/provider";
 import { theme as t } from "@/theme";
 
@@ -18,8 +19,12 @@ export function Arrival() {
       <View style={{ gap: 12, paddingBottom: 20 }}>
         <EntryArt floor={state.floor} route={state.route} />
         <StoryCard
-          title={"Floor " + state.floor + " · " + scene.cue}
-          body="The entry lantern burns behind you. Find a route through the passages; a defender guards the upward portal."
+          title={`Floor ${state.floor} · ${FLOORS[state.floor - 1].name}`}
+          body={
+            state.floor === 2
+              ? "Water laps around an abandoned wagon. The entry lantern glows on the dry bank behind you. Pick a path through the flooded passages."
+              : "The entry lantern burns behind you. Find a route through the passages; a defender guards the upward portal."
+          }
         >
           <Button
             label="Explore the passages"
@@ -37,7 +42,7 @@ export function Arrival() {
         backgroundColor: t.color.bg,
       }}
     >
-      <ArrivalArt floor={state.floor} label={scene.cue} />
+      <ArrivalArt scene={scene} />
       <Reveal key={`${state.floor}-${resolved}`}>
         <StoryCard
           title={scene.title}

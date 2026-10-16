@@ -4,7 +4,8 @@ import { Choice } from "./game-ui";
 import { useGame } from "@/game/provider";
 import { encounterKey } from "@/game/exploration";
 import { GENERIC_ENCOUNTERS } from "@/game/generic-encounters";
-import { EnvironmentArt, StoryArt } from "./story-art";
+import { SceneIllustration } from "./scene-illustration";
+import { genericIllustration } from "@/game/scene-illustrations";
 import { StoryCard } from "./story-card";
 export function GenericEncounterScene() {
   const { state, dispatch } = useGame();
@@ -14,19 +15,9 @@ export function GenericEncounterScene() {
   if (!record || !encounter) return null;
   return (
     <View style={{ gap: 12, paddingBottom: 20 }}>
-      {encounter.people ? (
-        <StoryArt
-          group="rooms"
-          index={1}
-          label="Travellers sheltering beside a lantern"
-        />
-      ) : (
-        <EnvironmentArt
-          floor={state.floor}
-          route={state.route}
-          label="The surrounding labyrinth passage"
-        />
-      )}
+      <SceneIllustration
+        illustration={genericIllustration(encounter.id, record.variant)}
+      />
       <StoryCard
         title={encounter.title}
         body={encounter.variants[record.variant]}

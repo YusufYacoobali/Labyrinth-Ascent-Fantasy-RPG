@@ -4,9 +4,14 @@ import { directedEncounter } from "@/game/encounter-director";
 import { npcAt, npcDescription, WORLD_NPCS } from "@/game/world-npcs";
 import React from "react";
 import { View } from "react-native";
-import { art, Atlas, Bar, Button, Choice, Copy } from "@/components/game-ui";
-import { StoryArt, EnvironmentArt, EntryArt } from "@/components/story-art";
-import { SceneImage } from "@/components/scene-motion";
+import { Atlas, Bar, Button, Choice, Copy } from "@/components/game-ui";
+import { EnvironmentArt, EntryArt } from "@/components/story-art";
+import { SceneIllustration } from "@/components/scene-illustration";
+import {
+  NPC_ILLUSTRATIONS,
+  ROOM_ILLUSTRATIONS,
+  PATROL_ILLUSTRATIONS,
+} from "@/game/scene-illustrations";
 import { useGame } from "@/game/provider";
 import { daysRemaining } from "@/game/engine";
 import {
@@ -17,12 +22,7 @@ import {
 } from "@/game/exploration";
 import { StoryCard } from "@/components/story-card";
 import { NpcPortrait } from "@/components/npc-portrait";
-import {
-  currentRoom,
-  backRoom,
-  exitsFor,
-  encounterKey,
-} from "@/game/exploration";
+import { currentRoom, exitsFor, encounterKey } from "@/game/exploration";
 import RouteMap from "@/components/route-map";
 import { theme as t } from "@/theme";
 
@@ -85,11 +85,7 @@ export function MissionScene() {
   const { dispatch } = useGame();
   return (
     <View style={{ gap: 12, paddingBottom: 20 }}>
-      <SceneImage
-        source={art.cave}
-        contentFit="cover"
-        style={{ width: "100%", aspectRatio: 1.7 }}
-      />
+      <SceneIllustration illustration={ROOM_ILLUSTRATIONS.entry} />
       <View style={{ paddingHorizontal: 15, gap: 12 }}>
         <Copy
           title
@@ -140,14 +136,6 @@ export function ExploreScene() {
           </Copy>
         )}
         <FieldSurvival />
-        {!!backRoom(state) && (
-          <Button
-            label="Retrace previous connection"
-            small
-            tone="dark"
-            onPress={() => dispatch({ type: "MOVE_BACK" })}
-          />
-        )}
         {currentRoom(state).kind === "portal" && (
           <Button
             label={
@@ -165,7 +153,6 @@ export function ExploreScene() {
 }
 const branchScenes = {
   cache: {
-    art: art.treasure,
     title: "A hidden treasure chest",
     body: "An ironbound chest waits behind the fallen stones. Its lock is intact. What has been hidden here?",
     choices: [
@@ -184,7 +171,6 @@ const branchScenes = {
     ],
   },
   company: {
-    art: art.clan,
     title: "Another lantern",
     body: "An exhausted survey team raises empty hands. Their chart records connected rooms and compass headings, with the direction they approached from.",
     choices: [
@@ -203,7 +189,6 @@ const branchScenes = {
     ],
   },
   spring: {
-    art: art.forest,
     title: "Water under the roots",
     body: "Pale roots hang over a shallow spring. Your companions look thirsty. A few roots may be edible; the water is harder to judge.",
     choices: [
@@ -222,7 +207,6 @@ const branchScenes = {
     ],
   },
   beast: {
-    art: art.dungeon,
     title: "Something feeding",
     body: "Bones crunch in the dark. A solitary hunter has not noticed your team. You can slip back—or clear this corridor and recover its spoils.",
     choices: [
@@ -243,25 +227,34 @@ export function BranchScene() {
   const npc = npcAt(state),
     plan = directedEncounter(state);
   const resolved = state.journey.resolvedBranches.includes(b.id);
-  if (b.kind === "company" && state.expedition.generic[encounterKey(state)])
+  if (
+    b.kind === "company" &&
+    !npc &&
+    state.expedition.generic[encounterKey(state)]
+  )
     return <GenericEncounterScene />;
   return (
     <View style={{ gap: 12, paddingBottom: 20 }}>
-      <StoryArt
-        group="rooms"
-        index={
-          b.kind === "cache"
-            ? 0
-            : b.kind === "company"
-              ? 1
-              : b.kind === "spring"
-                ? 2
-                : 3
+      <SceneIllustration
+        illustration={
+          resolved
+            ? undefined
+            : npc
+              ? NPC_ILLUSTRATIONS[npc]
+              : b.kind === "beast" && plan
+                ? PATROL_ILLUSTRATIONS[plan.variant]
+                : ROOM_ILLUSTRATIONS[b.kind]
         }
       />
       <StoryCard
         title={
-          npc ? WORLD_NPCS[npc].name : resolved ? "Your old marks" : scene.title
+          npc
+            ? WORLD_NPCS[npc].name
+            : resolved
+              ? "Your old marks"
+              : b.kind === "beast" && plan
+                ? "A patrol ahead"
+                : scene.title
         }
         portrait={npc ? <NpcPortrait id={npc} /> : undefined}
         body={
@@ -330,14 +323,6 @@ export function BranchScene() {
         <RouteMap />
         <Directions />
         <FieldSurvival />
-        <Button
-          label="Retrace previous connection"
-          small
-          tone="dark"
-          onPress={() =>
-            dispatch({ type: "BRANCH_CHOICE", choice: "leave", roll: 1 })
-          }
-        />
       </StoryCard>
     </View>
   );
@@ -349,7 +334,13 @@ export function CampScene() {
   const mission = MISSIONS.find((m) => m.id === state.journey.mission);
   return (
     <View style={{ gap: 12, paddingBottom: 20 }}>
-      <StoryArt group="rooms" index={4} />
+      <SceneIllustration
+        illustration={
+          state.journey.wildCamp
+            ? ROOM_ILLUSTRATIONS.wildCamp
+            : ROOM_ILLUSTRATIONS.sanctuary
+        }
+      />
       <StoryCard
         title={state.journey.wildCamp ? "Wild camp" : "The sanctuary"}
         body={

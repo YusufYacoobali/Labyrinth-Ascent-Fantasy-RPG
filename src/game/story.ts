@@ -10,6 +10,7 @@ export interface ArrivalChoice {
   favoredRace?: "elf" | "dwarf";
 }
 export interface ArrivalScene {
+  id: string;
   title: string;
   art: string;
   body: string;
@@ -18,6 +19,7 @@ export interface ArrivalScene {
 }
 export const ARRIVALS: ArrivalScene[] = [
   {
+    id: "goblin",
     title: "Beyond the cave mouth",
     art: "cave",
     body: "Daylight shrinks behind you. Somewhere beyond the torchlight, a sharp goblin cry answers the scrape of iron on stone. Then another sound: a hurried whisper. Something is waiting around the bend. What do you do?",
@@ -56,6 +58,7 @@ export const ARRIVALS: ArrivalScene[] = [
     ],
   },
   {
+    id: "roadkeeper",
     title: "The road under water",
     art: "labyrinth",
     body: "Wagon tracks disappear beneath black water. A guild seal hangs from a broken wheel on the far bank. Beside it, a skeleton in rusted armor turns its head. Its blade follows every ripple, even when nothing is there.",
@@ -94,6 +97,7 @@ export const ARRIVALS: ArrivalScene[] = [
     ],
   },
   {
+    id: "guardian",
     title: "The White Stag checkpoint",
     art: "clan",
     body: "Blue banners hang beyond a stone checkpoint. Armed adventurers watch from behind a runestone guardian. Their commander raises a hand. “It tests every party. Survive it, and we can talk.” The guardian's chest begins to glow.",
@@ -132,6 +136,7 @@ export const ARRIVALS: ArrivalScene[] = [
     ],
   },
   {
+    id: "broodmother",
     title: "Silk across four doors",
     art: "forest",
     body: "Four doorways rise beyond a hall webbed with silver thread. A pack hangs above them, its owner nowhere in sight. The ceiling creaks. Something with too many legs moves between the pillars, guarding every way upward.",
@@ -170,6 +175,7 @@ export const ARRIVALS: ArrivalScene[] = [
     ],
   },
   {
+    id: "revenant",
     title: "Footsteps before your own",
     art: "route",
     body: "Past your chosen doorway, your footsteps return a heartbeat too early. A figure stands beside a dark basin, copying the way you hold your weapon. When you stop, it takes one more step. The reflection is coming toward you.",
@@ -207,6 +213,7 @@ export const ARRIVALS: ArrivalScene[] = [
     ],
   },
   {
+    id: "blight",
     title: "The alchemist's warning",
     art: "route",
     body: "Glass vessels crowd a ruined workbench. Someone has scratched “Do not breathe the mist” into the stone. Beyond it, the Blight Warden drags a chain through pools of old reagents. Each breath makes the air shimmer.",
@@ -244,6 +251,7 @@ export const ARRIVALS: ArrivalScene[] = [
     ],
   },
   {
+    id: "frostfang",
     title: "Tracks on the broken span",
     art: "route",
     body: "The path narrows above a chasm. Claw marks score the stone beside tracks made by boots. Across the gap, a pale wolf lifts its muzzle. Farther up, a masked traveler watches without offering help.",
@@ -282,6 +290,7 @@ export const ARRIVALS: ArrivalScene[] = [
     ],
   },
   {
+    id: "sentinel",
     title: "The garden keeps its names",
     art: "relic",
     body: "Names cover the stones around an old sword. A sentinel kneels beside the pedestal, polishing a blade that has no reflection. Your torch passes over the newest carving. The letters look uncomfortably like your own name.",
@@ -319,6 +328,7 @@ export const ARRIVALS: ArrivalScene[] = [
     ],
   },
   {
+    id: "ashen",
     title: "A banner in the furnace",
     art: "forge",
     body: "A White Stag banner burns above the stairs. Someone below calls for help, then falls silent. Between you and that voice stands a knight whose armor glows through its cracks. It lifts a blade still dripping molten metal.",
@@ -357,6 +367,7 @@ export const ARRIVALS: ArrivalScene[] = [
     ],
   },
   {
+    id: "hunter",
     title: "Breath on the vault glass",
     art: "frost",
     body: "Frost seals the vault door. Scratches run across it from the inside. A pale hunter moves between the ice pillars, disappearing whenever your breath clouds the air. Its tracks stop directly behind your party.",
@@ -395,6 +406,7 @@ export const ARRIVALS: ArrivalScene[] = [
     ],
   },
   {
+    id: "kingsblade",
     title: "One lantern still burning",
     art: "dungeon",
     body: "A lantern glows at the end of the hall. Beside it sits a merchant with his pack tied shut. “Not yet,” he says, looking past you. The King's Blade steps out of the dark behind your party, sword already drawn.",
@@ -432,6 +444,7 @@ export const ARRIVALS: ArrivalScene[] = [
     ],
   },
   {
+    id: "king",
     title: "Before the Hollow Throne",
     art: "forge",
     body: "The final door opens without a hand upon it. A crown hangs above a throne of black stone. The king rises beneath it. “Twelve floors,” he says. “And still you think the way home is behind you.” His shadow reaches the doorway.",

@@ -1,16 +1,8 @@
 import React from "react";
 import { View } from "react-native";
-import {
-  Atlas,
-  Button,
-  Choice,
-  Copy,
-  Eyebrow,
-  Icon,
-  Panel,
-  art,
-} from "./game-ui";
-import { SceneImage } from "./scene-motion";
+import { Atlas, Button, Choice, Copy, Eyebrow, Icon, Panel } from "./game-ui";
+import { SceneIllustration } from "./scene-illustration";
+import { TOWN_ILLUSTRATIONS } from "@/game/scene-illustrations";
 import { useGame } from "@/game/provider";
 import { newTownLife, openingLine, townMoments } from "@/game/town-life";
 import { storyLeads } from "@/game/stories";
@@ -117,11 +109,7 @@ export function TownLifeScene() {
     );
   return (
     <View style={{ paddingBottom: 20, gap: 14 }}>
-      <SceneImage
-        source={art.town}
-        contentFit="cover"
-        style={{ width: "100%", aspectRatio: 1.7 }}
-      />
+      <SceneIllustration illustration={TOWN_ILLUSTRATIONS[moment.id]} />
       <View style={{ paddingHorizontal: 18, gap: 14 }}>
         <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
           <Atlas index={moment.portrait} size={56} />

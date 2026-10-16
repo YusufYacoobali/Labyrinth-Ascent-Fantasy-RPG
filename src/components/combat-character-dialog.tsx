@@ -9,6 +9,7 @@ import { formationOf } from "@/game/formation";
 import { ITEMS } from "@/game/world";
 import { Atlas, Bar, Copy, Icon } from "./game-ui";
 import CombatDetailsPopup from "./combat-details-popup";
+import { CharacterStatValue } from "./character-stat-value";
 import { theme as t } from "@/theme";
 
 export default function CombatCharacterDialog({
@@ -99,7 +100,12 @@ export default function CombatCharacterDialog({
                 >
                   <Copy style={styles.label}>{stat.label}</Copy>
                   <Copy style={{ fontSize: 13 }}>
-                    {stat.value}/{stat.max}
+                    <CharacterStatValue
+                      character={c}
+                      stat={stat.label === "HP" ? "maxHp" : "maxMp"}
+                      current={stat.value}
+                      style={{ fontSize: 13 }}
+                    />
                   </Copy>
                 </View>
                 <Bar value={stat.value} max={stat.max} color={stat.color} />
@@ -107,12 +113,41 @@ export default function CombatCharacterDialog({
             ))}
           </View>
           <View style={styles.row}>
-            {[
-              ["sword", "ATK", c.atk],
-              ["shield", "DEF", c.def],
-              ["run-fast", "SPD", c.speed],
-              ["sleep", "FATIGUE", `${c.exhaustion || 0}%`],
-            ].map(([icon, label, value]) => (
+            {(
+              [
+                [
+                  "sword",
+                  "ATK",
+                  <CharacterStatValue
+                    key="atk"
+                    character={c}
+                    stat="atk"
+                    style={{ fontSize: 18 }}
+                  />,
+                ],
+                [
+                  "shield",
+                  "DEF",
+                  <CharacterStatValue
+                    key="def"
+                    character={c}
+                    stat="def"
+                    style={{ fontSize: 18 }}
+                  />,
+                ],
+                [
+                  "run-fast",
+                  "SPD",
+                  <CharacterStatValue
+                    key="speed"
+                    character={c}
+                    stat="speed"
+                    style={{ fontSize: 18 }}
+                  />,
+                ],
+                ["sleep", "FATIGUE", `${c.exhaustion || 0}%`],
+              ] as const
+            ).map(([icon, label, value]) => (
               <View
                 key={label}
                 style={{ flex: 1, alignItems: "center", gap: 3 }}

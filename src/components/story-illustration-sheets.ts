@@ -2,13 +2,13 @@
 export const STORY_ILLUSTRATION_SHEETS: Record<string, number> = {
   "companion.kael": require("../../assets/story/companion-kael-stages.png"),
   "companion.lyria": require("../../assets/story/companion-lyria-stages.png"),
-  "companion.bram": require("../../assets/story/companion-bram-stages.png"),
+  "companion.bram": require("../../assets/story/companion-bram-stages-v2.png"),
   "companion.ragnar": require("../../assets/story/companion-ragnar-stages.png"),
   "companion.elowen": require("../../assets/story/companion-elowen-stages.png"),
   "companion.finn": require("../../assets/story/companion-finn-stages.png"),
   "companion.mira": require("../../assets/story/companion-mira-stages.png"),
   "companion.torren": require("../../assets/story/companion-torren-stages.png"),
-  "companion.sigrun": require("../../assets/story/companion-sigrun-stages.png"),
+  "companion.sigrun": require("../../assets/story/companion-sigrun-stages-v2.png"),
   "companion.eira": require("../../assets/story/companion-eira-stages.png"),
   "floor.1": require("../../assets/story/floor-1-stages.png"),
   "floor.2": require("../../assets/story/floor-2-stages.png"),
@@ -24,6 +24,6 @@ export const STORY_ILLUSTRATION_SHEETS: Record<string, number> = {
   "floor.12": require("../../assets/story/floor-12-stages.png"),
   "route.roots": require("../../assets/story/route-roots-stages.png"),
   "route.frost": require("../../assets/story/route-frost-stages.png"),
-  "route.forge": require("../../assets/story/route-forge-stages.png"),
+  "route.forge": require("../../assets/story/route-forge-stages-v2.png"),
   "route.crypt": require("../../assets/story/route-crypt-stages.png"),
 };
