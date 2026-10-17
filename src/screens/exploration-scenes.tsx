@@ -2,10 +2,11 @@ import { GenericEncounterScene } from "@/components/generic-encounter";
 import { ShelterBinding } from "@/components/skill-library";
 import { directedEncounter } from "@/game/encounter-director";
 import { npcAt, npcDescription, WORLD_NPCS } from "@/game/world-npcs";
-import React from "react";
+import React, { useState } from "react";
 import { View } from "react-native";
-import { Atlas, Bar, Button, Choice, Copy } from "@/components/game-ui";
-import { EnvironmentArt, EntryArt } from "@/components/story-art";
+import { art, Atlas, Bar, Button, Choice, Copy } from "@/components/game-ui";
+import { SceneImage } from "@/components/scene-motion";
+import { EnvironmentArt, EntryArt, PassageArt } from "@/components/story-art";
 import { SceneIllustration } from "@/components/scene-illustration";
 import {
   NPC_ILLUSTRATIONS,
@@ -16,15 +17,25 @@ import { useGame } from "@/game/provider";
 import { daysRemaining } from "@/game/engine";
 import {
   MISSIONS,
+  missionDetails,
   missionProgress,
   roomStory,
+  restHereRisk,
+  wildCampRisk,
   type Direction,
+  type Mission,
 } from "@/game/exploration";
 import { StoryCard } from "@/components/story-card";
 import { NpcPortrait } from "@/components/npc-portrait";
-import { currentRoom, exitsFor, encounterKey } from "@/game/exploration";
+import {
+  currentRoom,
+  exitsFor,
+  encounterKey,
+  isFreshEntrance,
+} from "@/game/exploration";
 import RouteMap from "@/components/route-map";
 import { theme as t } from "@/theme";
+import { canRestHere } from "@/game/field-rest";
 
 export { default as RouteMap } from "@/components/route-map";
 const arrows: Record<Direction, string> = {
@@ -35,43 +46,93 @@ const arrows: Record<Direction, string> = {
 };
 export function Directions({ afterMove }: { afterMove?: () => void } = {}) {
   const { state, dispatch } = useGame();
+  const exits = exitsFor(state);
+  const needsTurn = isFreshEntrance(state);
+  const directionButton = (direction: Direction) => (
+    <View key={direction} style={{ flex: 1, minHeight: 42 }}>
+      {exits.some((exit) => exit.direction === direction) && (
+        <Button
+          label={
+            direction === "back" && needsTurn
+              ? "Turn around"
+              : `${arrows[direction]} ${direction[0].toUpperCase() + direction.slice(1)}`
+          }
+          small
+          tone="blue"
+          style={{ minHeight: 42 }}
+          onPress={() => {
+            if (direction === "back" && needsTurn)
+              dispatch({ type: "TURN_AROUND" });
+            else dispatch({ type: "MOVE", direction });
+            afterMove?.();
+          }}
+        />
+      )}
+    </View>
+  );
   return (
     <View style={{ gap: 6 }}>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-        {exitsFor(state).map(({ direction, heading }) => (
-          <Button
-            key={direction}
-            label={`${arrows[direction]} ${direction[0].toUpperCase() + direction.slice(1)} · ${heading}`}
-            small
-            tone="blue"
-            style={{ minWidth: "45%", flexGrow: 1 }}
-            onPress={() => {
-              dispatch({ type: "MOVE", direction });
-              afterMove?.();
-            }}
-          />
-        ))}
-      </View>
+      {exits.some((e) => e.direction === "straight") && (
+        <View
+          style={{ width: "50%", alignSelf: "center", flexDirection: "row" }}
+        >
+          {directionButton("straight")}
+        </View>
+      )}
+      {exits.some((e) => e.direction === "left" || e.direction === "right") && (
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          {directionButton("left")}
+          {directionButton("right")}
+        </View>
+      )}
+      {exits.some((e) => e.direction === "back") && (
+        <View
+          style={{ width: "50%", alignSelf: "center", flexDirection: "row" }}
+        >
+          {directionButton("back")}
+        </View>
+      )}
     </View>
   );
 }
-function FieldSurvival() {
+export function FieldSurvival() {
   const { state, dispatch } = useGame();
+  if (!canRestHere(state)) return null;
+  const canCamp = ["exploration", "branch"].includes(state.phase);
   return (
     <View style={{ gap: 6 }}>
-      <Button
-        small
-        tone="dark"
-        label={`Make wild camp · ${state.inventory["camp-kit"] || 0} camping kits`}
-        disabled={!(state.inventory["camp-kit"] > 0)}
-        onPress={() => dispatch({ type: "WILD_CAMP" })}
-      />
+      <View style={{ flexDirection: "row", gap: 6 }}>
+        {canCamp && (
+          <Button
+            small
+            tone="dark"
+            style={{ flex: 1 }}
+            label={`Make wild camp · ${state.inventory["camp-kit"] || 0} kit${state.inventory["camp-kit"] === 1 ? "" : "s"}`}
+            disabled={!(state.inventory["camp-kit"] > 0)}
+            onPress={() => dispatch({ type: "WILD_CAMP" })}
+          />
+        )}
+        <Button
+          small
+          tone="dark"
+          style={{ flex: 1 }}
+          label={`Rest here · ${Math.round(restHereRisk(state.floor) * 100)}% ambush`}
+          disabled={state.food < 1 || !state.party.some((c) => c.hp > 0)}
+          onPress={() => dispatch({ type: "REST_HERE" })}
+        />
+      </View>
+      <Copy muted style={{ fontSize: 11, lineHeight: 16 }}>
+        1 day · 1 ration · +25% HP/MP · −35 exhaustion.
+        {canCamp
+          ? ` Kit camp: ${Math.round(wildCampRisk(state.floor) * 100)}% ambush.`
+          : ""}
+      </Copy>
     </View>
   );
 }
 export function MissionTracker() {
   const { state } = useGame();
-  const mission = MISSIONS.find((m) => m.id === state.journey.mission);
+  const mission = missionDetails(state.journey.mission);
   if (!mission) return null;
   return (
     <Copy style={{ fontSize: 12, color: t.color.gold }}>
@@ -81,11 +142,24 @@ export function MissionTracker() {
   );
 }
 
-export function MissionScene() {
+export function MissionScene({
+  onEnter,
+  onBack,
+}: {
+  onEnter?: (mission: Mission) => void;
+  onBack?: () => void;
+} = {}) {
   const { dispatch } = useGame();
+  const [selected, setSelected] = useState<Mission | null>(null);
   return (
     <View style={{ gap: 12, paddingBottom: 20 }}>
-      <SceneIllustration illustration={ROOM_ILLUSTRATIONS.entry} />
+      <SceneImage
+        source={art.portal}
+        accessibilityLabel="The open portal outside Stormhold"
+        contentFit="cover"
+        contentPosition="top"
+        style={{ width: "100%", aspectRatio: 1.2 }}
+      />
       <View style={{ paddingHorizontal: 15, gap: 12 }}>
         <Copy
           title
@@ -98,19 +172,33 @@ export function MissionScene() {
           Before the gate seals
         </Copy>
         <Copy>
-          The team gathers at the threshold. Thirty days inside. No way home
-          until the gate returns. What are you here to do?
+          Choose your goal before stepping through. The way home will seal for
+          thirty days.
         </Copy>
         {MISSIONS.map((m, i) => (
           <Choice
             key={m.id}
             label={m.title}
-            detail={`${m.body} · Guild reward ${m.reward}g`}
-            icon={["map-outline", "treasure-chest", "account-group"][i]}
-            tone={i === 1 ? "gold" : "blue"}
-            onPress={() => dispatch({ type: "MISSION", id: m.id })}
+            detail={m.body}
+            icon={i === 0 ? "stairs-up" : "treasure-chest"}
+            tone={selected === m.id ? (i === 1 ? "gold" : "blue") : "dark"}
+            trailing={selected === m.id ? "Selected" : undefined}
+            onPress={() => setSelected(m.id)}
           />
         ))}
+        <Button
+          label="Portal"
+          icon="gate"
+          disabled={!selected}
+          onPress={() => {
+            if (!selected) return;
+            if (onEnter) onEnter(selected);
+            else dispatch({ type: "MISSION", id: selected });
+          }}
+        />
+        {onBack && (
+          <Button label="Back to preparations" tone="dark" onPress={onBack} />
+        )}
       </View>
     </View>
   );
@@ -121,8 +209,14 @@ export function ExploreScene() {
   const room = roomStory(state);
   return (
     <View style={{ gap: 12, paddingBottom: 20 }}>
-      {currentRoom(state).id === "entrance" ? (
-        <EntryArt floor={state.floor} route={state.route} />
+      {state.floor === 1 ? (
+        <PassageArt directions={exitsFor(state).map((e) => e.direction)} />
+      ) : currentRoom(state).id === "entrance" ? (
+        <EntryArt
+          floor={state.floor}
+          route={state.route}
+          directions={exitsFor(state).map((e) => e.direction)}
+        />
       ) : (
         <EnvironmentArt floor={state.floor} route={state.route} />
       )}
@@ -135,7 +229,6 @@ export function ExploreScene() {
             {state.message}
           </Copy>
         )}
-        <FieldSurvival />
         {currentRoom(state).kind === "portal" && (
           <Button
             label={
@@ -322,7 +415,6 @@ export function BranchScene() {
         )}
         <RouteMap />
         <Directions />
-        <FieldSurvival />
       </StoryCard>
     </View>
   );
@@ -331,7 +423,7 @@ export function BranchScene() {
 export function CampScene() {
   const { state, dispatch } = useGame();
   const standing = state.party.some((c) => c.hp > 0);
-  const mission = MISSIONS.find((m) => m.id === state.journey.mission);
+  const mission = missionDetails(state.journey.mission);
   return (
     <View style={{ gap: 12, paddingBottom: 20 }}>
       <SceneIllustration
@@ -360,7 +452,11 @@ export function CampScene() {
           </Copy>
         )}
         <Choice
-          label="Rest for one day"
+          label={
+            state.journey.wildCamp
+              ? `Rest here · ${Math.round(wildCampRisk(state.floor) * 100)}% ambush`
+              : "Rest here · safe"
+          }
           detail={`At dawn: 1 party ration, 25% HP/MP and −35 exhaustion. ${state.journey.wildCamp ? `${state.floor <= 4 ? 20 : state.floor <= 8 ? 30 : 40}% interruption risk.` : "Safe from ambush."}`}
           icon="campfire"
           onPress={() => dispatch({ type: "CAMP_REST" })}

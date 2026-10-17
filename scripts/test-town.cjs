@@ -268,11 +268,11 @@ test("Legacy saves gain town defaults without resetting names, jobs, inventories
 test("Monster cores defer currency to town and never charge town work or upfront fees", () => {
   let s = sign(create(), "kael");
   s = sign(s, "mira");
-  assert.equal(s.gold, 80);
+  assert.equal(s.gold, 300);
   assert.equal(s.contracts.kael, 18);
   assert.equal(s.contracts.mira, 22);
   s = reduce(s, { type: "WORK" });
-  assert.equal(s.gold, 205);
+  assert.equal(s.gold, 425);
   s = reduce({ ...s, day: 30 }, { type: "ENTER" });
   s = reduce(s, { type: "MISSION", id: "survey" });
   s = reduce(portalArrival(s), {

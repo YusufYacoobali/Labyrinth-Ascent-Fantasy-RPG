@@ -6,9 +6,11 @@ import {
   EVENT_ILLUSTRATIONS,
   entryIllustration,
   environmentIllustration,
+  passageIllustration,
 } from "@/game/scene-illustrations";
 import { SceneIllustration } from "./scene-illustration";
 import type { Route } from "@/game/world";
+import type { RelativeDirection } from "@/game/floor-map";
 
 export function ArrivalArt({ scene }: { scene: ArrivalScene }) {
   return <SceneIllustration illustration={ARRIVAL_ILLUSTRATIONS[scene.id]} />;
@@ -16,11 +18,24 @@ export function ArrivalArt({ scene }: { scene: ArrivalScene }) {
 export function EntryArt({
   floor,
   route = null,
+  directions,
 }: {
   floor: number;
   route?: Route | null;
+  directions?: readonly RelativeDirection[];
 }) {
-  return <SceneIllustration illustration={entryIllustration(floor, route)} />;
+  return (
+    <SceneIllustration
+      illustration={entryIllustration(floor, route, directions)}
+    />
+  );
+}
+export function PassageArt({
+  directions,
+}: {
+  directions: readonly RelativeDirection[];
+}) {
+  return <SceneIllustration illustration={passageIllustration(directions)} />;
 }
 export function EventArt({ id }: { id: string }) {
   return <SceneIllustration illustration={EVENT_ILLUSTRATIONS[id]} />;

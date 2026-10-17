@@ -31,6 +31,7 @@ import {
   CampScene,
   RouteMap,
   MissionTracker,
+  FieldSurvival,
 } from "./exploration-scenes";
 import { EVENTS, FLOORS, ROUTES } from "@/game/world";
 import { useGame } from "@/game/provider";
@@ -39,11 +40,33 @@ import { FieldSupplies } from "@/components/field-supplies";
 import { Arrival } from "./arrival";
 import { theme as t } from "@/theme";
 import { CORE_TRADE_VALUE } from "@/game/monsters";
+import { canRestHere } from "@/game/field-rest";
 
 export function LabyrinthScreen() {
   const { state, dispatch } = useGame();
   const [map, setMap] = useState(false);
+  const [preparing, setPreparing] = useState(false);
   const open = gateOpen(state.day);
+  if (preparing)
+    return (
+      <Guard>
+        <Frame
+          active="Labyrinth"
+          title="The Labyrinth"
+          back={false}
+          hideWalkthrough
+          hideNav
+        >
+          <MissionScene
+            onBack={() => setPreparing(false)}
+            onEnter={(mission) => {
+              dispatch({ type: "ENTER", mission });
+              router.replace("/expedition");
+            }}
+          />
+        </Frame>
+      </Guard>
+    );
   return (
     <Guard>
       <Frame background={art.portal} active="Labyrinth" title="The Labyrinth">
@@ -239,9 +262,7 @@ export function LabyrinthScreen() {
                   router.push("/guild");
                   return;
                 }
-                dispatch({ type: "ENTER" });
-                if (state.party.some((c) => c.hp > 0))
-                  router.replace("/expedition");
+                setPreparing(true);
               }}
             />
             <Button
@@ -625,6 +646,11 @@ export function ExpeditionScreen() {
                 )
               }
             />
+          </View>
+        )}
+        {canRestHere(state) && (
+          <View style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
+            <FieldSurvival />
           </View>
         )}
         {!state.discoveryReceipt &&

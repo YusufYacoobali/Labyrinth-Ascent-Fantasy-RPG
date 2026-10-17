@@ -26,6 +26,7 @@ const all = [
   ...Object.values(art.GENERIC_ILLUSTRATIONS).flat(),
   ...Object.values(art.NPC_ILLUSTRATIONS),
   ...Object.values(art.ROOM_ILLUSTRATIONS),
+  ...art.PASSAGE_ILLUSTRATIONS,
   ...Object.values(art.PATROL_ILLUSTRATIONS),
   ...Object.values(art.TOWN_ILLUSTRATIONS),
   ...Object.values(storyIllustrations.STORY_ILLUSTRATIONS),
@@ -105,6 +106,29 @@ test("The flooded entrance and roadkeeper retain their water artwork", () => {
   assert.equal(art.entryIllustration(2).sheet, "floor.2");
   assert.equal(art.ARRIVAL_ILLUSTRATIONS.roadkeeper.sheet, "floodedRoad");
   assert.match(art.entryIllustration(2).label, /Water ripples.*wagon/);
+});
+
+test("All eight visible passage layouts select matching art, including mirrored right-hand views", () => {
+  const cases = [
+    [[], 0, false],
+    [["left"], 1, false],
+    [["right"], 1, true],
+    [["straight"], 2, false],
+    [["left", "straight"], 3, false],
+    [["right", "straight"], 3, true],
+    [["left", "right"], 4, false],
+    [["left", "straight", "right"], 5, false],
+  ];
+  for (const [directions, panel, mirrored] of cases) {
+    const scene = art.passageIllustration(directions);
+    checked(scene, directions.join(",") || "dead end");
+    assert.equal(scene.sheet, "passages");
+    assert.equal(scene.panel, panel);
+    assert.equal(scene.mirrored, mirrored);
+    assert.equal(art.entryIllustration(1, null, directions).panel, panel);
+    assert.deepEqual(art.passageIllustration([...directions, "back"]), scene);
+  }
+  assert.equal(art.entryIllustration(2, null, ["right"]).sheet, "floor.2");
 });
 test("Named NPCs, closed chests, springs and safe versus wild camps have separate subjects", () => {
   assert.equal(

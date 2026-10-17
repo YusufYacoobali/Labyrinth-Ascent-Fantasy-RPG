@@ -9,6 +9,7 @@ import { SceneMotion } from "@/components/scene-motion";
 import { CORE_TRADE_VALUE } from "@/game/monsters";
 import { TownLifeBoard, TownLifeScene } from "@/components/town-life";
 import { StoryScene } from "@/components/story-journal";
+import { ascentPending } from "@/game/town-life";
 export function Guard({
   children,
   expedition = false,
@@ -42,6 +43,7 @@ export function TownScreen() {
   if (
     townStory ||
     state.townLife?.introSeen === false ||
+    ascentPending(state) ||
     state.townLife?.active ||
     state.townLife?.result
   )

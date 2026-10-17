@@ -55,6 +55,7 @@ export interface CombatEnemy extends Enemy {
   enteredRound?: number;
 }
 export interface CombatState {
+  ambush?: boolean;
   history?: {
     id: string;
     round: number;
@@ -158,6 +159,7 @@ export function beginCombat(
   s: Game,
   resume: "exploration" | "camp" = "exploration",
   source = "roamer",
+  ambush = false,
 ): Game {
   if (!s.enemy) return s;
   const id = `${s.expedition.number}:${currentMapKey(s)}:${s.journey.room}:${s.journey.defender ? "portal" : resume === "camp" ? `camp-${s.journey.watches}` : s.sideBattle ? "story" : source}`;
@@ -270,6 +272,10 @@ export function beginCombat(
         id: `${id}:enemy-${index + 1}`,
         name: base.name,
         behaviorId: species.id,
+        equipment:
+          index === 0 && species.id === primary.id
+            ? original.equipment || species.equipment
+            : species.equipment,
         hp: Math.round(
           hp *
             (goblins && species.id !== "goblin"
@@ -307,6 +313,7 @@ export function beginCombat(
     },
   );
   const combat: CombatState = {
+    ambush,
     rules: 2,
     id,
     enemies,

@@ -94,7 +94,7 @@ test("Negotiation reveals traits, lowers loot shares, and cannot farm trust", ()
   s = reduce(s, { type: "RECRUIT", id: "lyria", offer });
   assert.equal(s.party.length, 2);
   assert.equal(s.party[1].traitRevealed, true);
-  assert.equal(s.gold, 80);
+  assert.equal(s.gold, 300);
   assert.equal(s.contracts.lyria, offer);
 });
 test("Recruitment caps at four and no duplicate signing costs", () => {
@@ -102,9 +102,9 @@ test("Recruitment caps at four and no duplicate signing costs", () => {
   for (const id of ["kael", "lyria", "bram"])
     s = reduce(s, { type: "RECRUIT", id });
   assert.equal(s.party.length, 4);
-  assert.equal(s.gold, 80);
+  assert.equal(s.gold, 300);
   assert.equal(reduce(s, { type: "RECRUIT", id: "ragnar" }).party.length, 4);
-  assert.equal(reduce(s, { type: "RECRUIT", id: "kael" }).gold, 80);
+  assert.equal(reduce(s, { type: "RECRUIT", id: "kael" }).gold, 300);
 });
 test("Bench and invite preserve levels and gear with no second fee", () => {
   let s = reduce(create(), { type: "RECRUIT", id: "kael" });
@@ -160,7 +160,7 @@ test("Appraisal pays matching vendors more", () => {
     vendor: "guild",
     quantity: 2,
   });
-  assert.equal(s.gold, 190);
+  assert.equal(s.gold, 410);
   assert.equal(s.inventory["beast-core"], 0);
 });
 test("Equipment swapping replaces bonuses rather than stacking forever", () => {

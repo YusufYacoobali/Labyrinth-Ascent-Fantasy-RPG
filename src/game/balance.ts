@@ -26,6 +26,7 @@ export const BALANCE = {
   hungerExhaustion: 15,
   hungerDamage: 0.1,
   wildCampRisk: [0.2, 0.3, 0.4],
+  restHereRisk: [0.4, 0.5, 0.6],
   sanctuaryRations: 3,
   normalHp: [65, 17],
   bossHp: [350, 100],

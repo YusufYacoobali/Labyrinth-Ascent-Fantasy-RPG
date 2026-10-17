@@ -78,6 +78,77 @@ test("World geography is deterministic and route maps remain distinct", () => {
     JSON.stringify(maps.generateFloor(1, 43).nodes),
   );
 });
+
+test("Arrival faces into every generated floor without a backward exit where a wall exists", () => {
+  for (let seed = 1; seed <= 100; seed++)
+    for (let floor = 1; floor <= 12; floor++) {
+      const map = maps.generateFloor(floor, seed);
+      const exits = map.nodes[map.entrance].exits;
+      const facing = maps.entryFacing(map);
+      assert.ok(maps.HEADINGS.includes(facing));
+      if (Object.keys(exits).length < 4)
+        assert.equal(exits[maps.opposite(facing)], undefined);
+      assert.ok(
+        Object.keys(exits).some(
+          (h) => maps.relativeDirection(facing, h) !== "back",
+        ),
+      );
+    }
+});
+
+test("Four-way arrivals turn in place, retain every passage and only acquire a return route after moving", () => {
+  let s = start();
+  assert.equal(x.isFreshEntrance(s), true);
+  assert.equal(x.exitsFor(s).length, 4);
+  const before = s;
+  s = campaignAction(s, { type: "TURN_AROUND" });
+  assert.equal(s.journey.room, before.journey.room);
+  assert.equal(s.journey.facing, maps.opposite(before.journey.facing));
+  assert.equal(s.day, before.day);
+  assert.equal(s.food, before.food);
+  assert.equal(
+    JSON.stringify(s.journey.maps),
+    JSON.stringify(before.journey.maps),
+  );
+  assert.equal(e.normalizeSave(plain(s)).journey.facing, s.journey.facing);
+  const exit = x.exitsFor(s).find((e) => e.direction === "straight");
+  s = campaignAction(s, { type: "MOVE", direction: exit.direction });
+  assert.equal(s.journey.room, exit.to);
+  assert.equal(x.isFreshEntrance(s), false);
+  assert.equal(
+    x.exitsFor(s).find((e) => e.direction === "back").to,
+    "entrance",
+  );
+  assert.equal(
+    campaignAction(s, { type: "TURN_AROUND" }).journey.facing,
+    s.journey.facing,
+  );
+});
+
+test("Old untouched entrances repair their facing without changing saved rooms or travelled approaches", () => {
+  let s = start();
+  const map = maps.generateFloor(1, 43);
+  s = {
+    ...s,
+    journey: {
+      ...s.journey,
+      maps: { ...s.journey.maps, 1: map },
+      facing: "north",
+    },
+  };
+  delete s.journey.arrivalFacingSet;
+  const loaded = e.normalizeSave(plain(s));
+  assert.equal(loaded.journey.facing, maps.entryFacing(map));
+  assert.equal(
+    JSON.stringify(loaded.journey.maps[1].nodes),
+    JSON.stringify(map.nodes),
+  );
+  const travelled = {
+    ...s,
+    expedition: { ...s.expedition, trail: { 1: ["entrance:aftermath"] } },
+  };
+  assert.equal(e.normalizeSave(plain(travelled)).journey.facing, "north");
+});
 test("All four facings convert every relative direction consistently and save travelled headings", () => {
   for (const facing of maps.HEADINGS)
     for (const direction of ["left", "straight", "right", "back"]) {

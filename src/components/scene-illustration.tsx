@@ -24,6 +24,7 @@ export function SceneIllustration({
         width: "100%",
         aspectRatio: bounds.aspectRatio,
         overflow: "hidden",
+        transform: illustration.mirrored ? [{ scaleX: -1 }] : undefined,
       }}
     >
       <SceneMotion style={{ flex: 1 }}>

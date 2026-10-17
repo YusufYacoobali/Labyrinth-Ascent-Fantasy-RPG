@@ -71,6 +71,12 @@ export const relativeDirection = (
   (["straight", "right", "back", "left"] as const)[
     (HEADINGS.indexOf(heading) - HEADINGS.indexOf(facing) + 4) % 4
   ];
+/** Face into the floor, with a wall or the arrival portal behind the party. */
+export function entryFacing(map: FloorMap): Heading {
+  const exits = map.nodes[map.entrance].exits;
+  const inward = HEADINGS.filter((heading) => !exits[opposite(heading)]);
+  return inward.find((heading) => exits[heading]) || inward[0] || "north";
+}
 export const mapKey = (floor: number, route: string | null = null) =>
   floor >= 5 && floor <= 7 ? `${floor}:${route || "roots"}` : String(floor);
 export function seedFor(text: string) {

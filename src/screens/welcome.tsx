@@ -20,9 +20,67 @@ import {
 import { RACES, Race } from "@/game/engine";
 import { useGame } from "@/game/provider";
 import { theme as t } from "@/theme";
+const CHARACTER_NAMES: Record<Race, string[]> = {
+  barbarian: [
+    "Bjorn",
+    "Astrid",
+    "Hakon",
+    "Freya",
+    "Gunnar",
+    "Saga",
+    "Rurik",
+    "Ingrid",
+    "Einar",
+    "Ylva",
+    "Leif",
+    "Thora",
+  ],
+  human: [
+    "Kael",
+    "Rowan",
+    "Maren",
+    "Cassian",
+    "Alina",
+    "Dorian",
+    "Tessa",
+    "Lucan",
+    "Vera",
+    "Ronan",
+    "Cedric",
+    "Isla",
+  ],
+  elf: [
+    "Sylva",
+    "Aerion",
+    "Faelyn",
+    "Thalion",
+    "Nyriel",
+    "Elaris",
+    "Caelith",
+    "Vaela",
+    "Ilyra",
+    "Orien",
+    "Lethiel",
+    "Sylwen",
+  ],
+  dwarf: [
+    "Brom",
+    "Hilda",
+    "Durgan",
+    "Brunna",
+    "Orik",
+    "Sigrid",
+    "Torvi",
+    "Keld",
+    "Berra",
+    "Durin",
+    "Thrain",
+    "Greta",
+  ],
+};
 export function CreateScreen() {
   const [race, setRace] = useState<Race>("barbarian");
-  const [name, setName] = useState("Bjorn");
+  const [name, setName] = useState(CHARACTER_NAMES.barbarian[0]);
   const { dispatch, state } = useGame();
   const r = RACES.find((r) => r.id === race)!;
   if (state.started)
@@ -50,14 +108,7 @@ export function CreateScreen() {
                 accessibilityState={{ selected: race === c.id }}
                 onPress={() => {
                   setRace(c.id);
-                  setName(
-                    {
-                      barbarian: "Bjorn",
-                      human: "Kael",
-                      elf: "Sylva",
-                      dwarf: "Brom",
-                    }[c.id],
-                  );
+                  setName(CHARACTER_NAMES[c.id][0]);
                 }}
                 style={{
                   flex: 1,
@@ -143,24 +194,58 @@ export function CreateScreen() {
           </Panel>
           <View style={{ gap: 6 }}>
             <Copy>Name</Copy>
-            <TextInput
-              accessibilityLabel="Adventurer name"
-              value={name}
-              onChangeText={setName}
-              maxLength={18}
-              placeholder="Your name"
-              placeholderTextColor={t.color.muted}
-              style={{
-                borderWidth: 1,
-                borderColor: t.color.goldDim,
-                borderRadius: 5,
-                padding: 14,
-                color: t.color.text,
-                fontFamily: t.font.body,
-                fontSize: 17,
-                backgroundColor: t.color.bg,
-              }}
-            />
+            <View
+              style={{ flexDirection: "row", alignItems: "stretch", gap: 8 }}
+            >
+              <TextInput
+                accessibilityLabel="Adventurer name"
+                value={name}
+                onChangeText={setName}
+                maxLength={18}
+                placeholder="Your name"
+                placeholderTextColor={t.color.muted}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  borderWidth: 1,
+                  borderColor: t.color.goldDim,
+                  borderRadius: 5,
+                  padding: 14,
+                  color: t.color.text,
+                  fontFamily: t.font.body,
+                  fontSize: 17,
+                  backgroundColor: t.color.bg,
+                }}
+              />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Roll a new name"
+                accessibilityHint={`Suggests a different ${r.name.toLowerCase()} name`}
+                onPress={() =>
+                  setName((current) => {
+                    const choices = CHARACTER_NAMES[race].filter(
+                      (candidate) =>
+                        candidate.toLowerCase() !==
+                        current.trim().toLowerCase(),
+                    );
+                    return choices[Math.floor(Math.random() * choices.length)];
+                  })
+                }
+                style={({ pressed }) => ({
+                  width: 52,
+                  minHeight: 52,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor: t.color.goldDim,
+                  borderRadius: 5,
+                  backgroundColor: t.color.bg,
+                  opacity: pressed ? 0.65 : 1,
+                })}
+              >
+                <Icon name="dice-multiple" size={28} />
+              </Pressable>
+            </View>
           </View>
           <Button
             label={`Begin as ${name.trim() || r.name}`}

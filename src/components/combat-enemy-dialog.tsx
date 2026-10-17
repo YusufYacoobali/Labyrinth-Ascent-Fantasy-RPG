@@ -8,6 +8,8 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import type { Enemy, Game } from "@/game/engine";
 import { monsterKnowledge } from "@/game/bestiary";
+import { monsterFor } from "@/game/monsters";
+import { ITEMS } from "@/game/world";
 import { enemyVisual, mirrorEnemy } from "@/game/combat-visuals";
 import { theme as t } from "@/theme";
 import { Bar, Copy, Icon } from "./game-ui";
@@ -60,6 +62,9 @@ export default function CombatEnemyDialog({
   const size = compact ? 100 : 148;
   const visual = enemyVisual({ ...state, enemy });
   const knowledge = monsterKnowledge(state, enemy);
+  const equipment = (monsterFor(enemy, state.floor).equipment || [])
+    .map((id) => ITEMS.find((item) => item.id === id))
+    .filter((item) => item !== undefined);
   const knownReadiedMove =
     readiedMove && knowledge.moves.includes(readiedMove)
       ? readiedMove
@@ -148,6 +153,22 @@ export default function CombatEnemyDialog({
             {knowledge.seen} encountered · {knowledge.defeated} defeated
           </Copy>
         </LinearGradient>
+        {equipment.length > 0 && (
+          <View style={{ padding: 14, gap: 8 }}>
+            <Copy style={styles.label}>
+              CARRIED EQUIPMENT · DROPS ON DEFEAT
+            </Copy>
+            {equipment.map((item) => (
+              <View
+                key={item.id}
+                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+              >
+                <Icon name={item.icon} size={25} />
+                <Copy style={{ flex: 1 }}>{item.name}</Copy>
+              </View>
+            ))}
+          </View>
+        )}
         <View style={{ paddingHorizontal: 18, gap: 16 }}>
           <View style={styles.vitals}>
             {[

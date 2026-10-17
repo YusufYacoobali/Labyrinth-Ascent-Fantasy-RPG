@@ -24,9 +24,9 @@ function openMoment(s, companion) {
   return act(s, { type: "OPEN_TOWN_MOMENT", id: moment.id, companion });
 }
 
-test("A new adventurer can just afford a chipped sword and one ration bundle", () => {
+test("A new adventurer starts with 300 gold and can buy a chipped sword and rations", () => {
   let s = fresh();
-  assert.equal(s.gold, 80);
+  assert.equal(s.gold, 300);
   assert.equal(s.gems, 0);
   assert.equal(s.food, 1);
   assert.equal(s.potions, 0);
@@ -35,11 +35,11 @@ test("A new adventurer can just afford a chipped sword and one ration bundle", (
   const attack = s.party[0].atk;
   s = act(s, { type: "BUY_ITEM", id: "chipped-blade" });
   s = act(s, { type: "BUY", item: "food" });
-  assert.equal(s.gold, 0);
+  assert.equal(s.gold, 220);
   assert.equal(s.food, 4);
   s = act(s, { type: "EQUIP", character: "hero", item: "chipped-blade" });
   assert.equal(s.party[0].atk, attack + 3);
-  assert.equal(act(s, { type: "BUY", item: "potion" }).potions, 0);
+  assert.equal(act(s, { type: "BUY", item: "potion" }).potions, 1);
 });
 test("Skills, experience, party size and trust change asking shares within 10–50%", () => {
   const s = fresh();
@@ -66,14 +66,14 @@ test("A low offer gets a personal decline and durable counteroffer, then an acce
   let s = fresh();
   s = act(s, { type: "RECRUIT", id: "kael", offer: 10 });
   assert.equal(s.party.length, 1);
-  assert.equal(s.gold, 80);
+  assert.equal(s.gold, 300);
   assert.equal(s.recruitReply.outcome, "declined");
   assert.match(s.recruitReply.line, /shield/);
   assert.equal(s.recruitReply.asking, 24);
   s = reload(s);
   s = act(s, { type: "RECRUIT", id: "kael", offer: s.recruitReply.asking });
   assert.equal(s.party.length, 2);
-  assert.equal(s.gold, 80);
+  assert.equal(s.gold, 300);
   assert.equal(s.contracts.kael, 24);
   assert.equal(s.recruitReply.outcome, "accepted");
   assert.match(s.recruitReply.line, /24%/);
@@ -137,7 +137,7 @@ test("The survival opening has four voices and is acknowledged durably", () => {
   assert.equal(s.townLife.introSeen, false);
   s = reload(act(s, { type: "ACK_OPENING" }));
   assert.equal(s.townLife.introSeen, true);
-  assert.equal(s.gold, 80);
+  assert.equal(s.gold, 300);
 });
 test("Town moments persist, award actual loyalty once, and return after an expedition", () => {
   let s = openMoment(recruit(fresh(), "kael"), "kael");
@@ -147,7 +147,7 @@ test("Town moments persist, award actual loyalty once, and return after an exped
   s = act(s, { type: "TOWN_MOMENT_CHOICE", choice: "join" });
   assert.equal(s.stories.loyalty.kael, 55);
   assert.equal(s.day, day);
-  assert.equal(s.gold, 80);
+  assert.equal(s.gold, 300);
   assert.equal(s.townLife.result.bonds[0].change, 5);
   assert.match(s.journal[0], /Stormhold/);
   assert.equal(town.townMoments(s).length, 0);

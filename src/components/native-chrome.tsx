@@ -10,6 +10,7 @@ import {
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { TOWN_ITEMS } from "@/game/town-content";
 import { theme as t } from "@/theme";
 
@@ -42,6 +43,25 @@ export function ResourceGlyph({
 }
 
 export function ItemGlyph({ id, size = 36 }: { id: string; size?: number }) {
+  // Atlas cells stay fixed when new items are added to the catalogue.
+  const town: Record<string, number> = {
+    "scout-dagger": 0,
+    "iron-pike": 1,
+    chainmail: 2,
+    "traveler-cloak": 3,
+    "spark-focus": 4,
+    "moon-robe": 5,
+    "ember-charm": 6,
+    "hollow-ward": 7,
+    "root-mantle": 8,
+    "glacier-blade": 9,
+    "heavy-maul": 10,
+    "dawn-amulet": 11,
+    torch: 12,
+    bandage: 13,
+    "camp-kit": 14,
+    "labyrinth-key": 15,
+  };
   const supplies: Record<string, number> = {
     rations: 0,
     potion: 1,
@@ -65,9 +85,31 @@ export function ItemGlyph({ id, size = 36 }: { id: string; size?: number }) {
     "scout-boots": 4,
     "frost-boots": 4,
   };
-  const townIndex = TOWN_ITEMS.findIndex((i) => i.id === id);
-  const index =
-    townIndex >= 0 ? townIndex : (supplies[id] ?? equipment[id] ?? 5);
+  const townIndex = town[id];
+  const townItem = TOWN_ITEMS.find((item) => item.id === id);
+  if (townIndex === undefined && townItem)
+    return (
+      <View
+        pointerEvents="none"
+        style={{
+          width: size,
+          height: size,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <MaterialCommunityIcons
+          name={
+            townItem.icon as React.ComponentProps<
+              typeof MaterialCommunityIcons
+            >["name"]
+          }
+          size={size}
+          color={t.color.gold}
+        />
+      </View>
+    );
+  const index = townIndex ?? supplies[id] ?? equipment[id] ?? 5;
   return (
     <View
       pointerEvents="none"
@@ -75,7 +117,7 @@ export function ItemGlyph({ id, size = 36 }: { id: string; size?: number }) {
     >
       <Image
         source={
-          townIndex >= 0
+          townIndex !== undefined
             ? require("../../assets/ui/town-item-icons.png")
             : supplies[id] !== undefined
               ? require("../../assets/ui/supply-icons.png")
@@ -86,7 +128,7 @@ export function ItemGlyph({ id, size = 36 }: { id: string; size?: number }) {
         style={{
           position: "absolute",
           width: size * 4,
-          height: size * (townIndex >= 0 ? 4 : 3),
+          height: size * (townIndex !== undefined ? 4 : 3),
           left: -(index % 4) * size,
           top: -Math.floor(index / 4) * size,
         }}

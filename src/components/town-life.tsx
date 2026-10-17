@@ -4,7 +4,13 @@ import { Atlas, Button, Choice, Copy, Eyebrow, Icon, Panel } from "./game-ui";
 import { SceneIllustration } from "./scene-illustration";
 import { TOWN_ILLUSTRATIONS } from "@/game/scene-illustrations";
 import { useGame } from "@/game/provider";
-import { newTownLife, openingLine, townMoments } from "@/game/town-life";
+import {
+  newTownLife,
+  openingLine,
+  townMoments,
+  ascentPending,
+  ascentLine,
+} from "@/game/town-life";
 import { storyLeads } from "@/game/stories";
 import { theme as t } from "@/theme";
 
@@ -38,6 +44,40 @@ export function TownLifeScene() {
         <Button
           label="Let’s make it count"
           onPress={() => dispatch({ type: "ACK_OPENING" })}
+        />
+      </View>
+    );
+  if (ascentPending(state) && hero)
+    return (
+      <View style={{ padding: 22, gap: 18, justifyContent: "center", flex: 1 }}>
+        <View style={{ alignItems: "center", gap: 10 }}>
+          <Atlas index={hero.portrait} size={104} />
+          <Copy
+            title
+            style={{
+              color: t.color.goldLight,
+              fontSize: 27,
+              textAlign: "center",
+            }}
+          >
+            {state.ending ? "We reached the summit." : "Floor 12 is waiting."}
+          </Copy>
+        </View>
+        <Panel style={{ gap: 12 }}>
+          <Eyebrow>{hero.name}</Eyebrow>
+          <Copy
+            style={{ fontFamily: t.font.story, fontSize: 23, lineHeight: 29 }}
+          >
+            “
+            {state.ending
+              ? "Twelve floors. Every one of them conquered. We came here with a chipped blade and a few coins. Look at us now."
+              : ascentLine(hero.race)}
+            ”
+          </Copy>
+        </Panel>
+        <Button
+          label={state.ending ? "We earned this." : "We climb again."}
+          onPress={() => dispatch({ type: "ACK_ASCENT" })}
         />
       </View>
     );

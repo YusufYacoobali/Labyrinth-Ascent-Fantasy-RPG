@@ -92,7 +92,6 @@ export function PartyScreen() {
         ) : (
           <View style={{ padding: 10, gap: 10 }}>
             <CompanionRelationships id={c.id} />
-            <StoryLeads />
             <View style={{ flexDirection: "row", gap: 6 }}>
               {state.party.map((p) => (
                 <Pressable
@@ -577,6 +576,7 @@ export function PartyScreen() {
                 onPress={() => dispatch({ type: "BENCH", id: c.id })}
               />
             )}
+            <StoryLeads />
             <Button
               label="Find new companions"
               tone="dark"

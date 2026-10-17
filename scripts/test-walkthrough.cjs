@@ -58,9 +58,11 @@ test("Recruiting and packing advance only when the real action succeeds", () => 
   assert.equal(s.food, 4);
   assert.equal(wt.walkthroughTip(s).id, "equipment");
   s = act(s, { type: "BUY_ITEM", id: "chipped-blade" });
-  assert.equal(s.gold, 0);
+  assert.equal(s.gold, 220);
   s = act(s, { type: "EQUIP", character: "hero", item: "chipped-blade" });
   s = act(s, { type: "WALKTHROUGH", kind: "ack", id: "equipment" });
+  assert.equal(wt.walkthroughTip(s).id, "train");
+  s = act(s, { type: "WALKTHROUGH", kind: "ack", id: "train" });
   assert.equal(wt.walkthroughTip(s).id, "gate");
 });
 test("Walkthrough skip, collapse and progress persist; replay preserves gameplay", () => {
@@ -96,7 +98,7 @@ test("Overview, map and portal lessons finish without resetting the expedition",
   s = act(s, { type: "WALKTHROUGH", kind: "ack", id: "party" });
   assert.equal(wt.walkthroughTip(s).id, "map");
   s = act(s, { type: "WALKTHROUGH", kind: "ack", id: "map" });
-  assert.equal(wt.walkthroughTip(s).id, "trail");
+  assert.equal(wt.walkthroughTip(s), null);
   s = { ...s, journey: { ...s.journey, portal: true } };
   assert.equal(wt.walkthroughTip(s).id, "complete");
   s = act(s, { type: "WALKTHROUGH", kind: "ack", id: "complete" });

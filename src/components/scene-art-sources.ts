@@ -19,5 +19,6 @@ export const SCENE_ART_SOURCES: Record<string, number> = {
   "generic-c-alternate": require("../../assets/story/generic-c-alternate.png"),
   "generic-d-alternate": require("../../assets/story/generic-d-alternate.png"),
   encounters: require("../../assets/story/encounter-scenes-v2.png"),
+  passages: require("../../assets/story/passage-scenes-v1.png"),
   approaches: require("../../assets/story/encounter-approaches.png"),
 };

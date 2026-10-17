@@ -1,4 +1,5 @@
 import type { Action, Game, Race } from "./engine";
+import { firstExpeditionComplete } from "./walkthrough";
 
 export interface TownResult {
   title: string;
@@ -8,26 +9,42 @@ export interface TownResult {
 }
 export interface TownLife {
   introSeen: boolean;
+  ascentSeen: boolean;
   completed: Record<string, number>;
   active: { id: string; companion: string } | null;
   result: TownResult | null;
 }
 export const newTownLife = (): TownLife => ({
   introSeen: false,
+  ascentSeen: false,
   completed: {},
   active: null,
   result: null,
 });
-export const STARTING_GOLD = 80;
+export const STARTING_GOLD = 300;
 export const openingLine = (race: Race) =>
   ({
     barbarian:
-      "Eighty coins. Enough for a chipped blade and stale bread. Fine. First we survive. Then we conquer every last floor.",
+      "Three hundred coins. A blade, some bread, and no room for mistakes. Fine. First we survive. Then we conquer every last floor.",
     human:
       "A chipped sword and a few rations. So much for a grand entrance. We survive the first floor, find good people, and conquer the rest together.",
     elf: "Centuries of wisdom, and I’m budgeting for stale bread. Survive first. Conquer elegantly. Preferably after lunch.",
     dwarf:
-      "Eighty coins? That barely buys a sword with the edge still attached. Right. Bread, blade, then teach this labyrinth some manners.",
+      "Three hundred coins? I’ve seen tavern tabs bigger than that. Right. Bread, blade, then teach this labyrinth some manners.",
+  })[race];
+
+export const ascentPending = (s: Game) =>
+  firstExpeditionComplete(s) && !s.townLife?.ascentSeen;
+
+export const ascentLine = (race: Race) =>
+  ({
+    barbarian:
+      "The labyrinth had its first swing. I’m still standing. Twelve floors, one summit nobody has conquered. Next time we climb higher. Let them learn our names.",
+    human:
+      "One expedition behind us. We know what’s waiting now. We’ll get stronger, keep each other alive, and reach Floor 12. Someone has to be the first. Why not us?",
+    elf: "One expedition, several bruises, and considerably fewer illusions. Good. Now we learn, climb, and claim Floor 12. I refuse to spend centuries wondering whether I could have done it.",
+    dwarf:
+      "First expedition’s done. The kit needs work, and so do we. Fine. We’ll forge ourselves into a party that can conquer Floor 12. No one’s reached the top? Then they’ve left it for us.",
   })[race];
 
 const voices: Record<string, string> = {
@@ -101,6 +118,7 @@ export function resolveTownLife(s: Game, a: Action): Game | undefined {
   if (
     ![
       "ACK_OPENING",
+      "ACK_ASCENT",
       "OPEN_TOWN_MOMENT",
       "TOWN_MOMENT_CHOICE",
       "CLOSE_TOWN_MOMENT",
@@ -112,6 +130,10 @@ export function resolveTownLife(s: Game, a: Action): Game | undefined {
   const life = s.townLife || newTownLife();
   if (a.type === "ACK_OPENING")
     return { ...s, townLife: { ...life, introSeen: true } };
+  if (a.type === "ACK_ASCENT")
+    return ascentPending(s)
+      ? { ...s, townLife: { ...life, ascentSeen: true }, message: "" }
+      : s;
   if (a.type === "ACK_TOWN_RESULT")
     return { ...s, townLife: { ...life, result: null }, message: "" };
   if (a.type === "CLOSE_TOWN_MOMENT")

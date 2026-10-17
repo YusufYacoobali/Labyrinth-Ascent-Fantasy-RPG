@@ -174,6 +174,7 @@ export function loseSpoils(s: Game): Game {
     potions: Math.max(0, s.potions - bag.potions),
     inventory,
     party: s.party.map(clean),
+    fieldRest: null,
     reserve: s.reserve.map(clean),
     expedition: {
       ...s.expedition,

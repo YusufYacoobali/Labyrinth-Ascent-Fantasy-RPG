@@ -7,6 +7,7 @@ import { narrateRoom } from "./room-narration";
 import { assignGeneric } from "./generic-stories";
 import { principalResolved, principalAftermath } from "./stories";
 import { passTime } from "./survival";
+import { canRestHere, rememberRestLocation } from "./field-rest";
 import { BALANCE } from "./balance";
 import { nextRandom, CORE_TRADE_VALUE } from "./monsters";
 import type { Action, Enemy, Game, Phase } from "./engine";
@@ -26,6 +27,7 @@ import {
   absoluteHeading,
   relativeDirection,
   HEADINGS,
+  opposite,
   shortestPath,
   type Heading,
   type RelativeDirection,
@@ -61,6 +63,7 @@ export interface Journey {
   maps: Record<string, FloorMap>;
   occupants: Record<string, Record<string, Occupant>>;
   facing: Heading;
+  arrivalFacingSet?: boolean;
   defender: boolean;
   wildCamp: boolean;
   defeatedPortals: string[];
@@ -87,6 +90,7 @@ export const newJourney = (): Journey => ({
   maps: {},
   occupants: {},
   facing: "north",
+  arrivalFacingSet: false,
   defender: false,
   wildCamp: false,
   defeatedPortals: [],
@@ -110,6 +114,10 @@ export const exitsFor = (s: Game) =>
         ]
       : [];
   });
+export const isFreshEntrance = (s: Game) =>
+  s.journey.room === floorMap(s).entrance &&
+  !s.journey.history.length &&
+  !s.expedition.trail?.[currentMapKey(s)]?.length;
 export function backRoom(s: Game) {
   const previous = s.journey.history.at(-1);
   return previous && Object.values(currentRoom(s).exits).includes(previous)
@@ -295,33 +303,38 @@ export function enterMappedRoom(
 export const MISSIONS = [
   {
     id: "survey" as Mission,
-    title: "Chart a way upward",
-    body: "Find the first floor’s portal. Bring a reliable route back to the guild.",
+    title: "Climb to the summit",
+    body: "Seek the next portal and push toward Floor 12.",
     target: 6,
     reward: 150,
   },
   {
     id: "salvage" as Mission,
-    title: "Recover valuable spoils",
-    body: "Bring home 400 gold worth of cores and coins.",
+    title: "Claim the labyrinth’s riches",
+    body: "Search for treasure. Bring home 400 gold in cores and coins.",
     target: 400,
     reward: 200,
   },
-  {
-    id: "survivors" as Mission,
-    title: "Find other survivors",
-    body: "Meet two expedition teams in the side passages. Trade news and help them live through the month.",
-    target: 2,
-    reward: 180,
-  },
 ];
+// Preserve the terms of survivor missions already underway in older saves.
+export const missionDetails = (id: Mission | null) =>
+  MISSIONS.find((mission) => mission.id === id) ||
+  (id === "survivors"
+    ? {
+        id,
+        title: "Find other survivors",
+        body: "Meet two expedition teams.",
+        target: 2,
+        reward: 180,
+      }
+    : undefined);
 export const daysRemaining = (s: Game) =>
   Math.max(0, 30 - Math.floor(s.journey.watches / 6));
 export function missionProgress(s: Game) {
   return s.journey.mission === "survey"
-    ? (s.journey.reachedPortals || []).includes(1)
+    ? (s.journey.reachedPortals || []).some((floor) => floor >= s.startFloor)
       ? 6
-      : s.floor === 1
+      : s.floor >= s.startFloor
         ? Math.min(5, s.journey.step)
         : 0
     : s.journey.mission === "salvage"
@@ -372,6 +385,10 @@ export function chartRumour(
   };
 }
 export const spendWatches = passTime;
+export const restHereRisk = (floor: number) =>
+  BALANCE.restHereRisk[floor <= 4 ? 0 : floor <= 8 ? 1 : 2];
+export const wildCampRisk = (floor: number) =>
+  BALANCE.wildCampRisk[floor <= 4 ? 0 : floor <= 8 ? 1 : 2];
 const say = (s: Game, message: string): Game => ({
   ...s,
   message,
@@ -464,6 +481,16 @@ export function resolveExploration(
     currentRoom(s).kind === "portal"
   )
     return enterMappedRoom(s, s.journey.room);
+  if (
+    a.type === "TURN_AROUND" &&
+    s.phase === "exploration" &&
+    isFreshEntrance(s) &&
+    currentRoom(s).exits[opposite(s.journey.facing)]
+  )
+    return {
+      ...s,
+      journey: { ...s.journey, facing: opposite(s.journey.facing) },
+    };
   if (
     (a.type === "MOVE" || a.type === "MOVE_BACK") &&
     ["exploration", "branch"].includes(s.phase)
@@ -737,6 +764,43 @@ export function resolveExploration(
     }
     return s;
   }
+  if (a.type === "REST_HERE" && canRestHere(s)) {
+    if (s.journey.startDay === null || !s.party.some((c) => c.hp > 0)) return s;
+    if (s.food < 1) return say(s, "You need a ration to recover here.");
+    const rested = spendWatches(s, BALANCE.watchesPerDay, { rest: true });
+    if (["defeat", "extraction"].includes(rested.phase)) return rested;
+    const draw = nextRandom(rested.rng.encounters);
+    const next = { ...rested, rng: { ...rested.rng, encounters: draw.seed } };
+    if (draw.roll < restHereRisk(s.floor))
+      return say(
+        {
+          ...next,
+          phase: "combat",
+          sideBattle: false,
+          fieldRest: rememberRestLocation(s),
+          combat: null,
+          lootReceipt: null,
+          discoveryReceipt: null,
+          arrivalChoice: "",
+          arrivalOutcome: "",
+          arrivalEffect: "",
+          arrivalScouted: false,
+          enemy: enemyFor(s.floor, s.party.length),
+          journey: {
+            ...next.journey,
+            defender: false,
+            portal: false,
+            branch: null,
+            branchFight: true,
+          },
+        },
+        "You recover 25% HP/MP and 35 exhaustion, using one day and one ration. Footsteps break the quiet: an ambush!",
+      );
+    return say(
+      next,
+      "You take turns keeping watch. One day and one ration used; standing companions recover 25% HP/MP and 35 exhaustion. No one finds you.",
+    );
+  }
   if (a.type === "WILD_CAMP" && ["exploration", "branch"].includes(s.phase)) {
     if (!(s.inventory["camp-kit"] > 0))
       return say(
@@ -771,10 +835,7 @@ export function resolveExploration(
       if (next.journey.wildCamp) {
         const draw = nextRandom(next.rng.encounters);
         next = { ...next, rng: { ...next.rng, encounters: draw.seed } };
-        if (
-          draw.roll <
-          BALANCE.wildCampRisk[s.floor <= 4 ? 0 : s.floor <= 8 ? 1 : 2]
-        )
+        if (draw.roll < wildCampRisk(s.floor))
           return {
             ...next,
             phase: "combat",

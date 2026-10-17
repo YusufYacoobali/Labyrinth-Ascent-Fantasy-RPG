@@ -2,6 +2,7 @@ import type { Enemy, Skill } from "./engine";
 import { ECOLOGY } from "./ecology";
 
 export interface MonsterSpec {
+  equipment?: string[];
   trophy?: string;
   id: string;
   name: string;
@@ -148,6 +149,7 @@ export const MONSTERS: MonsterSpec[] = [
   },
   {
     id: "plunderer",
+    equipment: ["iron-blade", "leather"],
     name: "The Plunderer",
     visual: "plunderer",
     skill: "Second Wind",
@@ -345,14 +347,17 @@ for (const [id, trophy] of [
   ["crypt-guardian", "oath-clasp"],
 ])
   MONSTERS.find((m) => m.id === id)!.trophy = trophy;
-export const monsterFor = (enemy: Enemy, floor: number): MonsterSpec =>
-  MONSTERS.find((m) => m.id === enemy.species) ||
-  MONSTERS.find(
-    (m) =>
-      m.name === enemy.name ||
-      (m.id === "plunderer" && /plunderer/i.test(enemy.name)),
-  ) ||
-  MONSTERS[Math.max(0, Math.min(11, floor - 1))];
+export const monsterFor = (enemy: Enemy, floor: number): MonsterSpec => {
+  const spec =
+    MONSTERS.find((m) => m.id === enemy.species) ||
+    MONSTERS.find(
+      (m) =>
+        m.name === enemy.name ||
+        (m.id === "plunderer" && /plunderer/i.test(enemy.name)),
+    ) ||
+    MONSTERS[Math.max(0, Math.min(11, floor - 1))];
+  return enemy.equipment ? { ...spec, equipment: enemy.equipment } : spec;
+};
 
 export function nextRandom(seed: number) {
   const next = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
@@ -369,6 +374,7 @@ export function monsterDrops(spec: MonsterSpec, seed: number) {
     seed: material.seed,
     items: {
       "beast-core": monsterCoreYield(spec),
+      ...Object.fromEntries((spec.equipment || []).map((id) => [id, 1])),
       ...(spec.trophy ? { [spec.trophy]: 1 } : {}),
       ...(essence.roll < 0.3 ? { [essenceId(spec.id)]: 1 } : {}),
     },

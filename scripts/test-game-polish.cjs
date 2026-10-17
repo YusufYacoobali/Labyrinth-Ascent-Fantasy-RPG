@@ -119,7 +119,7 @@ test("Cash-only event finds also receive a collection screen after companion sha
   assert.equal(found.expedition.accruedShares.kael, 4);
   assert.equal(found.food, state.food - 1);
 });
-test("Monster drops contain cores, optional essence and quest trophies; guild trade pays once", () => {
+test("Monster drops contain cores, optional essence, trophies and carried gear; guild trade pays once", () => {
   for (const monster of monsters.MONSTERS) {
     const { items } = monsters.monsterDrops(monster, 123456);
     assert.equal(items["beast-core"], monsters.monsterCoreYield(monster));
@@ -128,6 +128,7 @@ test("Monster drops contain cores, optional essence and quest trophies; guild tr
         (id) =>
           id === "beast-core" ||
           id.startsWith("essence-") ||
+          (monster.equipment || []).includes(id) ||
           id === monster.trophy,
       ),
     );

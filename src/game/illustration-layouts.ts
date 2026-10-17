@@ -301,6 +301,13 @@ export const ILLUSTRATION_LAYOUTS: Record<string, IllustrationLayout> = {
     width: 1536,
     height: 1024,
   },
+  passages: {
+    file: "passage-scenes-v1.png",
+    columns: 3,
+    rows: 2,
+    width: 1536,
+    height: 1024,
+  },
   approaches: {
     file: "encounter-approaches.png",
     columns: 3,

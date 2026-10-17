@@ -9,6 +9,7 @@ import {
   floorMap,
   exitsFor,
   encounterKey,
+  isFreshEntrance,
 } from "@/game/exploration";
 import { visibleRooms, roomName } from "@/game/floor-map";
 import { router } from "expo-router";
@@ -147,10 +148,18 @@ export default function RouteMap({
             ))}
             {adjacent && ["exploration", "branch"].includes(state.phase) && (
               <Button
-                label={`Travel ${adjacent.direction} · ${adjacent.heading}`}
+                label={
+                  adjacent.direction === "back" && isFreshEntrance(state)
+                    ? "Turn to face this passage"
+                    : `Travel ${adjacent.direction} · ${adjacent.heading}`
+                }
                 onPress={() => {
                   setSelected(null);
-                  dispatch({ type: "MOVE", direction: adjacent.direction });
+                  dispatch(
+                    adjacent.direction === "back" && isFreshEntrance(state)
+                      ? { type: "TURN_AROUND" }
+                      : { type: "MOVE", direction: adjacent.direction },
+                  );
                   if (fullScreen) router.back();
                 }}
               />

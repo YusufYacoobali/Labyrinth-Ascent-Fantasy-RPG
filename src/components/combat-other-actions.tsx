@@ -8,17 +8,21 @@ export default function CombatOtherActions({
   canItem,
   canFocus,
   canBurst,
+  canFlee,
   onItem,
   onFocus,
   onBurst,
+  onFlee,
 }: {
   canAct: boolean;
   canItem: boolean;
   canFocus: boolean;
   canBurst: boolean;
+  canFlee: boolean;
   onItem: () => void;
   onFocus: () => void;
   onBurst: () => void;
+  onFlee: () => void;
 }) {
   const options = [
     {
@@ -44,6 +48,14 @@ export default function CombatOtherActions({
       tone: "red" as const,
       disabled: !canAct || !canBurst,
       onPress: onBurst,
+    },
+    {
+      label: "Flee",
+      detail: "Enemies strike as you withdraw",
+      icon: "run-fast",
+      tone: "red" as const,
+      disabled: !canFlee,
+      onPress: onFlee,
     },
   ];
   return (

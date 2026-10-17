@@ -27,9 +27,17 @@ const tip = (
   extras: Partial<Guidance> = {},
 ): Guidance => ({ id, title, body, ...extras });
 
+export const firstExpeditionComplete = (s: Game) =>
+  !!s.lastReport ||
+  s.expedition.number > 1 ||
+  (s.expedition.number > 0 &&
+    s.phase === "town" &&
+    s.journey.startDay === null);
+
 /** Advice follows the actual save, not a scripted battle or a second tutorial economy. */
 export function walkthroughTip(s: Game): Guidance | null {
-  if (!s.started || !s.walkthrough.active) return null;
+  if (!s.started || !s.walkthrough.active || firstExpeditionComplete(s))
+    return null;
   const done = (id: string) => s.walkthrough.done.includes(id);
   if (s.phase === "town") {
     if (s.party.length < 2 && !done("recruit"))
@@ -81,7 +89,7 @@ export function walkthroughTip(s: Game): Guidance | null {
     return tip(
       "mission",
       "Choose your purpose",
-      "Chart a way upward is a good first mission. Other missions reward supplies or helping survivors. Pick a goal before entering.",
+      "Choose whether to climb toward the summit or seek treasure, then step through the portal.",
     );
   if (s.phase === "arrival")
     return tip(
@@ -212,11 +220,7 @@ export function walkthroughTip(s: Game): Guidance | null {
       "Show the floor map. Left, right, straight and back move between connected rooms. Explored paths stay saved; side passages hold treasure, strangers or danger.",
       { acknowledge: true },
     );
-  return tip(
-    "trail",
-    "Follow the connected rooms",
-    "Use the map to retrace your route. Find a sheltered place if health or exhaustion is getting worse. The upward portal is hidden somewhere ahead.",
-  );
+  return null;
 }
 
 export function advanceWalkthrough(
@@ -224,6 +228,14 @@ export function advanceWalkthrough(
   after: Game,
   action: Action,
 ): Game {
+  if (firstExpeditionComplete(after)) {
+    if (!after.walkthrough.active && after.guideSeen) return after;
+    return {
+      ...after,
+      guideSeen: true,
+      walkthrough: { ...after.walkthrough, active: false },
+    };
+  }
   if (!after.walkthrough.active || action.type === "CREATE") return after;
   const learned: string[] = [];
   if (after.party.length > before.party.length) learned.push("recruit");

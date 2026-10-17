@@ -9,6 +9,7 @@ import { ARRIVALS } from "@/game/story";
 import { FLOORS } from "@/game/world";
 import { useGame } from "@/game/provider";
 import { theme as t } from "@/theme";
+import { exitsFor } from "@/game/exploration";
 
 export function Arrival() {
   const { state, dispatch } = useGame();
@@ -17,7 +18,11 @@ export function Arrival() {
   if (!state.journey.defender)
     return (
       <View style={{ gap: 12, paddingBottom: 20 }}>
-        <EntryArt floor={state.floor} route={state.route} />
+        <EntryArt
+          floor={state.floor}
+          route={state.route}
+          directions={exitsFor(state).map((e) => e.direction)}
+        />
         <StoryCard
           title={`Floor ${state.floor} · ${FLOORS[state.floor - 1].name}`}
           body={

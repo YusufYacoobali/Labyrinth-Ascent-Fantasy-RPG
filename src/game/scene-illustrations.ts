@@ -1,6 +1,7 @@
 import { STORY_ILLUSTRATIONS } from "./story-illustrations";
 import { arenaFloor } from "./visual-environments";
 import type { Route } from "./world";
+import type { RelativeDirection } from "./floor-map";
 
 export interface SceneIllustration {
   sheet: string;
@@ -8,6 +9,7 @@ export interface SceneIllustration {
   label: string;
   focus?: number;
   aspectRatio?: number;
+  mirrored?: boolean;
 }
 
 const grid = (
@@ -322,9 +324,61 @@ export function environmentIllustration(
   };
 }
 
-export function entryIllustration(floor: number, route: Route | null = null) {
+export const PASSAGE_ILLUSTRATIONS = [
+  grid("passages", 0, "A lantern before a solid stone wall"),
+  grid("passages", 1, "A lantern beside one passage to the left"),
+  grid("passages", 2, "A lantern beside one passage straight ahead"),
+  grid(
+    "passages",
+    3,
+    "A lantern beside passages to the left and straight ahead",
+  ),
+  grid("passages", 4, "A lantern between passages to the left and right"),
+  grid(
+    "passages",
+    5,
+    "A lantern between passages to the left, straight ahead and right",
+  ),
+];
+/** The view shows the openings ahead and beside you; the return passage is behind the camera. */
+export function passageIllustration(directions: readonly RelativeDirection[]) {
+  const left = directions.includes("left"),
+    straight = directions.includes("straight"),
+    right = directions.includes("right");
+  const panel = straight
+    ? left && right
+      ? 5
+      : left || right
+        ? 3
+        : 2
+    : left && right
+      ? 4
+      : left || right
+        ? 1
+        : 0;
+  const mirrored = right && !left;
+  const openings = [
+    left && "left",
+    straight && "straight ahead",
+    right && "right",
+  ].filter(Boolean);
+  return {
+    ...PASSAGE_ILLUSTRATIONS[panel],
+    mirrored,
+    label: openings.length
+      ? `A lantern beside passages leading ${openings.join(" and ")}`
+      : "A lantern before a solid stone wall; the return passage is behind you",
+  };
+}
+export function entryIllustration(
+  floor: number,
+  route: Route | null = null,
+  directions?: readonly RelativeDirection[],
+) {
   return floor === 1
-    ? ROOM_ILLUSTRATIONS.entry
+    ? directions
+      ? passageIllustration(directions)
+      : ROOM_ILLUSTRATIONS.entry
     : floor === 2
       ? ROOM_ILLUSTRATIONS.sunkenEntry
       : environmentIllustration(

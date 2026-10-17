@@ -8,16 +8,20 @@ const test = (name, fn) => {
   count++;
   console.log("PASS " + name);
 };
-function start() {
-  let s = act(e.initialGame(), {
+function fresh() {
+  return act(e.initialGame(), {
     type: "CREATE",
     seed: 42,
     race: "human",
     name: "Rowan",
     roll: 0.5,
   });
-  s = act({ ...s, day: 30, food: 40 }, { type: "ENTER" });
-  return s;
+}
+function start(mission, overrides = {}) {
+  return act(
+    { ...fresh(), day: 30, food: 40, ...overrides },
+    { type: "ENTER", ...(mission ? { mission } : {}) },
+  );
 }
 function explore() {
   return act(act(start(), { type: "MISSION", id: "survey" }), {
@@ -56,6 +60,70 @@ test("Mission seals the month and peaceful arrival opens exploration before the 
   assert.equal(s.phase, "exploration");
   assert.equal(s.kills, 0);
   assert.equal(s.journey.room, "entrance");
+});
+
+test("Both prepared goals enter the portal with one day, one ration and a complete expedition", () => {
+  assert.deepEqual(
+    Array.from(x.MISSIONS, (m) => m.id),
+    ["survey", "salvage"],
+  );
+  for (const mission of ["survey", "salvage"]) {
+    const s = start(mission);
+    assert.equal(s.phase, "arrival");
+    assert.equal(s.journey.mission, mission);
+    assert.equal(s.journey.startDay, 30);
+    assert.equal(s.day, 31);
+    assert.equal(s.food, 39);
+    assert.equal(s.journey.watches, 6);
+    assert.equal(e.daysRemaining(s), 29);
+    assert.equal(s.expedition.number, 1);
+    assert.ok(s.expedition.departure.characters.hero);
+    assert.ok(s.expedition.director);
+    assert.ok(s.journey.maps[1]);
+    assert.equal(s.journey.room, "entrance");
+    assert.equal(s.runGross, 0);
+    const repeated = act(s, { type: "ENTER", mission });
+    assert.equal(repeated.expedition.number, 1);
+    assert.equal(repeated.day, 31);
+    assert.equal(repeated.food, 39);
+    assert.equal(
+      act(s, { type: "MISSION", id: "salvage" }).journey.mission,
+      mission,
+    );
+  }
+});
+
+test("Removed goals and closed gates cannot start an expedition or spend a day", () => {
+  for (const s of [start("survivors"), start("survey", { day: 29 })]) {
+    assert.equal(s.phase, "town");
+    assert.equal(s.journey.startDay, null);
+    assert.equal(s.journey.watches, 0);
+    assert.equal(s.expedition.number, 0);
+    assert.equal(s.food, 40);
+  }
+});
+
+test("Climbing progress follows the departure floor and old survivor contracts remain valid", () => {
+  const s = start("survey", {
+    startFloor: 4,
+    checkpoints: [1, 4],
+    bestFloor: 3,
+  });
+  assert.equal(s.floor, 4);
+  assert.equal(x.missionProgress(s), 0);
+  assert.equal(
+    x.missionProgress({ ...s, journey: { ...s.journey, reachedPortals: [4] } }),
+    6,
+  );
+  const legacy = {
+    ...s,
+    phase: "extraction",
+    journey: { ...s.journey, watches: 180, mission: "survivors", met: 2 },
+  };
+  const returned = act(e.normalizeSave(JSON.parse(JSON.stringify(legacy))), {
+    type: "RETURN",
+  });
+  assert.equal(returned.gold, legacy.gold + 180);
 });
 test("Every movement costs a full day and cannot return through a closed gate", () => {
   let s = explore();

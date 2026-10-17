@@ -117,7 +117,11 @@ export default function CombatIntro({
         </Animated.View>
         <Animated.View style={[styles.side, enter(1)]}>
           <Copy style={[styles.kicker, { color: t.color.red }]}>
-            {enemies.some((e) => e.boss) ? "GUARDIAN" : "ENCOUNTER"}
+            {state.combat?.ambush
+              ? "REST AMBUSH"
+              : enemies.some((e) => e.boss)
+                ? "GUARDIAN"
+                : "ENCOUNTER"}
           </Copy>
           <View
             style={{

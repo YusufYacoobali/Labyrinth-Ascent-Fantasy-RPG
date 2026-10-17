@@ -12,6 +12,7 @@ import {
   resolveFactionAction,
 } from "./faction-opportunities";
 import { establishExpedition } from "./encounter-director";
+import { resumeRestLocation, type FieldRestResume } from "./field-rest";
 import { knownPath } from "./known-travel";
 import type { NpcMemory, WorldNpcId } from "./world-npcs";
 import { recordDefeats, type Bestiary } from "./bestiary";
@@ -45,6 +46,7 @@ import {
   HEADINGS,
   relativeDirection,
   generateFloor,
+  entryFacing,
   seedFor,
   mapKey,
   populateFloor,
@@ -69,6 +71,7 @@ import {
   advanceWalkthrough,
   newWalkthrough,
   walkthroughTip,
+  firstExpeditionComplete,
   type Walkthrough,
 } from "./walkthrough";
 import { maybeComplain, exertForAction } from "./exhaustion";
@@ -104,10 +107,12 @@ import {
   spendWatches,
   daysRemaining,
   MISSIONS,
+  missionDetails,
   missionProgress,
   chartRumour,
   currentRoom,
   floorMap,
+  isFreshEntrance,
   currentMapKey,
   encounterKey,
   enterMappedRoom,
@@ -180,6 +185,7 @@ export interface Character {
   cooldowns: Partial<Record<Skill, number>>;
 }
 export interface Enemy {
+  equipment?: string[];
   shield?: number;
   resistances?: Partial<Record<Element, number>>;
   weaknesses?: Element[];
@@ -251,6 +257,7 @@ export interface Game {
   expedition: Expedition;
   rng: { combat: number; loot: number; encounters: number };
   lootReceipt: LootReceipt | null;
+  fieldRest?: FieldRestResume | null;
   discoveryReceipt?: {
     title: string;
     gold: number;
@@ -498,6 +505,7 @@ export function initialGame(): Game {
     expedition: newExpedition(),
     rng: { combat: 1, loot: 2, encounters: 3 },
     lootReceipt: null,
+    fieldRest: null,
     trial: false,
     combat: null,
     roundPlayback: null,
@@ -646,6 +654,10 @@ export function normalizeSave(raw: Game): Game {
   };
   if (!map.nodes[s.journey.room]) s.journey.room = map.entrance;
   s.journey.facing = s.journey.facing || "north";
+  if (isFreshEntrance(s) && !s.journey.arrivalFacingSet) {
+    s.journey.facing = entryFacing(map);
+    s.journey.arrivalFacingSet = true;
+  }
   if (s.phase !== "town" && s.journey.startDay === null)
     s.journey.startDay = s.day;
   s.journey.watches = Math.min(180, Math.max(0, s.journey.watches));
@@ -694,6 +706,10 @@ export function normalizeSave(raw: Game): Game {
     ...raw.expedition,
     unsecured: { ...newExpedition().unsecured, ...raw.expedition?.unsecured },
   };
+  if (firstExpeditionComplete(s)) {
+    s.walkthrough = { ...s.walkthrough, active: false };
+    s.guideSeen = true;
+  }
   s.rng = { ...initialGame().rng, ...raw.rng };
   return s;
 }
@@ -883,10 +899,13 @@ export type Action =
   | { type: "NAG_DECISION" }
   | { type: "SEARCH_PORTAL" }
   | { type: "MOVE"; direction: Direction }
+  | { type: "TURN_AROUND" }
   | { type: "MOVE_BACK" }
   | { type: "AT_PORTAL" }
   | { type: "BRANCH_CHOICE"; choice: string; roll: number }
   | { type: "WILD_CAMP" }
+  | { type: "REST_HERE" }
+  | { type: "ACK_ASCENT" }
   | { type: "TREAT_INJURY"; id: string }
   | { type: "CAMP_REST"; untilClose?: boolean }
   | { type: "LEAVE_CAMP" }
@@ -912,7 +931,7 @@ export type Action =
   | { type: "ENCHANT"; id: string; skill: Skill }
   | { type: "REFINE_GEAR"; id: string; element: Element }
   | { type: "SELECT_START"; floor: number; route?: Route }
-  | { type: "ENTER" }
+  | { type: "ENTER"; mission?: Mission }
   | { type: "APPROACH"; choice: string; roll: number }
   | { type: "ENGAGE" }
   | {
@@ -947,6 +966,7 @@ export type Action =
   | { type: "INTRO_COMPLETED" }
   | { type: "SETTING"; key: "sound" | "haptics"; value: boolean };
 function afterFloor(s: Game): Game {
+  if (s.fieldRest) return resumeRestLocation(s);
   if (s.journey.watches >= 180) return { ...s, phase: "extraction" };
   if (s.combat?.resume === "camp") return { ...s, phase: "camp", combat: null };
   if (s.journey.defender)
@@ -1192,7 +1212,11 @@ export function reducer(s: Game, a: Action): Game {
   if (a.type === "WALKTHROUGH") {
     if (!s.started) return s;
     if (a.kind === "restart")
-      return { ...s, guideSeen: true, walkthrough: newWalkthrough(true) };
+      return {
+        ...s,
+        guideSeen: true,
+        walkthrough: newWalkthrough(!firstExpeditionComplete(s)),
+      };
     if (a.kind === "skip")
       return {
         ...s,
@@ -1399,15 +1423,41 @@ function resolveGameAction(s: Game, a: Action): Game {
       "The labyrinth is open. Confirm skipping this opening before spending a day in town.",
     );
   let next = reduceGame(s, a);
-  if (a.type === "ENTER" && s.phase === "town" && next.phase === "mission") {
+  if (
+    s.fieldRest &&
+    a.type === "ROUND" &&
+    a.flee &&
+    next.journey.room !== s.journey.room
+  )
+    next = {
+      ...next,
+      fieldRest: null,
+      stories: { ...next.stories, active: null },
+    };
+  if (
+    a.type === "ENTER" &&
+    s.phase === "town" &&
+    ["mission", "arrival"].includes(next.phase) &&
+    next.expedition.number === s.expedition.number + 1
+  ) {
     next = establishExpedition(next);
     next = {
       ...next,
+      journey: {
+        ...next.journey,
+        facing: entryFacing(floorMap(next)),
+        arrivalFacingSet: true,
+      },
       expedition: { ...next.expedition, departure: departureSnapshot(s) },
     };
+    if (a.mission)
+      next = spendWatches(exertForAction(next, next, a), B.watchesPerDay, {
+        rest: false,
+      });
   }
   if (
     !next.trial &&
+    !(a.type === "COLLECT" && s.fieldRest) &&
     ((next.phase === "arrival" &&
       next.journey.defender &&
       s.journey.room !== next.journey.room) ||
@@ -1420,12 +1470,13 @@ function resolveGameAction(s: Game, a: Action): Game {
     next.phase === "combat" &&
     s.phase !== "combat" &&
     !next.trial &&
-    !(s.phase === "arrival" && s.combat)
+    !(s.phase === "arrival" && s.combat && a.type !== "REST_HERE")
   )
     next = beginCombat(
       next,
       s.phase === "camp" ? "camp" : "exploration",
-      "roamer",
+      a.type === "REST_HERE" ? `rest-${next.journey.watches}` : "roamer",
+      a.type === "REST_HERE" || (a.type === "CAMP_REST" && s.journey.wildCamp),
     );
   if (
     next.combat &&
@@ -1805,7 +1856,7 @@ function reduceGame(s: Game, a: Action): Game {
         `The return gate is sealed for ${daysRemaining(s)} more days. Find shelter if your team cannot continue.`,
       );
     s = rescueInjuries(s);
-    const mission = MISSIONS.find((m) => m.id === s.journey.mission);
+    const mission = missionDetails(s.journey.mission);
     const reward =
       !s.expedition.lost && mission && missionProgress(s) >= mission.target
         ? mission.reward
@@ -1823,8 +1874,9 @@ function reduceGame(s: Game, a: Action): Game {
         combat: null,
         roundPlayback: null,
         lastOutcome: s.expedition.lost ? "Lost expedition" : "Returned safely",
+        fieldRest: null,
       },
-      `The return gate carried your team home.${reward ? ` Mission fulfilled: +${reward} guild gold.` : ""} Trade your spoils and prepare for the next opening.`,
+      `The return gate carried your team home.${reward ? ` Mission fulfilled: +${reward} guild gold.` : ""} ${s.ending ? "The summit is conquered. Stormhold will remember your names." : "Regroup, grow stronger, and conquer Floor 12."}`,
     );
   }
   if (a.type === "ACCEPT") {
@@ -2395,6 +2447,11 @@ function reduceGame(s: Game, a: Action): Game {
       return { ...s, startFloor: a.floor, startRoute: route || null };
     }
     if (a.type === "ENTER") {
+      if (a.mission !== undefined && !MISSIONS.some((m) => m.id === a.mission))
+        return note(
+          s,
+          "Choose climbing or treasure before entering the portal.",
+        );
       if (
         s.party.some(
           (c) =>
@@ -2417,9 +2474,10 @@ function reduceGame(s: Game, a: Action): Game {
           combat: null,
           roundPlayback: null,
           expedition: newExpedition(s.expedition.number + 1),
+          fieldRest: null,
           lootReceipt: null,
           floor: s.startFloor,
-          phase: "mission",
+          phase: a.mission ? "arrival" : "mission",
           journey: {
             ...newJourney(),
             seed: s.journey.seed,
@@ -2435,6 +2493,7 @@ function reduceGame(s: Game, a: Action): Game {
             },
             chart: s.journey.chart,
             startDay: s.day,
+            mission: a.mission || null,
           },
           enemy: enemyFor(s.startFloor, s.startRoute, s.party.length),
           turn: 1,
@@ -2577,6 +2636,13 @@ function reduceGame(s: Game, a: Action): Game {
       );
 
     const floor = s.floor + 1;
+    const nextMap =
+      s.journey.maps[mapKey(floor, s.route)] ||
+      generateFloor(
+        floor,
+        s.journey.seed,
+        floor >= 5 && floor <= 7 ? s.route || "roots" : "",
+      );
     return {
       ...s,
       phase: "arrival",
@@ -2588,17 +2654,12 @@ function reduceGame(s: Game, a: Action): Game {
         branchFight: false,
         room: "entrance",
         history: [],
-        facing: "north",
+        facing: entryFacing(nextMap),
+        arrivalFacingSet: true,
         defender: false,
         maps: {
           ...s.journey.maps,
-          [mapKey(floor, s.route)]:
-            s.journey.maps[mapKey(floor, s.route)] ||
-            generateFloor(
-              floor,
-              s.journey.seed,
-              floor >= 5 && floor <= 7 ? s.route || "roots" : "",
-            ),
+          [mapKey(floor, s.route)]: nextMap,
         },
       },
       floor,
