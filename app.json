@@ -18,7 +18,9 @@
       },
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
-      "permissions": ["android.permission.MODIFY_AUDIO_SETTINGS"],
+      "permissions": [
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
       "package": "com.yacoobali.rpg"
     },
     "web": {
@@ -56,6 +58,16 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "expo-status-bar": {
+        "style": "light",
+        "hidden": true
+      },
+      "eas": {
+        "projectId": "6bbf0519-97ce-49c8-b511-ccd8ed18536b"
+      }
     }
   }
 }
