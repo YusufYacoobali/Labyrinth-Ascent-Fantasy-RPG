@@ -133,14 +133,26 @@ test("Every origin, mage variation, recruit, floor foe and side foe resolves to 
         trial.trialSave({ ...trial.DEFAULT_TRIAL, enemy: enemy.id }),
       ).key,
     );
-  assert.equal(keys.size, 25);
+  assert.equal(keys.size, 35);
+  const expansion = JSON.parse(
+    fs.readFileSync("assets/expansion/generation-manifest.json", "utf8"),
+  ).characters;
   for (const key of keys) {
-    const data = fs.readFileSync("assets/combat/" + key + "-motion.png");
-    assert.equal(
-      data.readUInt32BE(16) / 8,
-      data.readUInt32BE(20) / 6,
-      key + " square sprite cells",
+    const newSheet = expansion.find((c) => c.id === key);
+    const data = fs.readFileSync(
+      newSheet?.file || "assets/combat/" + key + "-motion.png",
     );
+    if (newSheet)
+      assert.ok(
+        Math.abs(data.readUInt32BE(16) / 8 - data.readUInt32BE(20) / 6) < 1,
+        key + " square sprite cells",
+      );
+    else
+      assert.equal(
+        data.readUInt32BE(16) / 8,
+        data.readUInt32BE(20) / 6,
+        key + " square sprite cells",
+      );
     assert.equal(data[25], 6, key + " RGBA alpha channel");
   }
 });

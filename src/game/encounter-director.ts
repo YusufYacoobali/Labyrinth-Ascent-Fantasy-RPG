@@ -143,6 +143,7 @@ export function establishExpedition(s: Game): Game {
             ["weapon", "armor", "helmet", "boots", "charm"].includes(i.kind) &&
             i.quality === (floor >= 8 ? "rare" : "fine") &&
             !i.faction &&
+            !i.shopOnly &&
             gearFloor(i) <= floor,
         );
         encounters[key][room.id] = {

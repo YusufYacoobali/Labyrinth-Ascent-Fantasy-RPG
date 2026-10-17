@@ -46,8 +46,8 @@ const arena = () =>
 test("Catalog is unique, priced, stocked and all recipes reference real materials", () => {
   assert.ok(w.ITEMS.length >= 30);
   assert.equal(new Set(w.ITEMS.map((i) => i.id)).size, w.ITEMS.length);
-  assert.equal(e.RECRUITS.length, 10);
-  assert.equal(new Set(e.RECRUITS.map((r) => r.id)).size, 10);
+  assert.equal(e.RECRUITS.length, 20);
+  assert.equal(new Set(e.RECRUITS.map((r) => r.id)).size, 20);
   assert.equal(w.QUESTS.length, 9);
   for (const i of w.ITEMS) {
     assert.ok(i.price >= 0 && i.sell >= 0);
@@ -60,10 +60,10 @@ test("Catalog is unique, priced, stocked and all recipes reference real material
       assert.ok(m.quantity > 0 && w.ITEMS.find((i) => i.id === m.id));
   }
 });
-test("Six new recruits have distinct artwork and usable roles; hero mage roll stays 5%", () => {
+test("Sixteen specialist recruits have distinct artwork and usable roles; hero mage roll stays 5%", () => {
   const recruits = e.RECRUITS.filter((r) => r.portrait >= 12);
-  assert.equal(recruits.length, 6);
-  assert.equal(new Set(recruits.map((r) => r.portrait)).size, 6);
+  assert.equal(recruits.length, 16);
+  assert.equal(new Set(recruits.map((r) => r.portrait)).size, 16);
   for (const r of recruits) {
     const c = e.makeCharacter(r.race, r.id, r.name);
     assert.equal(c.job, r.job);

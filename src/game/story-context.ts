@@ -9,7 +9,7 @@ export function contextualStoryStage(s: Game, stage: StoryStage): StoryStage {
   const injured = roster.find((c) => c.injuries > 0);
   if (injured && stage.location === "field")
     notes.push(
-      `${injured.name} protects an injured side while the party examines the site. A careful account can be taken without asking them to climb.`,
+      `${injured.name} sits down to spare an old injury while you take a closer look.`,
     );
   const prior = Object.entries(s.stories.outcomes).find(
     ([id]) =>
@@ -26,7 +26,7 @@ export function contextualStoryStage(s: Game, stage: StoryStage): StoryStage {
     )
   )
     notes.push(
-      "An earlier decision to keep profit or discard testimony still troubles this meeting. The witnesses ask for a public account this time.",
+      "Someone asks what happened to the papers you found earlier. The question hangs there for a moment.",
     );
   let extra: { label: string; outcome: string; item?: string } | undefined;
   if (

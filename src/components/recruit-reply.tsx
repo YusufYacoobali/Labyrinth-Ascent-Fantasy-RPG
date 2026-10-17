@@ -1,6 +1,11 @@
-import React, { useState } from "react";
-import { ScrollView, View, useWindowDimensions } from "react-native";
-import { Host, BottomSheet, RNHostView } from "@expo/ui";
+import React from "react";
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { Atlas, Button, Copy, Icon } from "./game-ui";
 import { useGame } from "@/game/provider";
 import { theme as t } from "@/theme";
@@ -12,120 +17,136 @@ export function RecruitReplyDialog({
   onDone: () => void;
   onCounter: (share: number) => void;
 }) {
-  const { state, dispatch } = useGame();
+  const { state, dispatch, saving } = useGame();
   const { height } = useWindowDimensions();
-  const [contentHeight, setContentHeight] = useState(0);
-  const maxHeight = Math.max(120, Math.floor(height * 0.72) - 36);
   const reply = state.recruitReply;
-  if (!reply) return null;
   const dismiss = () => {
+    if (!reply || saving) return;
     dispatch({ type: "ACK_RECRUIT_REPLY" });
     if (reply.outcome === "accepted") onDone();
   };
   return (
-    <Host colorScheme="dark" style={{ position: "absolute" }}>
-      <BottomSheet
-        testID="recruit-reply-sheet"
-        isPresented
-        onDismiss={dismiss}
-        contentPadding={18}
-        containerColor={t.color.bg}
+    <Modal
+      visible={!!reply}
+      transparent
+      animationType="none"
+      onRequestClose={dismiss}
+    >
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          padding: 20,
+          backgroundColor: "rgba(0, 0, 0, 0.78)",
+        }}
       >
-        <RNHostView matchContents={{ vertical: true }}>
-          <ScrollView
-            testID="recruit-reply-content"
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close reply"
+          onPress={dismiss}
+          style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}
+        />
+        {reply && (
+          <View
+            accessibilityViewIsModal
+            testID="recruit-reply-popup"
             style={{
               width: "100%",
-              height: Math.min(contentHeight || maxHeight, maxHeight),
-              flexGrow: 0,
-            }}
-            contentContainerStyle={{
-              gap: 14,
-              paddingBottom: 16,
-              width: "100%",
-            }}
-            keyboardShouldPersistTaps="handled"
-            directionalLockEnabled
-            onContentSizeChange={(_, measuredHeight) => {
-              const nextHeight = Math.ceil(measuredHeight);
-              setContentHeight((current) =>
-                current === nextHeight ? current : nextHeight,
-              );
+              maxWidth: 420,
+              maxHeight: height * 0.82,
+              borderRadius: 16,
+              backgroundColor: "#102431",
+              padding: 18,
             }}
           >
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
+            <ScrollView
+              testID="recruit-reply-content"
+              key={reply.id}
+              style={{ flexGrow: 0 }}
+              contentContainerStyle={{ gap: 16, paddingBottom: 2 }}
+              keyboardShouldPersistTaps="handled"
             >
-              <Atlas index={reply.portrait} size={64} />
-              <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-                <Copy title style={{ fontSize: 24 }}>
-                  {reply.name}
-                </Copy>
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-                >
-                  <Icon
-                    name={
-                      reply.outcome === "accepted"
-                        ? "handshake"
-                        : "chat-outline"
-                    }
-                    size={20}
-                    color={
-                      reply.outcome === "accepted"
-                        ? t.color.green
-                        : t.color.gold
-                    }
-                  />
-                  <Copy style={{ flex: 1, color: t.color.goldLight }}>
-                    {reply.outcome === "accepted"
-                      ? `Joined · ${reply.offered}% agreed`
-                      : reply.outcome === "declined"
-                        ? "Offer declined"
-                        : "Not yet"}
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
+              >
+                <Atlas index={reply.portrait} size={60} />
+                <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+                  <Copy title style={{ fontSize: 24, color: "#fff1d1" }}>
+                    {reply.name}
                   </Copy>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <Icon
+                      name={
+                        reply.outcome === "accepted"
+                          ? "handshake"
+                          : "chat-outline"
+                      }
+                      size={19}
+                      color={
+                        reply.outcome === "accepted"
+                          ? t.color.green
+                          : t.color.goldLight
+                      }
+                    />
+                    <Copy style={{ flex: 1, color: "#f2d69b" }}>
+                      {reply.outcome === "accepted"
+                        ? `Joined · ${reply.offered}% agreed`
+                        : reply.outcome === "declined"
+                          ? "Offer declined"
+                          : "Not this time"}
+                    </Copy>
+                  </View>
                 </View>
               </View>
-            </View>
-            <Copy
-              accessibilityLiveRegion="polite"
-              style={{
-                width: "100%",
-                fontFamily: t.font.story,
-                fontSize: 22,
-                lineHeight: 28,
-              }}
-            >
-              “{reply.line}”
-            </Copy>
-            {reply.outcome === "declined" && (
-              <Button
-                label={`Offer ${reply.asking}%`}
-                tone="gold"
-                style={{ width: "100%" }}
-                onPress={() => {
-                  onCounter(reply.asking);
-                  dispatch({
-                    type: "RECRUIT",
-                    id: reply.id,
-                    offer: reply.asking,
-                  });
+              <Copy
+                accessibilityLiveRegion="polite"
+                style={{
+                  fontFamily: t.font.story,
+                  fontSize: 22,
+                  lineHeight: 29,
+                  color: "#f7eedb",
                 }}
+              >
+                “{reply.line}”
+              </Copy>
+              {reply.outcome === "declined" && (
+                <Button
+                  disabled={saving}
+                  label={`Offer ${reply.asking}%`}
+                  tone="gold"
+                  onPress={() => {
+                    onCounter(reply.asking);
+                    dispatch({
+                      type: "RECRUIT",
+                      id: reply.id,
+                      offer: reply.asking,
+                    });
+                  }}
+                />
+              )}
+              <Button
+                label={
+                  reply.outcome === "accepted"
+                    ? "Welcome aboard"
+                    : reply.outcome === "declined"
+                      ? "Keep bargaining"
+                      : "Back to the tavern"
+                }
+                disabled={saving}
+                tone={reply.outcome === "accepted" ? "blue" : "dark"}
+                onPress={dismiss}
               />
-            )}
-            <Button
-              label={
-                reply.outcome === "accepted"
-                  ? "Welcome aboard"
-                  : "Keep bargaining"
-              }
-              tone={reply.outcome === "accepted" ? "blue" : "dark"}
-              style={{ width: "100%" }}
-              onPress={dismiss}
-            />
-          </ScrollView>
-        </RNHostView>
-      </BottomSheet>
-    </Host>
+            </ScrollView>
+          </View>
+        )}
+      </View>
+    </Modal>
   );
 }

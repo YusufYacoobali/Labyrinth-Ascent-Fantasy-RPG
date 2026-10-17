@@ -16,11 +16,13 @@ export const SOLO_SCENES: Record<
       "You help Kael compare the mark with the order. Iven did not abandon his company. His account is carried home.",
   },
   "lyria.echo": {
-    body: "Roots on the Sunken Road curl around a caravan bell. Lyria hears rain in its silence. An inscription records the road’s original watercourse, offering evidence that can be checked against her memory.",
-    label: "Record the memory beside the inscription",
+    body: "Lyria’s green ink leads to a caravan bell tangled in roots. “Mother marked a river here,” she says. Beneath the bell, old lettering marks the high-water line. Her mother’s map may explain how this road ended up underwater.",
+    label: "Help Lyria check the flood marks",
     outcome:
-      "Lyria copies the lettering while you hold the lantern. The map now distinguishes a memory from a surviving inscription.",
-    alternateLabel: "Dismiss Lyria’s memory as a distraction",
+      "You hold the lantern while Lyria copies the flood marks. Her mother’s river fits the old road exactly. She runs a finger over the map, smiling. “You were right, Mother.”",
+    alternateLabel: "Tell Lyria to put the map away",
+    alternateOutcome:
+      "Lyria rolls the map up carefully. “Fine. We’ll keep moving.” She says nothing more about it for the rest of the day.",
   },
   "bram.stamp": {
     body: "A split pick at the third-floor threshold bears Ironbell’s stamp. Its cheap core failed under a rescue crew. Bram wants to carry the broken tool back intact, even though its valuable casing would be easier to sell.",

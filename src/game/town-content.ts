@@ -1,4 +1,5 @@
 import { HUNT_RECIPES } from "./build-equipment";
+import { EXPANSION_RECRUITS } from "./market-expansion";
 import type { Race, Skill } from "./engine";
 import type { Item, QuestId } from "./world";
 
@@ -17,6 +18,9 @@ export interface Recruit {
   skills?: Skill[];
   floor?: number;
   level?: number;
+  equipment?: string[];
+  accept?: string;
+  decline?: string;
   stats?: { hp: number; mp: number; atk: number; def: number; speed: number };
 }
 export const RECRUITS: Recruit[] = [
@@ -166,6 +170,7 @@ export const RECRUITS: Recruit[] = [
     quote:
       "I heard the vault singing through the ice. Reach the sixth floor, and I’ll help you find its voice.",
   },
+  ...EXPANSION_RECRUITS,
 ];
 
 export const TOWN_ITEMS: Item[] = [

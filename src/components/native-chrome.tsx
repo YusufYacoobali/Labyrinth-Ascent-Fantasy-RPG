@@ -12,6 +12,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { TOWN_ITEMS } from "@/game/town-content";
+import { marketItemCell } from "@/game/market-expansion";
+import { MARKET_ICON_BOUNDS } from "@/game/market-icon-bounds";
+import { MARKET_ITEM_SHEETS } from "./market-art-sources";
 import { theme as t } from "@/theme";
 
 export function ResourceGlyph({
@@ -43,6 +46,44 @@ export function ResourceGlyph({
 }
 
 export function ItemGlyph({ id, size = 36 }: { id: string; size?: number }) {
+  const market = marketItemCell(id);
+  if (market) {
+    const [left, top, right, bottom] =
+      MARKET_ICON_BOUNDS[market.tier][market.cell];
+    const scale = (size * 0.9) / Math.max(right - left, bottom - top);
+    const width = (right - left) * scale,
+      height = (bottom - top) * scale;
+    return (
+      <View
+        pointerEvents="none"
+        style={{ width: size, height: size, overflow: "hidden" }}
+      >
+        <View
+          style={{
+            position: "absolute",
+            left: (size - width) / 2,
+            top: (size - height) / 2,
+            width,
+            height,
+            overflow: "hidden",
+          }}
+        >
+          <Image
+            source={MARKET_ITEM_SHEETS[market.tier]}
+            contentFit="fill"
+            cachePolicy="memory-disk"
+            style={{
+              position: "absolute",
+              width: 1145 * scale,
+              height: 1374 * scale,
+              left: -left * scale,
+              top: -top * scale,
+            }}
+          />
+        </View>
+      </View>
+    );
+  }
   // Atlas cells stay fixed when new items are added to the catalogue.
   const town: Record<string, number> = {
     "scout-dagger": 0,
@@ -283,10 +324,12 @@ export function TabStrip({
   tabs,
   active,
   onChange,
+  compact = false,
 }: {
   tabs: readonly string[];
   active: string;
   onChange: (tab: string) => void;
+  compact?: boolean;
 }) {
   return (
     <View
@@ -315,7 +358,13 @@ export function TabStrip({
               style={{
                 fontFamily: t.font.title,
                 color: label === active ? "#241d17" : t.color.text,
-                fontSize: label.length > 10 ? 13 : label.length > 8 ? 15 : 17,
+                fontSize: compact
+                  ? 13
+                  : label.length > 10
+                    ? 13
+                    : label.length > 8
+                      ? 15
+                      : 17,
               }}
             >
               {label}

@@ -1,4 +1,5 @@
 import { HUNT_ITEMS, GEAR_TRAITS } from "./build-equipment";
+import { EXPANSION_ITEMS } from "./market-expansion";
 import { FACTION_ITEMS, type FactionId } from "./faction-opportunities";
 import { MONSTERS, essenceId, CORE_TRADE_VALUE } from "./monsters";
 import { TOWN_ITEMS, TOWN_QUESTS } from "./town-content";
@@ -225,6 +226,7 @@ export const VENDORS: {
   },
 ];
 export interface Item {
+  shopOnly?: boolean;
   faction?: FactionId;
   id: string;
   name: string;
@@ -467,6 +469,7 @@ export const ITEMS: Item[] = [
     description: "Proof that your party reached the twelfth floor.",
   },
   ...TOWN_ITEMS,
+  ...EXPANSION_ITEMS,
   ...FACTION_ITEMS,
   ...HUNT_ITEMS,
   ...MONSTERS.map((m): Item => ({
@@ -599,27 +602,27 @@ export const EVENTS: Record<
 > = {
   camp: {
     eyebrow: "FLOOR 1 · THE NIGHT WATCH",
-    title: "A stranger at your fire",
-    body: "You make camp beneath a broken arch. As the fire settles, a traveler steps into its light. He asks to share your shelter and claims to know a safer path upward. His hand stays beneath his cloak. What do you do?",
+    title: "A fire beneath the arch",
+    body: "A traveller has a small fire going beneath a broken arch. He waves you over. “Room for a few more. You look like you could use the rest.” His smile is easy, but one hand stays hidden beneath his cloak.",
     art: "camp",
     choices: [
       {
         id: "watch",
-        title: "Keep a watch",
-        detail: "Challenge the stranger before the party sleeps.",
+        title: "Rest with someone on watch",
+        detail: "Take a day to recover. Keep an eye on your host.",
         icon: "eye-outline",
         tone: "blue",
       },
       {
         id: "welcome",
-        title: "Let him share the fire",
-        detail: "Trust his story. Perhaps he knows a way up.",
+        title: "Rest beside his fire",
+        detail: "Take a day to recover. Trust him to keep watch.",
         icon: "campfire",
       },
       {
         id: "leave",
-        title: "Break camp quietly",
-        detail: "Leave 40 gold to distract him and move on.",
+        title: "Keep moving",
+        detail: "Decline his invitation and stay on the road.",
         icon: "shoe-print",
         tone: "dark",
       },
@@ -641,7 +644,7 @@ export const EVENTS: Record<
       {
         id: "rush",
         title: "Pry the chest open",
-        detail: "More gold, but the ward may bite.",
+        detail: "More gold; the ward hits standing allies for 15 HP.",
         icon: "treasure-chest",
       },
       {
@@ -758,7 +761,7 @@ export const EVENTS: Record<
     choices: [
       {
         id: "fight",
-        title: "No one takes our people",
+        title: "We’re not paying",
         detail: "Fight a plunderer captain for extra loot.",
         icon: "sword-cross",
         tone: "red",
@@ -809,7 +812,7 @@ export const EVENTS: Record<
   rescue: {
     eyebrow: "FLOOR 9 · NO BANNER LEFT BEHIND",
     title: "The White Stag’s last stand",
-    body: "You find three White Stag scouts beneath the stairs. One presses a torn banner against a wound; another has no strength left to stand. They recognize Serin's colors among your supplies. There is a cache beside them, and a long road back to town.",
+    body: "Three White Stag scouts huddle beneath the stairs. One presses a torn banner against a wound; another can barely lift his head. “Serin sent you?” he asks. A few supply packs lie beside them. They’re too weak to carry them any further.",
     art: "clan",
     choices: [
       {

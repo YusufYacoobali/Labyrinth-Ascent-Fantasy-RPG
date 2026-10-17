@@ -93,6 +93,8 @@ import { ARRIVALS } from "./story";
 import {
   recruitShare,
   recruitmentReply,
+  recruitLevelRefusal,
+  recruitEquipment,
   type RecruitReply,
 } from "./recruitment";
 import {
@@ -182,6 +184,7 @@ export interface Character {
   traitRevealed: boolean;
   ailments: Ailments;
   equipment: string[];
+  starterGearIssued?: boolean;
   cooldowns: Partial<Record<Skill, number>>;
 }
 export interface Enemy {
@@ -479,9 +482,37 @@ export function makeCharacter(
     cooldowns: {},
   };
   const level = recruit?.level || 1;
-  return prepareSkills(
-    level > 1 ? gainXp(character, (70 * level * (level - 1)) / 2) : character,
+  const equipped = issueRecruitEquipment(
+    prepareSkills(
+      level > 1 ? gainXp(character, (70 * level * (level - 1)) / 2) : character,
+    ),
   );
+  return { ...equipped, hp: equipped.maxHp, mp: equipped.maxMp };
+}
+/** Issue only missing slots once; sold or replaced equipment never regenerates on reload. */
+function issueRecruitEquipment(c: Character): Character {
+  const recruit = RECRUITS.find((r) => r.id === c.id);
+  if (!recruit || c.starterGearIssued) return c;
+  const occupied = new Set(
+    c.equipment.map((id) => ITEMS.find((i) => i.id === id)?.kind),
+  );
+  const gear = recruitEquipment(recruit)
+    .map((id) => ITEMS.find((i) => i.id === id)!)
+    .filter((item) => item && !occupied.has(item.kind));
+  const bonus = (stat: "hp" | "mp" | "atk" | "def" | "speed") =>
+    gear.reduce((sum, item) => sum + (item[stat] || 0), 0);
+  const uninjuredHp = healthyMaxHp(c) + bonus("hp");
+  return {
+    ...c,
+    starterGearIssued: true,
+    equipment: [...c.equipment, ...gear.map((i) => i.id)],
+    uninjuredHp,
+    maxHp: Math.floor(uninjuredHp * (1 - (c.injuries || 0) * B.injuryHp)),
+    maxMp: c.maxMp + bonus("mp"),
+    atk: c.atk + bonus("atk"),
+    def: c.def + bonus("def"),
+    speed: c.speed + bonus("speed"),
+  };
 }
 export const recruitAvailable = (s: Game, recruit: Recruit) =>
   s.bestFloor >= (recruit.floor || 0);
@@ -593,20 +624,26 @@ export function normalizeSave(raw: Game): Game {
       }
     : newWalkthrough();
   s.introSeen = raw.introSeen ?? raw.started;
-  s.party = (raw.party || []).map((c) => ({
-    ...makeCharacter(c.race, c.id, c.name),
-    ...c,
-    ailments: c.ailments || { poison: 0, paralysis: 0 },
-    equipment: c.equipment || [],
-    cooldowns: c.cooldowns || {},
-  }));
-  s.reserve = (raw.reserve || []).map((c) => ({
-    ...makeCharacter(c.race, c.id, c.name),
-    ...c,
-    cooldowns: c.cooldowns || {},
-    ailments: c.ailments || { poison: 0, paralysis: 0 },
-    equipment: c.equipment || [],
-  }));
+  s.party = (raw.party || []).map((c) =>
+    issueRecruitEquipment({
+      ...makeCharacter(c.race, c.id, c.name),
+      ...c,
+      ailments: c.ailments || { poison: 0, paralysis: 0 },
+      equipment: c.equipment || [],
+      starterGearIssued: c.starterGearIssued,
+      cooldowns: c.cooldowns || {},
+    }),
+  );
+  s.reserve = (raw.reserve || []).map((c) =>
+    issueRecruitEquipment({
+      ...makeCharacter(c.race, c.id, c.name),
+      ...c,
+      cooldowns: c.cooldowns || {},
+      ailments: c.ailments || { poison: 0, paralysis: 0 },
+      equipment: c.equipment || [],
+      starterGearIssued: c.starterGearIssued,
+    }),
+  );
   s.usedSupplies = raw.usedSupplies || [];
   s.contracts = Object.fromEntries(
     s.party
@@ -1476,7 +1513,11 @@ function resolveGameAction(s: Game, a: Action): Game {
       next,
       s.phase === "camp" ? "camp" : "exploration",
       a.type === "REST_HERE" ? `rest-${next.journey.watches}` : "roamer",
-      a.type === "REST_HERE" || (a.type === "CAMP_REST" && s.journey.wildCamp),
+      a.type === "REST_HERE" ||
+        (a.type === "CAMP_REST" && s.journey.wildCamp) ||
+        (a.type === "EVENT" &&
+          FLOORS[s.floor - 1].event === "camp" &&
+          a.choice === "welcome"),
     );
   if (
     next.combat &&
@@ -2098,18 +2139,16 @@ function reduceGame(s: Game, a: Action): Game {
       if (a.choice === "strengths") {
         if (old.inspected)
           return note(s, "You already know their visible strengths.");
+        const knownFloor = Math.min(
+          12,
+          (r.portrait || 0) >= 24
+            ? r.level || 1
+            : 1 + RECRUITS.findIndex((x) => x.id === r.id),
+        );
         return {
           ...s,
-          knownFloors: [
-            ...new Set([
-              ...s.knownFloors,
-              Math.min(12, 1 + RECRUITS.findIndex((x) => x.id === r.id)),
-            ]),
-          ],
-          journey: chartRumour(
-            s,
-            Math.min(12, 1 + RECRUITS.findIndex((x) => x.id === r.id)),
-          ),
+          knownFloors: [...new Set([...s.knownFloors, knownFloor])],
+          journey: chartRumour(s, knownFloor),
           rapport: {
             ...s.rapport,
             [a.id]: {
@@ -2117,12 +2156,7 @@ function reduceGame(s: Game, a: Action): Game {
               inspected: true,
               trust: old.trust + 1,
               reply: `“I am a ${r.job || RACES.find((x) => x.id === r.race)!.job}. ${r.tagline} I can mark ${
-                FLOORS[
-                  Math.min(
-                    11,
-                    RECRUITS.findIndex((x) => x.id === r.id),
-                  )
-                ].name
+                FLOORS[knownFloor - 1].name
               } on your chart.”`,
             },
           },
@@ -2175,6 +2209,8 @@ function reduceGame(s: Game, a: Action): Game {
           "blocked",
           `Reach Floor ${r.floor} and come back. I need to know you can handle what’s down there.`,
         );
+      const levelRefusal = recruitLevelRefusal(s, r);
+      if (levelRefusal) return respond("blocked", levelRefusal);
       if (s.party.length >= 4)
         return respond(
           "blocked",
@@ -2732,19 +2768,19 @@ function resolveEvent(s: Game, choice: string, roll: number): Game {
       },
       message,
     );
-  const fight = (name: string, ambush = false) => {
+  const fight = (name: string, ambush = false, from: Game = s) => {
     const hp = Math.round(
-      (140 + s.floor * 35) * (1 + 0.7 * (s.party.length - 1)),
+      (140 + from.floor * 35) * (1 + 0.7 * (from.party.length - 1)),
     );
     return note(
       {
-        ...s,
+        ...from,
         phase: "combat",
         eventResolved: true,
         sideBattle: true,
         turn: 1,
         momentum: 0,
-        party: (ambush ? hurtParty(s.party, 22) : s.party).map((c) => ({
+        party: (ambush ? hurtParty(from.party, 22) : from.party).map((c) => ({
           ...c,
           cooldowns: {},
           battleMastery: {},
@@ -2754,7 +2790,7 @@ function resolveEvent(s: Game, choice: string, roll: number): Game {
           name,
           hp,
           maxHp: hp,
-          atk: 19 + s.floor * 4,
+          atk: 19 + from.floor * 4,
           boss: false,
           sprite: 6,
           element: "physical",
@@ -2782,17 +2818,19 @@ function resolveEvent(s: Game, choice: string, roll: number): Game {
   };
   if (kind === "camp") {
     if (choice === "leave") {
-      if (s.gold < 40)
-        return note(
-          s,
-          "You need 40 gold for the distraction. Keep watch instead.",
-        );
       return done(
-        { ...s, gold: s.gold - 40 },
-        "You leave the stranger behind. A dagger glints as he watches you go.",
+        s,
+        "“Another time,” you tell him. His smile fades as you pass. You keep walking until the fire is out of sight.",
       );
     }
-    return fight("The Smiling Plunderer", choice === "welcome");
+    const rested = spendWatches(s, B.watchesPerDay, { rest: true });
+    if (["defeat", "extraction"].includes(rested.phase)) return rested;
+    const encounter = fight(
+      "The Smiling Plunderer",
+      choice === "welcome",
+      rested,
+    );
+    return { ...encounter, message: `${rested.message} ${encounter.message}` };
   }
   if (kind === "caravan") {
     if (choice === "leave")

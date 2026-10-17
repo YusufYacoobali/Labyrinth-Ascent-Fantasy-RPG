@@ -1,0 +1,256 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-10-17",
+  "references": [
+    "assets/art/town-recruits-portraits.png",
+    "assets/combat/kael-motion.png",
+    "assets/ui/town-item-icons.png"
+  ],
+  "portraits": {
+    "file": "assets/expansion/recruit-portraits-v1.png",
+    "columns": 5,
+    "rows": 2,
+    "identities": [
+      "nessa",
+      "orik",
+      "vesper",
+      "haldor",
+      "ilyra",
+      "cassian",
+      "dagna",
+      "zephyr",
+      "morrigan",
+      "astra"
+    ],
+    "prompt": "Use case: stylized-concept. Production asset: fantasy RPG recruit PORTRAIT ATLAS. Reference image is STYLE ONLY: match its detailed painted anime fantasy faces, navy backgrounds, warm gold rim light, practical layered clothing. Create a NEW atlas with exactly FIVE columns and TWO rows, ten equally sized SQUARE portrait cells, edge-to-edge grid, no gutters, no borders, no labels or text. Each cell a unique fully clothed ADULT head-and-shoulders portrait centered, complete face and hair comfortably within its own square. Reading order: top row 1 Nessa: cheerful dark-skinned human female field medic, curly black hair tied with cream scarf, teal practical coat, small leather medicine satchel strap. 2 Orik: dwarf male tinkerer, dark copper beard and round brass goggles, patched ochre leather coat, clever grin. 3 Vesper: adult elf female duelist, straight black bob hair with violet streak, long pointed ears, violet high-collared leather armor, sly smile. 4 Haldor: adult barbarian male frost hunter, long pale blond braid and short beard, blue-gray fur cloak over steel armor, confident weathered face. 5 Ilyra: adult elf female root oracle, deep brown skin, long moss-green hair, pointed ears, ivory-and-forest layered robes with antler-shaped wooden hairpin, kind eyes. Bottom row 6 Cassian: adult human male bannerlord, warm brown skin, short swept dark hair, gold-trimmed white plate armor and crimson cape, commanding smile. 7 Dagna: mature dwarf female smith, red braided hair with gray streak and no beard, bronze goggles on forehead, soot-marked face, dark iron armor with ember-orange scarf. 8 Zephyr: adult elf male storm archer, silver windswept hair, pointed ears, cobalt coat and white scarf, playful grin. 9 Morrigan: adult human female archmage, long silver-black hair, violet eyes, black-and-gold modest high-neck robes with subtle star embroidery, imposing calm. 10 Astra: adult barbarian female champion, dark brown skin, luminous pale-gold braided hair, ornate gold and white plate armor, sapphire cape, fierce proud expression. Match all ten styles to the reference. No duplicate characters, no weapons across cells, no crowns, no readable writing. Output a wide 5:2 image.",
+    "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-4d0cad77-6bbd-4a10-ba16-5e457acbe07c.png"
+  },
+  "characters": [
+    {
+      "id": "nessa",
+      "file": "assets/expansion/nessa-motion-v2.png",
+      "columns": 8,
+      "rows": 6,
+      "rowsMeaning": [
+        "idle",
+        "walk",
+        "attack",
+        "hit",
+        "defeat",
+        "skill"
+      ],
+      "prompt": "Production fantasy RPG ANIMATION SPRITE SHEET for one NEW playable party character. Reference image 1: STYLE AND GRID reference, existing Kael animation. Reference image 2: IDENTITY reference, ten portraits; use ONLY nessa's matching portrait. Nessa, adult dark-skinned human female field medic, black curly hair tied with cream scarf, teal coat, cream trousers, brown satchel, short silver mace and medicine flask. Match the reference painted anime chibi sprite style, crisp small-size details, two-to-three heads tall, full body, right-facing three-quarter view. Genuine TRANSPARENT background. EXACTLY 8 columns by 6 rows, 48 equally sized SQUARE cells on a 4:3 canvas, ideally 1536x1152. No gutters, labels, lines, text or UI. Consistent character identity, face, outfit, size and baseline in every cell. Each sprite and weapon fully contained within its cell with a clear 10% safety margin. Every one of all 48 cells must include the ENTIRE CHARACTER BODY; never show only a projectile, never omit a frame. Ordered rows: row1 eight subtle breathing/idle frames; row2 eight walking frames with distinct alternating leg positions; row3 eight basic attack frames, wind-up, weapon release, follow-through and return; row4 eight hit reaction frames, stagger and recovery, body never disappears; row5 eight defeat frames, upright through kneeling to lying sideways, last four hold a clear fallen body; row6 eight skill frames, windup then teal healing circle and warm gold sparkles then return. Keep effect inside its cell and character visible. No duplicated grid rows. Use nessa's own weapon and palette, not Kael's sword or blue outfit.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-e99108a0-946f-4811-8fac-78bc895ab401.png",
+      "repair": {
+        "prompt": "Edit this existing fantasy RPG sprite animation sheet. Preserve the exact 1448x1086 dimensions, transparent background, 8 columns by 6 rows of square cells, all character identities, colors, rendering style, alignment, and ALL 47 existing nonblank cells. Fix ONLY the almost EMPTY cell in ROW FOUR, COLUMN FOUR (one-based), at x543..724, y543..724. That cell must contain a complete full-body hit-stagger sprite of the SAME nessa character visible in its neighboring third and fifth cells, with the same outfit, face, hair and weapon, kneeling or leaning in recoil before recovering. Keep that new pose fully inside this cell. NO additional empty cell, no opaque background, no text, no borders, no grid lines, no changes to other cells. This one repaired hit-reaction frame must contain an entire character body, not only effects.",
+        "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-cab231a4-5de1-4ee7-9626-4cfa3fa26ad8.png"
+      }
+    },
+    {
+      "id": "orik",
+      "file": "assets/expansion/orik-motion-v1.png",
+      "columns": 8,
+      "rows": 6,
+      "rowsMeaning": [
+        "idle",
+        "walk",
+        "attack",
+        "hit",
+        "defeat",
+        "skill"
+      ],
+      "prompt": "Production fantasy RPG ANIMATION SPRITE SHEET for one NEW playable party character. Reference image 1: STYLE AND GRID reference, existing Kael animation. Reference image 2: IDENTITY reference, ten portraits; use ONLY orik's matching portrait. Orik, adult dwarf male tinkerer, copper braided beard, brass goggles on forehead, ochre leather armor, stout boots, short sling and round mechanical buckler. Match the reference painted anime chibi sprite style, crisp small-size details, two-to-three heads tall, full body, right-facing three-quarter view. Genuine TRANSPARENT background. EXACTLY 8 columns by 6 rows, 48 equally sized SQUARE cells on a 4:3 canvas, ideally 1536x1152. No gutters, labels, lines, text or UI. Consistent character identity, face, outfit, size and baseline in every cell. Each sprite and weapon fully contained within its cell with a clear 10% safety margin. Every one of all 48 cells must include the ENTIRE CHARACTER BODY; never show only a projectile, never omit a frame. Ordered rows: row1 eight subtle breathing/idle frames; row2 eight walking frames with distinct alternating leg positions; row3 eight basic attack frames, wind-up, weapon release, follow-through and return; row4 eight hit reaction frames, stagger and recovery, body never disappears; row5 eight defeat frames, upright through kneeling to lying sideways, last four hold a clear fallen body; row6 eight skill frames, windup then amber mechanical ward then return. Keep effect inside its cell and character visible. No duplicated grid rows. Use orik's own weapon and palette, not Kael's sword or blue outfit.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-4c0300ff-9874-49d3-8374-d34e5992c8a8.png"
+    },
+    {
+      "id": "vesper",
+      "file": "assets/expansion/vesper-motion-v2.png",
+      "columns": 8,
+      "rows": 6,
+      "rowsMeaning": [
+        "idle",
+        "walk",
+        "attack",
+        "hit",
+        "defeat",
+        "skill"
+      ],
+      "prompt": "Production fantasy RPG ANIMATION SPRITE SHEET for one NEW playable party character. Reference image 1: STYLE AND GRID reference, existing Kael animation. Reference image 2: IDENTITY reference, ten portraits; use ONLY vesper's matching portrait. Vesper, adult elf female duelist, black bob with violet streak, pointed ears, violet leather armor and short cape, twin slim silver daggers. Match the reference painted anime chibi sprite style, crisp small-size details, two-to-three heads tall, full body, right-facing three-quarter view. Genuine TRANSPARENT background. EXACTLY 8 columns by 6 rows, 48 equally sized SQUARE cells on a 4:3 canvas, ideally 1536x1152. No gutters, labels, lines, text or UI. Consistent character identity, face, outfit, size and baseline in every cell. Each sprite and weapon fully contained within its cell with a clear 10% safety margin. Every one of all 48 cells must include the ENTIRE CHARACTER BODY; never show only a projectile, never omit a frame. Ordered rows: row1 eight subtle breathing/idle frames; row2 eight walking frames with distinct alternating leg positions; row3 eight basic attack frames, wind-up, weapon release, follow-through and return; row4 eight hit reaction frames, stagger and recovery, body never disappears; row5 eight defeat frames, upright through kneeling to lying sideways, last four hold a clear fallen body; row6 eight skill frames, windup then violet ghostlike echo slash then return. Keep effect inside its cell and character visible. No duplicated grid rows. Use vesper's own weapon and palette, not Kael's sword or blue outfit.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-a980ba59-7519-403f-a25b-9b1e97549be0.png",
+      "repair": {
+        "prompt": "Edit this existing fantasy RPG sprite animation sheet. Preserve the exact 1448x1086 dimensions, transparent background, 8 columns by 6 rows of square cells, all character identities, colors, rendering style, alignment, and ALL 47 existing nonblank cells. Fix ONLY the almost EMPTY cell in ROW FOUR, COLUMN FOUR (one-based), at x543..724, y543..724. That cell must contain a complete full-body hit-stagger sprite of the SAME vesper character visible in its neighboring third and fifth cells, with the same outfit, face, hair and weapon, kneeling or leaning in recoil before recovering. Keep that new pose fully inside this cell. NO additional empty cell, no opaque background, no text, no borders, no grid lines, no changes to other cells. This one repaired hit-reaction frame must contain an entire character body, not only effects.",
+        "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-d375d898-4199-4177-91b4-450ec66c5f0e.png"
+      }
+    },
+    {
+      "id": "haldor",
+      "file": "assets/expansion/haldor-motion-v1.png",
+      "columns": 8,
+      "rows": 6,
+      "rowsMeaning": [
+        "idle",
+        "walk",
+        "attack",
+        "hit",
+        "defeat",
+        "skill"
+      ],
+      "prompt": "Production fantasy RPG ANIMATION SPRITE SHEET for one NEW playable party character. Reference image 1: STYLE AND GRID reference, existing Kael animation. Reference image 2: IDENTITY reference, ten portraits; use ONLY haldor's matching portrait. Haldor, adult barbarian male frost hunter, pale blond braid and short beard, blue-gray fur cloak, steel armor, broad icy battleaxe. Match the reference painted anime chibi sprite style, crisp small-size details, two-to-three heads tall, full body, right-facing three-quarter view. Genuine TRANSPARENT background. EXACTLY 8 columns by 6 rows, 48 equally sized SQUARE cells on a 4:3 canvas, ideally 1536x1152. No gutters, labels, lines, text or UI. Consistent character identity, face, outfit, size and baseline in every cell. Each sprite and weapon fully contained within its cell with a clear 10% safety margin. Every one of all 48 cells must include the ENTIRE CHARACTER BODY; never show only a projectile, never omit a frame. Ordered rows: row1 eight subtle breathing/idle frames; row2 eight walking frames with distinct alternating leg positions; row3 eight basic attack frames, wind-up, weapon release, follow-through and return; row4 eight hit reaction frames, stagger and recovery, body never disappears; row5 eight defeat frames, upright through kneeling to lying sideways, last four hold a clear fallen body; row6 eight skill frames, windup then pale blue frosty axe arc then return. Keep effect inside its cell and character visible. No duplicated grid rows. Use haldor's own weapon and palette, not Kael's sword or blue outfit.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-e3a1afa5-a99c-45a5-9a5c-7a5c3b648507.png"
+    },
+    {
+      "id": "ilyra",
+      "file": "assets/expansion/ilyra-motion-v1.png",
+      "columns": 8,
+      "rows": 6,
+      "rowsMeaning": [
+        "idle",
+        "walk",
+        "attack",
+        "hit",
+        "defeat",
+        "skill"
+      ],
+      "prompt": "Production fantasy RPG ANIMATION SPRITE SHEET for one NEW playable party character. Reference image 1: STYLE AND GRID reference, existing Kael animation. Reference image 2: IDENTITY reference, ten portraits; use ONLY ilyra's matching portrait. Ilyra, adult dark brown-skinned elf female root oracle, long moss-green hair, pointed ears, modest ivory and forest robes, wooden antler hairpin, thornwood staff. Match the reference painted anime chibi sprite style, crisp small-size details, two-to-three heads tall, full body, right-facing three-quarter view. Genuine TRANSPARENT background. EXACTLY 8 columns by 6 rows, 48 equally sized SQUARE cells on a 4:3 canvas, ideally 1536x1152. No gutters, labels, lines, text or UI. Consistent character identity, face, outfit, size and baseline in every cell. Each sprite and weapon fully contained within its cell with a clear 10% safety margin. Every one of all 48 cells must include the ENTIRE CHARACTER BODY; never show only a projectile, never omit a frame. Ordered rows: row1 eight subtle breathing/idle frames; row2 eight walking frames with distinct alternating leg positions; row3 eight basic attack frames, wind-up, weapon release, follow-through and return; row4 eight hit reaction frames, stagger and recovery, body never disappears; row5 eight defeat frames, upright through kneeling to lying sideways, last four hold a clear fallen body; row6 eight skill frames, windup then green curling roots and healing leaves then return. Keep effect inside its cell and character visible. No duplicated grid rows. Use ilyra's own weapon and palette, not Kael's sword or blue outfit.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-d2461e5c-56f1-46d8-a85b-e103ade10a67.png"
+    },
+    {
+      "id": "cassian",
+      "file": "assets/expansion/cassian-motion-v2.png",
+      "columns": 8,
+      "rows": 6,
+      "rowsMeaning": [
+        "idle",
+        "walk",
+        "attack",
+        "hit",
+        "defeat",
+        "skill"
+      ],
+      "prompt": "Production fantasy RPG ANIMATION SPRITE SHEET for one NEW playable party character. Reference image 1: STYLE AND GRID reference, existing Kael animation. Reference image 2: IDENTITY reference, ten portraits; use ONLY cassian's matching portrait. Cassian, adult warm brown-skinned human male bannerlord, short dark swept hair, white and gold plate armor, crimson cape, sword and heraldic shield. Match the reference painted anime chibi sprite style, crisp small-size details, two-to-three heads tall, full body, right-facing three-quarter view. Genuine TRANSPARENT background. EXACTLY 8 columns by 6 rows, 48 equally sized SQUARE cells on a 4:3 canvas, ideally 1536x1152. No gutters, labels, lines, text or UI. Consistent character identity, face, outfit, size and baseline in every cell. Each sprite and weapon fully contained within its cell with a clear 10% safety margin. Every one of all 48 cells must include the ENTIRE CHARACTER BODY; never show only a projectile, never omit a frame. Ordered rows: row1 eight subtle breathing/idle frames; row2 eight walking frames with distinct alternating leg positions; row3 eight basic attack frames, wind-up, weapon release, follow-through and return; row4 eight hit reaction frames, stagger and recovery, body never disappears; row5 eight defeat frames, upright through kneeling to lying sideways, last four hold a clear fallen body; row6 eight skill frames, windup then golden shield barrier then return. Keep effect inside its cell and character visible. No duplicated grid rows. Use cassian's own weapon and palette, not Kael's sword or blue outfit.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-7f3e0507-caa8-4706-ade9-5426521f028f.png",
+      "repair": {
+        "prompt": "Edit this existing fantasy RPG sprite animation sheet. Preserve the exact 1448x1086 dimensions, transparent background, 8 columns by 6 rows of square cells, all character identities, colors, rendering style, alignment, and ALL 47 existing nonblank cells. Fix ONLY the almost EMPTY cell in ROW FOUR, COLUMN FOUR (one-based), at x543..724, y543..724. That cell must contain a complete full-body hit-stagger sprite of the SAME cassian character visible in its neighboring third and fifth cells, with the same outfit, face, hair and weapon, kneeling or leaning in recoil before recovering. Keep that new pose fully inside this cell. NO additional empty cell, no opaque background, no text, no borders, no grid lines, no changes to other cells. This one repaired hit-reaction frame must contain an entire character body, not only effects.",
+        "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-61b4a5bf-1db9-4af3-b73e-8068fe66a82f.png"
+      }
+    },
+    {
+      "id": "dagna",
+      "file": "assets/expansion/dagna-motion-v2.png",
+      "columns": 8,
+      "rows": 6,
+      "rowsMeaning": [
+        "idle",
+        "walk",
+        "attack",
+        "hit",
+        "defeat",
+        "skill"
+      ],
+      "prompt": "Production fantasy RPG ANIMATION SPRITE SHEET for one NEW playable party character. Reference image 1: STYLE AND GRID reference, existing Kael animation. Reference image 2: IDENTITY reference, ten portraits; use ONLY dagna's matching portrait. Dagna, mature dwarf female smith, red hair braided with gray streak, no beard, bronze goggles, dark iron armor, ember orange scarf, heavy square smith hammer. Match the reference painted anime chibi sprite style, crisp small-size details, two-to-three heads tall, full body, right-facing three-quarter view. Genuine TRANSPARENT background. EXACTLY 8 columns by 6 rows, 48 equally sized SQUARE cells on a 4:3 canvas, ideally 1536x1152. No gutters, labels, lines, text or UI. Consistent character identity, face, outfit, size and baseline in every cell. Each sprite and weapon fully contained within its cell with a clear 10% safety margin. Every one of all 48 cells must include the ENTIRE CHARACTER BODY; never show only a projectile, never omit a frame. Ordered rows: row1 eight subtle breathing/idle frames; row2 eight walking frames with distinct alternating leg positions; row3 eight basic attack frames, wind-up, weapon release, follow-through and return; row4 eight hit reaction frames, stagger and recovery, body never disappears; row5 eight defeat frames, upright through kneeling to lying sideways, last four hold a clear fallen body; row6 eight skill frames, windup then orange fire sparks around the hammer then return. Keep effect inside its cell and character visible. No duplicated grid rows. Use dagna's own weapon and palette, not Kael's sword or blue outfit.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-902e7fb2-693c-4ff1-8cc1-0d7f4d64a801.png",
+      "repair": {
+        "prompt": "Edit this existing fantasy RPG sprite animation sheet. Preserve the exact 1448x1086 dimensions, transparent background, 8 columns by 6 rows of square cells, all character identities, colors, rendering style, alignment, and ALL 47 existing nonblank cells. Fix ONLY the almost EMPTY cell in ROW FOUR, COLUMN FOUR (one-based), at x543..724, y543..724. That cell must contain a complete full-body hit-stagger sprite of the SAME dagna character visible in its neighboring third and fifth cells, with the same outfit, face, hair and weapon, kneeling or leaning in recoil before recovering. Keep that new pose fully inside this cell. NO additional empty cell, no opaque background, no text, no borders, no grid lines, no changes to other cells. This one repaired hit-reaction frame must contain an entire character body, not only effects.",
+        "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-ef9f37c2-0968-4126-8efb-3599a757793b.png"
+      }
+    },
+    {
+      "id": "zephyr",
+      "file": "assets/expansion/zephyr-motion-v1.png",
+      "columns": 8,
+      "rows": 6,
+      "rowsMeaning": [
+        "idle",
+        "walk",
+        "attack",
+        "hit",
+        "defeat",
+        "skill"
+      ],
+      "prompt": "Production fantasy RPG ANIMATION SPRITE SHEET for one NEW playable party character. Reference image 1: STYLE AND GRID reference, existing Kael animation. Reference image 2: IDENTITY reference, ten portraits; use ONLY zephyr's matching portrait. Zephyr, adult elf male archer, pointed ears, windswept silver hair, cobalt coat and white scarf, curved cobalt longbow. Match the reference painted anime chibi sprite style, crisp small-size details, two-to-three heads tall, full body, right-facing three-quarter view. Genuine TRANSPARENT background. EXACTLY 8 columns by 6 rows, 48 equally sized SQUARE cells on a 4:3 canvas, ideally 1536x1152. No gutters, labels, lines, text or UI. Consistent character identity, face, outfit, size and baseline in every cell. Each sprite and weapon fully contained within its cell with a clear 10% safety margin. Every one of all 48 cells must include the ENTIRE CHARACTER BODY; never show only a projectile, never omit a frame. Ordered rows: row1 eight subtle breathing/idle frames; row2 eight walking frames with distinct alternating leg positions; row3 eight basic attack frames, wind-up, weapon release, follow-through and return; row4 eight hit reaction frames, stagger and recovery, body never disappears; row5 eight defeat frames, upright through kneeling to lying sideways, last four hold a clear fallen body; row6 eight skill frames, windup then pale blue storm arrow streak then return. Keep effect inside its cell and character visible. No duplicated grid rows. Use zephyr's own weapon and palette, not Kael's sword or blue outfit.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-527082e9-a359-41fb-92ad-e324b162bd00.png"
+    },
+    {
+      "id": "morrigan",
+      "file": "assets/expansion/morrigan-motion-v1.png",
+      "columns": 8,
+      "rows": 6,
+      "rowsMeaning": [
+        "idle",
+        "walk",
+        "attack",
+        "hit",
+        "defeat",
+        "skill"
+      ],
+      "prompt": "Production fantasy RPG ANIMATION SPRITE SHEET for one NEW playable party character. Reference image 1: STYLE AND GRID reference, existing Kael animation. Reference image 2: IDENTITY reference, ten portraits; use ONLY morrigan's matching portrait. Morrigan, adult human female archmage, long black-silver hair, violet eyes, modest black and gold high-neck star robes, violet crystal staff and floating book. Match the reference painted anime chibi sprite style, crisp small-size details, two-to-three heads tall, full body, right-facing three-quarter view. Genuine TRANSPARENT background. EXACTLY 8 columns by 6 rows, 48 equally sized SQUARE cells on a 4:3 canvas, ideally 1536x1152. No gutters, labels, lines, text or UI. Consistent character identity, face, outfit, size and baseline in every cell. Each sprite and weapon fully contained within its cell with a clear 10% safety margin. Every one of all 48 cells must include the ENTIRE CHARACTER BODY; never show only a projectile, never omit a frame. Ordered rows: row1 eight subtle breathing/idle frames; row2 eight walking frames with distinct alternating leg positions; row3 eight basic attack frames, wind-up, weapon release, follow-through and return; row4 eight hit reaction frames, stagger and recovery, body never disappears; row5 eight defeat frames, upright through kneeling to lying sideways, last four hold a clear fallen body; row6 eight skill frames, windup then violet arcane spell sigil then return. Keep effect inside its cell and character visible. No duplicated grid rows. Use morrigan's own weapon and palette, not Kael's sword or blue outfit.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-3888ba46-85f2-44cf-81ce-298e9cc1f42a.png"
+    },
+    {
+      "id": "astra",
+      "file": "assets/expansion/astra-motion-v1.png",
+      "columns": 8,
+      "rows": 6,
+      "rowsMeaning": [
+        "idle",
+        "walk",
+        "attack",
+        "hit",
+        "defeat",
+        "skill"
+      ],
+      "prompt": "Production fantasy RPG ANIMATION SPRITE SHEET for one NEW playable party character. Reference image 1: STYLE AND GRID reference, existing Kael animation. Reference image 2: IDENTITY reference, ten portraits; use ONLY astra's matching portrait. Astra, adult dark brown-skinned barbarian female champion, pale gold braids, ornate white and gold full plate, sapphire cape, enormous gold two-handed sword. Match the reference painted anime chibi sprite style, crisp small-size details, two-to-three heads tall, full body, right-facing three-quarter view. Genuine TRANSPARENT background. EXACTLY 8 columns by 6 rows, 48 equally sized SQUARE cells on a 4:3 canvas, ideally 1536x1152. No gutters, labels, lines, text or UI. Consistent character identity, face, outfit, size and baseline in every cell. Each sprite and weapon fully contained within its cell with a clear 10% safety margin. Every one of all 48 cells must include the ENTIRE CHARACTER BODY; never show only a projectile, never omit a frame. Ordered rows: row1 eight subtle breathing/idle frames; row2 eight walking frames with distinct alternating leg positions; row3 eight basic attack frames, wind-up, weapon release, follow-through and return; row4 eight hit reaction frames, stagger and recovery, body never disappears; row5 eight defeat frames, upright through kneeling to lying sideways, last four hold a clear fallen body; row6 eight skill frames, windup then bright gold celestial sword crescent then return. Keep effect inside its cell and character visible. No duplicated grid rows. Use astra's own weapon and palette, not Kael's sword or blue outfit.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-406528c5-715d-40fc-9f28-93e9ae2f16b1.png"
+    }
+  ],
+  "items": [
+    {
+      "id": "copper",
+      "file": "assets/expansion/items-copper-v1.png",
+      "columns": 5,
+      "rows": 6,
+      "prompt": "Production fantasy RPG EQUIPMENT ICON ATLAS. Reference image is STYLE ONLY: match the existing crisp painterly pixel-detailed inventory icons, isolated objects, readable silhouettes and restrained highlights. Make a new sheet with EXACTLY FIVE columns and SIX rows: 30 equally sized SQUARE cells, 5:6 canvas ideally 1280x1536. Genuine transparent background, NO grid lines, gutters, text, letters, numbers, UI, frames or people. All 30 objects use cheap weathered copper, oak, patched leather, wool, muted teal fabric, tiny brass fittings, no magic glow. One complete centered object in each cell (paired footwear or daggers is one item), clear 14% transparent padding to each cell edge so nothing overlaps adjacent items. Strict reading order left-to-right top-to-bottom: Row 1: longsword; paired daggers; battleaxe; square warhammer; long pike. Row 2: longbow; crossbow; crystal-tipped spellstaff; short wand; closed decorated grimoire. Row 3: full plate torso; chainmail torso; leather armor torso; long mage robes; hoodless shoulder mantle. Row 4: scout vest; greathelm; cloth mage hood; jeweled circlet; war mask. Row 5: pair of greaves; pair of agile trail boots; pair of mage sandals; pair of heavy sabatons; signet ring. Row 6: life amulet on necklace; mana orb; round buckler; shield-shaped ward talisman; compass. Keep inventory shapes recognizable even at 40px. No extra objects. Distinct cells, no merged items.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-831befc6-fb4e-465e-b948-8ce5ef022b79.png"
+    },
+    {
+      "id": "steel",
+      "file": "assets/expansion/items-steel-v1.png",
+      "columns": 5,
+      "rows": 6,
+      "prompt": "Production fantasy RPG EQUIPMENT ICON ATLAS. Reference image is STYLE ONLY: match the existing crisp painterly pixel-detailed inventory icons, isolated objects, readable silhouettes and restrained highlights. Make a new sheet with EXACTLY FIVE columns and SIX rows: 30 equally sized SQUARE cells, 5:6 canvas ideally 1280x1536. Genuine transparent background, NO grid lines, gutters, text, letters, numbers, UI, frames or people. All 30 objects use well-crafted silver steel, midnight blue leather, warm brass accents, practical adventurer equipment, restrained blue gemstone accents. One complete centered object in each cell (paired footwear or daggers is one item), clear 14% transparent padding to each cell edge so nothing overlaps adjacent items. Strict reading order left-to-right top-to-bottom: Row 1: longsword; paired daggers; battleaxe; square warhammer; long pike. Row 2: longbow; crossbow; crystal-tipped spellstaff; short wand; closed decorated grimoire. Row 3: full plate torso; chainmail torso; leather armor torso; long mage robes; hoodless shoulder mantle. Row 4: scout vest; greathelm; cloth mage hood; jeweled circlet; war mask. Row 5: pair of greaves; pair of agile trail boots; pair of mage sandals; pair of heavy sabatons; signet ring. Row 6: life amulet on necklace; mana orb; round buckler; shield-shaped ward talisman; compass. Keep inventory shapes recognizable even at 40px. No extra objects. Distinct cells, no merged items.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-dff635f7-0cc5-45f4-8686-95a258d44690.png"
+    },
+    {
+      "id": "moon",
+      "file": "assets/expansion/items-moon-v1.png",
+      "columns": 5,
+      "rows": 6,
+      "prompt": "Production fantasy RPG EQUIPMENT ICON ATLAS. Reference image is STYLE ONLY: match the existing crisp painterly pixel-detailed inventory icons, isolated objects, readable silhouettes and restrained highlights. Make a new sheet with EXACTLY FIVE columns and SIX rows: 30 equally sized SQUARE cells, 5:6 canvas ideally 1280x1536. Genuine transparent background, NO grid lines, gutters, text, letters, numbers, UI, frames or people. All 30 objects use enchanted silver, deep violet fabric, pale blue moonstones, delicate crescent filigree, subtle blue-violet magical highlights. One complete centered object in each cell (paired footwear or daggers is one item), clear 14% transparent padding to each cell edge so nothing overlaps adjacent items. Strict reading order left-to-right top-to-bottom: Row 1: longsword; paired daggers; battleaxe; square warhammer; long pike. Row 2: longbow; crossbow; crystal-tipped spellstaff; short wand; closed decorated grimoire. Row 3: full plate torso; chainmail torso; leather armor torso; long mage robes; hoodless shoulder mantle. Row 4: scout vest; greathelm; cloth mage hood; jeweled circlet; war mask. Row 5: pair of greaves; pair of agile trail boots; pair of mage sandals; pair of heavy sabatons; signet ring. Row 6: life amulet on necklace; mana orb; round buckler; shield-shaped ward talisman; compass. Keep inventory shapes recognizable even at 40px. No extra objects. Distinct cells, no merged items.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-5dbaaf73-c441-43fa-be32-19e74f3cba29.png"
+    },
+    {
+      "id": "dragon",
+      "file": "assets/expansion/items-dragon-v1.png",
+      "columns": 5,
+      "rows": 6,
+      "prompt": "Production fantasy RPG EQUIPMENT ICON ATLAS. Reference image is STYLE ONLY: match the existing crisp painterly pixel-detailed inventory icons, isolated objects, readable silhouettes and restrained highlights. Make a new sheet with EXACTLY FIVE columns and SIX rows: 30 equally sized SQUARE cells, 5:6 canvas ideally 1280x1536. Genuine transparent background, NO grid lines, gutters, text, letters, numbers, UI, frames or people. All 30 objects use dragon bone and dark red scales, black iron, amber gems, restrained ember-orange accents, rugged powerful silhouettes. One complete centered object in each cell (paired footwear or daggers is one item), clear 14% transparent padding to each cell edge so nothing overlaps adjacent items. Strict reading order left-to-right top-to-bottom: Row 1: longsword; paired daggers; battleaxe; square warhammer; long pike. Row 2: longbow; crossbow; crystal-tipped spellstaff; short wand; closed decorated grimoire. Row 3: full plate torso; chainmail torso; leather armor torso; long mage robes; hoodless shoulder mantle. Row 4: scout vest; greathelm; cloth mage hood; jeweled circlet; war mask. Row 5: pair of greaves; pair of agile trail boots; pair of mage sandals; pair of heavy sabatons; signet ring. Row 6: life amulet on necklace; mana orb; round buckler; shield-shaped ward talisman; compass. Keep inventory shapes recognizable even at 40px. No extra objects. Distinct cells, no merged items.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-73c27d56-a7e7-4b5c-b98c-3543bdd9b135.png"
+    },
+    {
+      "id": "sovereign",
+      "file": "assets/expansion/items-sovereign-v1.png",
+      "columns": 5,
+      "rows": 6,
+      "prompt": "Production fantasy RPG EQUIPMENT ICON ATLAS. Reference image is STYLE ONLY: match the existing crisp painterly pixel-detailed inventory icons, isolated objects, readable silhouettes and restrained highlights. Make a new sheet with EXACTLY FIVE columns and SIX rows: 30 equally sized SQUARE cells, 5:6 canvas ideally 1280x1536. Genuine transparent background, NO grid lines, gutters, text, letters, numbers, UI, frames or people. All 30 objects use legendary royal white steel and rich gold, crimson velvet, large sapphire and ruby gems, ornate regal engraving. One complete centered object in each cell (paired footwear or daggers is one item), clear 14% transparent padding to each cell edge so nothing overlaps adjacent items. Strict reading order left-to-right top-to-bottom: Row 1: longsword; paired daggers; battleaxe; square warhammer; long pike. Row 2: longbow; crossbow; crystal-tipped spellstaff; short wand; closed decorated grimoire. Row 3: full plate torso; chainmail torso; leather armor torso; long mage robes; hoodless shoulder mantle. Row 4: scout vest; greathelm; cloth mage hood; jeweled circlet; war mask. Row 5: pair of greaves; pair of agile trail boots; pair of mage sandals; pair of heavy sabatons; signet ring. Row 6: life amulet on necklace; mana orb; round buckler; shield-shaped ward talisman; compass. Keep inventory shapes recognizable even at 40px. No extra objects. Distinct cells, no merged items.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-d818ba70-f32d-4efb-a018-24a3ce178064.png"
+    },
+    {
+      "id": "starfall",
+      "file": "assets/expansion/items-starfall-v1.png",
+      "columns": 5,
+      "rows": 6,
+      "prompt": "Production fantasy RPG EQUIPMENT ICON ATLAS. Reference image is STYLE ONLY: match the existing crisp painterly pixel-detailed inventory icons, isolated objects, readable silhouettes and restrained highlights. Make a new sheet with EXACTLY FIVE columns and SIX rows: 30 equally sized SQUARE cells, 5:6 canvas ideally 1280x1536. Genuine transparent background, NO grid lines, gutters, text, letters, numbers, UI, frames or people. All 30 objects use mythic celestial white-gold metal, deep sapphire and indigo, bright star crystals, restrained luminous auroras, intricate extraordinary silhouettes. One complete centered object in each cell (paired footwear or daggers is one item), clear 14% transparent padding to each cell edge so nothing overlaps adjacent items. Strict reading order left-to-right top-to-bottom: Row 1: longsword; paired daggers; battleaxe; square warhammer; long pike. Row 2: longbow; crossbow; crystal-tipped spellstaff; short wand; closed decorated grimoire. Row 3: full plate torso; chainmail torso; leather armor torso; long mage robes; hoodless shoulder mantle. Row 4: scout vest; greathelm; cloth mage hood; jeweled circlet; war mask. Row 5: pair of greaves; pair of agile trail boots; pair of mage sandals; pair of heavy sabatons; signet ring. Row 6: life amulet on necklace; mana orb; round buckler; shield-shaped ward talisman; compass. Keep inventory shapes recognizable even at 40px. No extra objects. Distinct cells, no merged items.",
+      "source": "C:\\Users\\yyaco\\.codex\\generated_images\\01a14485-0ae7-7822-90af-a083d2ca64db\\exec-ead76835-1334-45d4-8d6c-292bd1619733.png"
+    }
+  ]
+}

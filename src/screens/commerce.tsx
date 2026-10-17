@@ -1,9 +1,11 @@
 import { FactionOpportunities } from "@/components/faction-opportunities";
 import { RecruitReplyDialog } from "@/components/recruit-reply";
+import { CharacterStatValue } from "@/components/character-stat-value";
+import { recruitLevelRefusal } from "@/game/recruitment";
 import { gearFloor } from "@/game/build-equipment";
 import { factionAccess } from "@/game/faction-opportunities";
-import React, { useState } from "react";
-import { View, Pressable, TextInput } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Pressable, TextInput, type ScrollView } from "react-native";
 import { Image } from "expo-image";
 import { SceneImage } from "@/components/scene-motion";
 import { router, useLocalSearchParams } from "expo-router";
@@ -46,9 +48,13 @@ import {
 } from "@/components/native-chrome";
 
 export function TavernScreen() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch, saving } = useGame();
   const [tab, setTab] = useState("Recruit");
   const [selected, setSelected] = useState<string | null>(null);
+  const conversationScroll = useRef<ScrollView>(null);
+  useEffect(() => {
+    conversationScroll.current?.scrollTo({ y: 0, animated: false });
+  }, [selected]);
   const [offer, setOffer] = useState("14");
   const [roster, setRoster] = useState("Available");
   const recruit = RECRUITS.find((r) => r.id === selected);
@@ -63,6 +69,7 @@ export function TavernScreen() {
       <Frame
         active="Home"
         title="The Wandering Stag"
+        scrollRef={conversationScroll}
         subtitle="Good people. Greater stories."
       >
         <TabStrip
@@ -91,6 +98,9 @@ export function TavernScreen() {
                     <Atlas index={recruitBuild!.portrait} size={64} />
                     <View style={{ flex: 1 }}>
                       <Copy title>{recruit.name}</Copy>
+                      <Copy muted style={{ fontSize: 12 }}>
+                        {recruitBuild!.job} · Lv. {recruitBuild!.level}
+                      </Copy>
                       <Copy style={{ fontSize: 12, color: t.color.gold }}>
                         Trust {rapport?.trust || 0}/3 · Asking{" "}
                         {askingShare(rapport?.trust || 0)}% of gold
@@ -134,16 +144,34 @@ export function TavernScreen() {
                   {rapport?.inspected && (
                     <Copy style={{ fontSize: 12, color: t.color.blue }}>
                       Skills: {recruitBuild!.skills.join(", ")} · MP{" "}
-                      {recruitBuild!.maxMp} · SPD {recruitBuild!.speed}
+                      <CharacterStatValue
+                        character={recruitBuild!}
+                        stat="maxMp"
+                        style={{ fontSize: 12 }}
+                      />
+                      {" · SPD "}
+                      <CharacterStatValue
+                        character={recruitBuild!}
+                        stat="speed"
+                        style={{ fontSize: 12 }}
+                      />
                     </Copy>
                   )}
                   {rapport?.inspected && (
-                    <View style={{ flexDirection: "row", gap: 14 }}>
-                      {[
-                        ["heart", recruitBuild!.maxHp],
-                        ["sword", recruitBuild!.atk],
-                        ["shield", recruitBuild!.def],
-                      ].map(([icon, n]) => (
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        flexWrap: "wrap",
+                        gap: 14,
+                      }}
+                    >
+                      {(
+                        [
+                          ["heart", "maxHp"],
+                          ["sword", "atk"],
+                          ["shield", "def"],
+                        ] as const
+                      ).map(([icon, stat]) => (
                         <View
                           key={String(icon)}
                           style={{
@@ -153,8 +181,30 @@ export function TavernScreen() {
                           }}
                         >
                           <Icon name={String(icon)} size={17} />
-                          <Copy style={{ fontSize: 12 }}>{n}</Copy>
+                          <CharacterStatValue
+                            character={recruitBuild!}
+                            stat={stat}
+                            style={{ fontSize: 12 }}
+                          />
                         </View>
+                      ))}
+                    </View>
+                  )}
+                  {rapport?.inspected && (
+                    <View
+                      accessible
+                      accessibilityLabel={`Equipped: ${recruitBuild!.equipment.map((id) => ITEMS.find((i) => i.id === id)?.name).join(", ")}`}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
+                      <Copy muted style={{ fontSize: 12 }}>
+                        Equipped
+                      </Copy>
+                      {recruitBuild!.equipment.map((id) => (
+                        <ItemGlyph key={id} id={id} size={27} />
                       ))}
                     </View>
                   )}
@@ -248,6 +298,7 @@ export function TavernScreen() {
                       small
                       tone="green"
                       disabled={
+                        saving ||
                         !Number(offer) ||
                         Number(offer) > 50 ||
                         state.party.length >= 4
@@ -387,9 +438,18 @@ export function TavernScreen() {
                         }
                         small
                         tone="green"
-                        disabled={!unlocked || !!own || state.party.length >= 4}
+                        disabled={
+                          saving ||
+                          !unlocked ||
+                          !!own ||
+                          state.party.length >= 4
+                        }
                         onPress={() => {
                           if (state.reserve.some((c) => c.id === r.id)) {
+                            dispatch({ type: "RECRUIT", id: r.id });
+                            return;
+                          }
+                          if (recruitLevelRefusal(state, r)) {
                             dispatch({ type: "RECRUIT", id: r.id });
                             return;
                           }
@@ -450,6 +510,13 @@ export function TavernScreen() {
   );
 }
 
+const SHOP_TABS: Record<string, string> = {
+  Supplies: "Supplies",
+  Equipment: "Gear",
+  Consumables: "Magic",
+  "Rare Goods": "Relics",
+  Sell: "Sell",
+};
 export function ShopScreen() {
   const { state, dispatch } = useGame();
   const params = useLocalSearchParams<{ vendor?: string; mode?: string }>();
@@ -469,6 +536,13 @@ export function ShopScreen() {
   }));
   const [cart, setCart] = useState<Record<string, number>>({});
   const [buyer, setBuyer] = useState<Vendor>("guild");
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("Price ↑");
+  const [page, setPage] = useState(0);
+  const stockScroll = useRef<ScrollView>(null);
+  useEffect(() => {
+    stockScroll.current?.scrollTo({ y: 0, animated: false });
+  }, [page]);
   const vendor: Vendor =
     category === "Consumables"
       ? "alchemist"
@@ -491,6 +565,22 @@ export function ShopScreen() {
     (n, i) => n + (cart[i.id] || 0) * buyPrice(i, state.day, state),
     0,
   );
+  const filtered = goods
+    .filter((item) =>
+      `${item.name} ${item.kind} ${item.description}`
+        .toLowerCase()
+        .includes(search.trim().toLowerCase()),
+    )
+    .sort((a, b) =>
+      sort === "Name"
+        ? a.name.localeCompare(b.name)
+        : sort === "Price ↓"
+          ? b.price - a.price
+          : a.price - b.price,
+    );
+  const pageCount = Math.max(1, Math.ceil(filtered.length / 12));
+  const shownPage = Math.min(page, pageCount - 1);
+  const visibleGoods = filtered.slice(shownPage * 12, (shownPage + 1) * 12);
   const quantity = (id: string, n: number) =>
     setCart((c) => ({ ...c, [id]: Math.max(0, Math.min(10, n)) }));
   return (
@@ -498,6 +588,7 @@ export function ShopScreen() {
       <Frame
         active="Home"
         title="Stormhold"
+        scrollRef={stockScroll}
         portrait={state.party[0]?.portrait}
         subtitle={
           "Day " +
@@ -512,11 +603,55 @@ export function ShopScreen() {
           accessibilityLabel="Provisioner’s Shop. Good gear makes long roads shorter. Everything you need for a safer journey is right here."
         />
         <TabStrip
-          tabs={["Supplies", "Equipment", "Consumables", "Rare Goods", "Sell"]}
-          active={category}
-          onChange={setCategory}
+          tabs={Object.values(SHOP_TABS)}
+          active={SHOP_TABS[category]}
+          compact
+          onChange={(next) => {
+            setCategory(
+              Object.keys(SHOP_TABS).find((key) => SHOP_TABS[key] === next)!,
+            );
+            setPage(0);
+          }}
         />
         <View style={{ padding: 10, gap: 7 }}>
+          <TextInput
+            accessibilityLabel="Search shop items"
+            placeholder="Search gear, stats or item names"
+            placeholderTextColor={t.color.muted}
+            value={search}
+            onChangeText={(value) => {
+              setSearch(value);
+              setPage(0);
+            }}
+            style={{
+              minHeight: 44,
+              borderWidth: 1,
+              borderColor: t.color.goldDim,
+              borderRadius: 5,
+              color: t.color.text,
+              paddingHorizontal: 12,
+              fontFamily: t.font.body,
+              fontSize: 15,
+            }}
+          />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Copy muted style={{ fontSize: 12, flex: 1 }}>
+              {filtered.length} {filtered.length === 1 ? "item" : "items"}
+            </Copy>
+            {["Price ↑", "Price ↓", "Name"].map((option) => (
+              <Button
+                key={option}
+                label={option}
+                small
+                compact
+                tone={sort === option ? "gold" : "dark"}
+                onPress={() => {
+                  setSort(option);
+                  setPage(0);
+                }}
+              />
+            ))}
+          </View>
           {sell && (
             <TabStrip
               tabs={["Guild", "Provisioner", "Alchemist", "Emporium"]}
@@ -553,7 +688,7 @@ export function ShopScreen() {
               }
             />
           )}
-          {goods.map((item) => {
+          {visibleGoods.map((item) => {
             const qty = state.inventory[item.id] || 0;
             const owned =
               item.effect === "food"
@@ -594,7 +729,7 @@ export function ShopScreen() {
                     <Copy
                       style={{ fontSize: 11, lineHeight: 15, color: "#725335" }}
                     >
-                      Owned {owned} · {price}g
+                      Owned {owned} · {price.toLocaleString()}g
                       {!sell &&
                       (factionAccess(state, item) ||
                         state.bestFloor < gearFloor(item))
@@ -673,7 +808,7 @@ export function ShopScreen() {
                     label={
                       sell
                         ? "Sell one · " + price + "g"
-                        : "Buy · " + price + "g"
+                        : "Buy · " + price.toLocaleString() + "g"
                     }
                     small
                     compact
@@ -728,10 +863,46 @@ export function ShopScreen() {
               </Surface>
             );
           })}
-          {!goods.length && (
+          {pageCount > 1 && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+                paddingVertical: 10,
+              }}
+            >
+              <Button
+                label="Previous"
+                small
+                tone="dark"
+                style={{ flex: 1 }}
+                disabled={shownPage === 0}
+                onPress={() => setPage(shownPage - 1)}
+              />
+              <Copy muted>
+                {shownPage + 1}/{pageCount}
+              </Copy>
+              <Button
+                label="Next"
+                small
+                tone="blue"
+                style={{ flex: 1 }}
+                disabled={shownPage >= pageCount - 1}
+                onPress={() => setPage(shownPage + 1)}
+              />
+            </View>
+          )}
+          {!filtered.length && (
             <Surface style={{ padding: 20 }}>
-              <Copy title>No spoils to sell</Copy>
-              <Copy muted>Bring back loot from the labyrinth.</Copy>
+              <Copy title>
+                {search ? "No matching items" : "No spoils to sell"}
+              </Copy>
+              <Copy muted>
+                {search
+                  ? "Try another name or stat."
+                  : "Bring back loot from the labyrinth."}
+              </Copy>
             </Surface>
           )}
           {!sell && (

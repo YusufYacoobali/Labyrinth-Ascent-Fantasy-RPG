@@ -100,7 +100,13 @@ function Figure({
   const scale = size / Math.max(cw, ch);
   const pose = useDerivedValue(() => {
     if (fallen && !(enemy && cue?.enemyDied) && !cue?.fallen.includes(id))
-      return { row: 4, frame: 7, advance: 0, recoil: 0, opacity: 0.4 };
+      return {
+        row: 4,
+        frame: 7,
+        advance: 0,
+        recoil: 0,
+        opacity: enemy ? 0.4 : 1,
+      };
     return combatPose(
       time.get(),
       reduced ? 0 : clock.get(),
@@ -236,7 +242,6 @@ function CharacterHealth({
           width: panel.width,
           left: panel.x,
           top: panel.y,
-          opacity: c.hp <= 0 && !cue?.fallen.includes(c.id) ? 0.45 : 1,
         },
         motion,
       ]}

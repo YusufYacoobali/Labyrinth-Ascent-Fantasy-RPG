@@ -23,6 +23,8 @@ export const BALANCE = {
   expeditionDays: 30,
   dailyRecovery: 0.25,
   fedExhaustionRecovery: 35,
+  hungryRestRecovery: 20,
+  hungryRestMp: 0.1,
   hungerExhaustion: 15,
   hungerDamage: 0.1,
   wildCampRisk: [0.2, 0.3, 0.4],

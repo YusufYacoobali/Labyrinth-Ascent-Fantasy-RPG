@@ -4,6 +4,16 @@ import type { Character, Game } from "./engine";
 
 export type MotionStyle = "melee" | "arrow" | "magic" | "slam";
 export type MotionKey =
+  | "nessa"
+  | "orik"
+  | "vesper"
+  | "haldor"
+  | "ilyra"
+  | "cassian"
+  | "dagna"
+  | "zephyr"
+  | "morrigan"
+  | "astra"
   | "kael"
   | "barbarian"
   | "lyria"
@@ -89,6 +99,16 @@ export function spriteFrame(key: MotionKey, row: number, frame: number) {
 }
 
 const players: Record<number, CombatVisual> = {
+  24: { key: "nessa", style: "magic", color: "#82e5d4" },
+  25: { key: "orik", style: "arrow", color: "#e9bf74" },
+  26: { key: "vesper", style: "melee", color: "#c6a0f4" },
+  27: { key: "haldor", style: "melee", color: "#a0dfff" },
+  28: { key: "ilyra", style: "magic", color: "#93e8a4" },
+  29: { key: "cassian", style: "melee", color: "#ffe2a1" },
+  30: { key: "dagna", style: "slam", color: "#ffac6b" },
+  31: { key: "zephyr", style: "arrow", color: "#a3e9ff" },
+  32: { key: "morrigan", style: "magic", color: "#c1a2ff" },
+  33: { key: "astra", style: "melee", color: "#ffe6aa" },
   0: { key: "kael", style: "melee", color: "#ffd78c" },
   1: { key: "lyria", style: "arrow", color: "#86e890" },
   2: { key: "bram", style: "melee", color: "#ffd78c" },

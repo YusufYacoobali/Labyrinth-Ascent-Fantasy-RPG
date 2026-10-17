@@ -766,11 +766,14 @@ export function resolveExploration(
   }
   if (a.type === "REST_HERE" && canRestHere(s)) {
     if (s.journey.startDay === null || !s.party.some((c) => c.hp > 0)) return s;
-    if (s.food < 1) return say(s, "You need a ration to recover here.");
     const rested = spendWatches(s, BALANCE.watchesPerDay, { rest: true });
     if (["defeat", "extraction"].includes(rested.phase)) return rested;
     const draw = nextRandom(rested.rng.encounters);
     const next = { ...rested, rng: { ...rested.rng, encounters: draw.seed } };
+    if (next.phase === "nag" && next.journey.nag) {
+      next.phase = next.journey.nag.resume;
+      next.journey = { ...next.journey, nag: null };
+    }
     if (draw.roll < restHereRisk(s.floor))
       return say(
         {
@@ -794,12 +797,9 @@ export function resolveExploration(
             branchFight: true,
           },
         },
-        "You recover 25% HP/MP and 35 exhaustion, using one day and one ration. Footsteps break the quiet: an ambush!",
+        `${rested.message} Footsteps break the quiet: an ambush!`,
       );
-    return say(
-      next,
-      "You take turns keeping watch. One day and one ration used; standing companions recover 25% HP/MP and 35 exhaustion. No one finds you.",
-    );
+    return say(next, `${rested.message} No one finds you.`);
   }
   if (a.type === "WILD_CAMP" && ["exploration", "branch"].includes(s.phase)) {
     if (!(s.inventory["camp-kit"] > 0))
@@ -831,7 +831,7 @@ export function resolveExploration(
         next,
         Math.min(BALANCE.watchesPerDay, 180 - next.journey.watches),
       );
-      if (next.phase !== "camp" || unfed) break;
+      if (next.phase !== "camp") break;
       if (next.journey.wildCamp) {
         const draw = nextRandom(next.rng.encounters);
         next = { ...next, rng: { ...next.rng, encounters: draw.seed } };
@@ -845,7 +845,7 @@ export function resolveExploration(
               "Your wild camp is interrupted. The accepted day's recovery has resolved; face the intruders.",
           };
       }
-      if (!a.untilClose) break;
+      if (unfed || !a.untilClose) break;
     } while (next.journey.watches < 180);
     return next;
   }

@@ -320,7 +320,8 @@ test("Daily food uses one party ration; fed rest and hunger apply the agreed val
   const hp = n.party[0].hp;
   n = survival.passTime(n, 6);
   assert.equal(n.party[0].hp, hp - 18);
-  assert.equal(n.party[0].exhaustion, 50);
+  assert.equal(n.party[0].exhaustion, 15);
+  assert.equal(n.party[0].mp, 14);
 });
 test("Waiting stops on hunger and sanctuary caches cannot replenish within the same expedition", () => {
   let s = arena(1, 1);

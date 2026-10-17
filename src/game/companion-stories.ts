@@ -131,18 +131,18 @@ export const COMPANION_STORIES: StoryChain[] = [
       stage(
         "lyria.echo",
         "The road remembers rain",
-        "On the Sunken Road, roots curl around a caravan bell. Lyria hears rain in its silence; Kael hears a warning. An inscription records the road’s original watercourse, a truth neither memory quite captured.",
+        "Roots curl around a caravan bell on the Sunken Road. Lyria’s green ink points straight to it. “Mother marked a river here.” Kael stops her reaching into the roots. “And bells like that warn of floods.” Beneath the bell, old lettering marks the high-water line.",
         "field",
         2,
         [
           decision(
-            "Record both accounts beside the inscription",
-            "Kael holds the lantern while Lyria copies the lettering. They agree that a map can hold more than one memory.",
+            "Check the water marks together",
+            "Kael holds the lantern while Lyria copies the flood marks. Her mother’s map is right, and so is his warning. “We wait until the water drops,” Lyria says. Kael nods. For once, neither has to argue.",
             { pair: { ids: ["kael", "lyria"], change: 1 } },
           ),
           decision(
-            "Tell Kael his warning matters more",
-            "Lyria stops translating. Their disagreement becomes a silence that follows the party.",
+            "Tell Lyria to put the map away",
+            "Lyria closes the map before you’ve finished speaking. Kael looks uncomfortable. You move on without checking the inscription, and nobody says much for the next stretch.",
             {
               id: "silence",
               approved: false,

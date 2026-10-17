@@ -42,8 +42,7 @@ export function encounter(
       {
         id: "leave",
         label: "Pass quietly",
-        outcome:
-          "You leave the scene undisturbed and continue through the chamber.",
+        outcome: "You shoulder your pack and carry on.",
       },
     ],
     ...extra,
@@ -56,15 +55,15 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
     "A lantern running low",
     1,
     [
-      "A survey pair shades a failing lantern behind a broken tile. They have ink, but nothing dry enough to take a flame.",
-      "Three porters crouch around a wick that will not catch. Their spare oil leaked through a seam in the pack.",
+      "Two surveyors huddle over an unlit lantern. One strikes a flint while the other wrings water from their tinder. “Please tell me you’ve got something dry.”",
+      "Three porters are trying to relight a lantern. They’ve saved a little oil, but the kindling is soaked. Without a flame, they’ll have to wait here in the dark.",
     ],
     [
       {
         id: "talk",
         label: "Compare travelling notes",
         outcome:
-          "You exchange accounts of the passages already travelled. Nobody claims to know a route they have not seen.",
+          "You compare notes by your own lantern. They warn you about loose stones and laugh at a wrong turn you both made. For a while, the dark feels less empty.",
       },
       {
         id: "help",
@@ -72,7 +71,7 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
         foodCost: 1,
         gold: 20,
         outcome:
-          "The dry wrapping takes a flame. The travellers offer twenty gold for the supply and remember the help.",
+          "Your dry wrapping catches on the first spark. The lantern lights, and a relieved porter presses twenty gold into your hand. “Worth it. I hate the dark.”",
       },
     ],
     { people: true },
@@ -117,7 +116,7 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
         label: "Release the ratchet carefully",
         item: "relic-fragment",
         outcome:
-          "The satchel lowers safely. Its broken seal is worth keeping as a relic fragment; the rest has rotted away.",
+          "You ease the satchel down. The supplies inside have rotted, but its old bronze seal survives. You tuck the relic fragment into your pack.",
       },
       {
         id: "help",
@@ -133,8 +132,8 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
     "Soup with too much water",
     1,
     [
-      "Two cooks are stretching a pot of roots for a company twice its size. They have plenty of salt and little else.",
-      "A wandering cook offers a thin broth and a story about the feast planned for the gate’s reopening.",
+      "A cook stirs a pot of roots while her partner slices the next batch. “Soup’s hot. Flavour costs extra.” Judging by the smell, that might be a warning.",
+      "A wandering cook guards a pot of thin broth and a sack of roots. He’s planning a feast for the day the gate reopens. Today’s menu is less ambitious.",
     ],
     [
       {
@@ -151,7 +150,7 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
         foodCost: 1,
         item: "night-herb",
         outcome:
-          "The broth thickens. The cook gives you a medicinal sprig rather than pretending the kindness has no cost.",
+          "You crumble a ration into the pot. The cook tastes it and nods. “That’s almost supper.” She slips you a medicinal sprig in thanks.",
       },
     ],
     { people: true },
@@ -177,7 +176,7 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
         id: "help",
         label: "Mark the plate and leave it alone",
         outcome:
-          "You mark the real pressure plate without inventing a safe direction. Later travellers can choose their own passage.",
+          "You chalk a warning around the pressure plate. The next traveller should see it before they put a foot wrong.",
       },
     ],
   ),
@@ -221,15 +220,15 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
     [
       {
         id: "talk",
-        label: "Record the marks as uncertain testimony",
+        label: "Work out what the marks mean",
         outcome:
-          "You record who made the marks and their missing orientation. They do not become directions on your map.",
+          "One company used circles for danger; the other used them for shelter. That explains the crossed-out arrows. You make a note to trust your own bearings.",
       },
       {
         id: "help",
         label: "Leave a note explaining the ambiguity",
         outcome:
-          "Your note distinguishes a report from an observed connection. Nobody following it is promised an invented exit.",
+          "You write “Two companies, two sets of signs” beneath the marks. It won’t guide anyone through, but it might stop someone following the wrong arrow.",
       },
     ],
   ),
@@ -245,17 +244,17 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
     [
       {
         id: "talk",
-        label: "Read the public delivery notice",
+        label: "Check the expedition’s seal",
         outcome:
-          "The notice belongs in the next town dispatch. You preserve the seal and give no promise of an impossible passage home.",
+          "You recognise the seal from the guild board. That company has already gone home. The messenger sighs and carefully puts the letter away. “Next opening, then.”",
       },
       {
         id: "help",
-        label: "Share a ration for the remaining month",
+        label: "Sell her a spare ration",
         foodCost: 1,
         gold: 20,
         outcome:
-          "The messenger pays what she can and keeps the letter. The sealed month still applies to couriers.",
+          "She pays twenty gold and eats slowly, saving half for later. “I’ll deliver it myself when we get out. They can’t say I didn’t try.”",
       },
     ],
     { people: true },
@@ -292,22 +291,22 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
     "A clock without daylight",
     4,
     [
-      "A water clock marks passing days in a chamber with no windows. Its lowest cup is blocked by a maker’s seal that fell from the frame.",
-      "A pendulum taps against a stone marked with six lines. A little brass weight has slipped between the teeth of its escapement.",
+      "A water clock drips onto the floor instead of filling its cups. A brass maker’s seal has fallen into the mechanism. The last day it counted was a very long time ago.",
+      "A pendulum strains against a jammed gear. A broken brass seal is caught between its teeth. Each swing produces a small, stubborn click.",
     ],
     [
       {
         id: "talk",
-        label: "Free the fallen weight",
+        label: "Clear the jam",
         item: "relic-fragment",
         outcome:
-          "The mechanism resumes its old rhythm. The broken maker’s seal is a relic fragment, separate from the clock’s working parts.",
+          "You work the broken seal free. The clock starts ticking again, and you keep the brass fragment. Whether it tells the right time is another matter.",
       },
       {
         id: "help",
-        label: "Label it as an unverified timepiece",
+        label: "Leave a warning beside it",
         outcome:
-          "Your note warns travellers to record each day themselves. An old clock cannot decide when the return gate opens.",
+          "You scratch “Stopped clock” into the wall beside it. Better a plain warning than another party losing track of the days.",
       },
     ],
   ),
@@ -346,15 +345,15 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
     "A voice with the wrong name",
     4,
     [
-      "A frightened novice calls for a companion whose name echoes back a beat too late. The companion is asleep behind the novice’s pack.",
-      "A surveyor mistakes a chamber’s echo for an answer from a missing scout. His remaining partner is trying to bring him back to himself.",
+      "A novice calls his companion’s name into the dark, louder each time. Behind a pile of packs, someone snores. He’s too frightened to hear it.",
+      "A surveyor keeps shouting for his scout. Every echo makes him turn towards a different passage. His scout is asleep against the wall, with a cloak pulled over her head.",
     ],
     [
       {
         id: "talk",
         label: "Check who is actually present",
         outcome:
-          "You count the living companions before interpreting the echo. The novice sits down beside the person he feared he had lost.",
+          "You point out the sleeping figure. The shouting stops. A hand reaches out from under the cloak. “I said I was taking a nap.” Nobody quite manages to hide their laughter.",
       },
       {
         id: "help",
@@ -388,7 +387,7 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
         id: "help",
         label: "Mark the warm wire and move on",
         outcome:
-          "A precise warning marks the filament itself. The party does not claim to have disarmed what it left alone.",
+          "You mark the hot wire with chalk and give it a wide berth. Whatever powered this place still has a little strength left.",
       },
     ],
   ),
@@ -406,7 +405,7 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
         id: "talk",
         label: "Copy the writer’s name into the journal",
         outcome:
-          "The name and its unfinished expectation join the chronicle. A familiar town becomes a little older.",
+          "You copy the name and the date. Someone in Stormhold may still know the family. You leave the card tucked safely behind its tile.",
       },
       {
         id: "help",
@@ -428,9 +427,9 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
     [
       {
         id: "talk",
-        label: "Read the public address and note the delay",
+        label: "Help check the delivery address",
         outcome:
-          "The parcel stays sealed. Its carrier has a written account of the failed rendezvous for the return journey.",
+          "The address is right; the timing isn’t. You help the carrier write a note for the customer. “Next time,” she says, “they can carry their own parcel.”",
       },
       {
         id: "help",
@@ -438,7 +437,7 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
         foodCost: 1,
         gold: 25,
         outcome:
-          "The carrier pays for the ration without selling the customer’s parcel. Waiting through the month feels less lonely.",
+          "The carrier pays twenty-five gold for the ration and makes room beside the crate. For a little while, you both complain about other people’s planning.",
       },
     ],
     { people: true },
@@ -464,7 +463,7 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
         id: "help",
         label: "Respect the note and leave the latch alone",
         outcome:
-          "The door remains open. You add no mystery where an ordinary maintenance request explains the marks.",
+          "You leave the door tied open. Someone went to a lot of trouble to stop it locking, and you’d rather not find out why from inside.",
       },
     ],
   ),
@@ -474,15 +473,15 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
     "Veterans counting the days",
     8,
     [
-      "Two veteran companies disagree about how many days remain. One forgot to record their last battle. The other marked a day for every round.",
-      "A veteran has stopped crossing days off her slate. Her companion has recorded each movement and encounter instead and is trying to reconcile the totals.",
+      "Two veterans argue over slates covered in tally marks. One has counted a day twice; neither will admit it. Their companions look ready to leave them here.",
+      "A veteran turns her slate sideways, as if the tally might look better that way. Her companion produces a second slate. The totals don’t match.",
     ],
     [
       {
         id: "talk",
         label: "Compare recorded days",
         outcome:
-          "The companies reconcile their own slates. Your party keeps the expedition clock it has actually lived through.",
+          "You compare meals, battles and places slept. Eventually both slates agree. “Knew mine was right,” says the veteran who was wrong.",
       },
       {
         id: "help",
@@ -490,7 +489,7 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
         foodCost: 1,
         gold: 30,
         outcome:
-          "The veterans buy a ration and stop arguing long enough to eat. Their wait is still governed by the sealed gate.",
+          "Thirty gold changes hands, and the argument gives way to chewing. They wish you luck on the climb. One quietly fixes a mark on his slate.",
       },
     ],
     { people: true },
@@ -507,15 +506,15 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
     [
       {
         id: "talk",
-        label: "Record its uncertain origin",
+        label: "Examine the ribbon",
         outcome:
-          "The ribbon enters your journal as an object with an unknown owner. It reveals no untravelled passage.",
+          "The faded stitching is from a Stormhold festival. Someone brought a piece of home this far. You tie the loose end back onto the pillar.",
       },
       {
         id: "help",
-        label: "Remove only the misleading added notes",
+        label: "Clear away the contradictory notes",
         outcome:
-          "The keepsake remains. The unsupported directions no longer borrow authority from its colour.",
+          "You take down the crossed-out directions and leave the ribbon. Whatever it meant to its owner, it wasn’t a map.",
       },
     ],
   ),
@@ -563,13 +562,13 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
         label: "Stop the mechanism before clearing it",
         item: "ancient-ore",
         outcome:
-          "The tapping ends when the wheel is freed. The obstruction is a useful piece of ancient ore, without a hidden message.",
+          "You brace the weight and free the wheel. The tapping stops. A piece of old metal comes loose, still good enough to sell as ancient ore.",
       },
       {
         id: "help",
-        label: "Label the mechanical fault",
+        label: "Leave a warning about the loose weight",
         outcome:
-          "A maintenance note replaces speculation. Later listeners can hear a broken machine without fearing an unseen caller.",
+          "You mark the floor beneath the weight and warn anyone passing to keep clear. The frayed rope won’t hold forever.",
       },
     ],
   ),
@@ -608,7 +607,7 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
     8,
     [
       "Fine dust rises through a cracked vent. A surviving air pump is pushing grit into the chamber whenever its old piston turns.",
-      "A breeze blows steadily from the floor toward a sealed grille. Dust marks a loose pump fitting, not the direction of a secret passage.",
+      "A breeze rises from a floor vent, filling the lantern light with dust. Beneath the grille, a loose fitting rattles with every stroke of an old pump.",
     ],
     [
       {
@@ -622,7 +621,7 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
         id: "help",
         label: "Mark the grit-filled vent",
         outcome:
-          "You warn later travellers about the vent without calling it an exit. The party moves beyond the drifting grit.",
+          "You leave a chalk warning beside the grille and pull your cloak over your mouth. The dust follows you a little way down the passage.",
       },
     ],
   ),
@@ -632,7 +631,7 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
     "Accounts of an ordinary day",
     8,
     [
-      "A slate records bread, lamp oil and a repaired chair from the time before the king. There is no prophecy among the careful sums.",
+      "A slate lists bread, lamp oil and the cost of repairing a chair. The writing is older than the king’s crest above it. Somebody once lived an ordinary life here.",
       "A household budget has survived beneath a grand inscription. Its largest expense was winter shoes for three growing children.",
     ],
     [
@@ -664,7 +663,7 @@ export const GENERIC_ENCOUNTERS: GenericEncounter[] = [
         id: "talk",
         label: "Exchange the names of your companies",
         outcome:
-          "Both companies have witnesses now. The promises concern the people present, not an easier route the chamber does not contain.",
+          "You trade names and descriptions. If either company reaches town first, they’ll know who to ask for. It’s a small promise, but everyone listens.",
       },
       {
         id: "help",

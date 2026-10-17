@@ -114,10 +114,9 @@ test("Rest here spends one day and ration, recovers once, and keeps the same roo
   assert.match(next.message, /No one finds you/);
   assert.equal(reload(next).day, next.day);
 });
-test("Hungry, fallen and out-of-expedition parties cannot obtain free rest", () => {
+test("Fallen and out-of-expedition parties cannot obtain free rest", () => {
   for (const s of [
     fresh(),
-    { ...field(), food: 0 },
     { ...field(), party: field().party.map((c) => ({ ...c, hp: 0 })) },
   ]) {
     const next = e.reducer(s, { type: "REST_HERE" });
@@ -125,6 +124,53 @@ test("Hungry, fallen and out-of-expedition parties cannot obtain free rest", () 
     assert.equal(next.journey.watches, s.journey.watches);
     assert.equal(next.party[0].hp, s.party[0].hp);
     assert.equal(next.rng.encounters, s.rng.encounters);
+  }
+});
+test("Hungry exhausted adventurers can rest during a complaint and still risk an ambush", () => {
+  const base = field();
+  const s = {
+    ...base,
+    food: 0,
+    phase: "nag",
+    journey: {
+      ...base.journey,
+      nag: { speaker: "hero", quote: "I need to stop.", resume: "exploration" },
+    },
+  };
+  const safe = rest(s, false);
+  assert.equal(safe.day, s.day + 1);
+  assert.equal(safe.food, 0);
+  assert.equal(safe.party[0].exhaustion, 30);
+  assert.equal(
+    safe.party[0].hp,
+    s.party[0].hp - Math.round(s.party[0].maxHp * 0.1),
+  );
+  assert.equal(safe.party[0].mp, Math.round(s.party[0].maxMp * 0.1));
+  assert.equal(safe.phase, "exploration");
+  assert.equal(safe.journey.nag, null);
+  assert.match(safe.message, /empty stomachs/);
+  const ambush = rest(s, true);
+  assert.equal(ambush.phase, "combat");
+  assert.equal(ambush.combat.ambush, true);
+  assert.equal(ambush.day, s.day + 1);
+});
+test("The stranger attacks only after an explicit choice to rest at his fire", () => {
+  const base = field(),
+    s = { ...base, phase: "event", eventResolved: false };
+  const leave = e.reducer(s, { type: "EVENT", choice: "leave", roll: 0.5 });
+  assert.notEqual(leave.phase, "combat");
+  assert.equal(leave.combat, s.combat);
+  assert.equal(leave.gold, s.gold);
+  assert.equal(leave.day, s.day + 1);
+  for (const choice of ["watch", "welcome"]) {
+    const rested = e.reducer(s, { type: "EVENT", choice, roll: 0.5 });
+    assert.equal(rested.phase, "combat");
+    assert.equal(rested.enemy.name, "The Smiling Plunderer");
+    assert.equal(rested.day, s.day + 1);
+    assert.equal(rested.food, s.food - 1);
+    assert.equal(rested.party[0].exhaustion, 15);
+    assert.equal(rested.combat.ambush, choice === "welcome");
+    assert.match(rested.message, /recover/);
   }
 });
 test("Resting can produce a real ambush after recovery without resolving the room's story", () => {

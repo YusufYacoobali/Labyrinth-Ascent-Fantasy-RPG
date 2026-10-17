@@ -131,9 +131,9 @@ test("Authored investigations react to race, skills, protective gear, NPC testim
   }
   s.party[0].injuries = 1;
   const stage = q.STORY_CHAINS[0].stages[1];
-  assert.match(sc.contextualStoryStage(s, stage).body, /injured/);
+  assert.match(sc.contextualStoryStage(s, stage).body, /injur/);
   s.stories.outcomes["kael.promise"] = "dismiss";
-  assert.match(sc.contextualStoryStage(s, stage).body, /earlier decision/);
+  assert.match(sc.contextualStoryStage(s, stage).body, /earlier/);
 });
 test("Conditional choices are validated against current party and grant their authored reward only once", () => {
   let s = fresh();

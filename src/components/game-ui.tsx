@@ -24,6 +24,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme as t } from "@/theme";
 import { useGame } from "@/game/provider";
 import { BevelFrame } from "./mock-chrome";
+import { EXPANSION_RECRUITS } from "@/game/market-expansion";
+import {
+  EXPANSION_MOTION_SHEETS,
+  EXPANSION_PORTRAITS,
+} from "./market-art-sources";
 import {
   MenuIcon,
   NativeNavbar,
@@ -160,6 +165,32 @@ export function Atlas({
   style?: StyleProp<ViewStyle>;
   enemyFloor?: number;
 }) {
+  const newRecruit = EXPANSION_RECRUITS.find((r) => r.portrait === index);
+  if (newRecruit) {
+    const cell = index - 24;
+    return (
+      <View style={[{ width: size, height: size, overflow: "hidden" }, style]}>
+        <Image
+          source={
+            sprite
+              ? EXPANSION_MOTION_SHEETS[
+                  newRecruit.id as keyof typeof EXPANSION_MOTION_SHEETS
+                ]
+              : EXPANSION_PORTRAITS
+          }
+          contentFit="fill"
+          cachePolicy="memory-disk"
+          style={{
+            position: "absolute",
+            width: size * (sprite ? 8 : 5),
+            height: size * (sprite ? 6 : 2),
+            left: sprite ? 0 : -(cell % 5) * size,
+            top: sprite ? 0 : -Math.floor(cell / 5) * size,
+          }}
+        />
+      </View>
+    );
+  }
   const floorEnemy =
     enemyFloor === undefined
       ? undefined
@@ -652,7 +683,6 @@ export function ExpeditionHeader({
                   flex: 1,
                   alignItems: "center",
                   gap: 3,
-                  opacity: c.hp ? 1 : 0.45,
                 }}
               >
                 <Pressable
@@ -942,6 +972,7 @@ export function Frame({
   back,
   portrait,
   scroll = true,
+  scrollRef,
   hideNav = false,
   hideWalkthrough = false,
   fullBleed = false,
@@ -956,6 +987,7 @@ export function Frame({
   back?: boolean;
   portrait?: number;
   scroll?: boolean;
+  scrollRef?: React.Ref<ScrollView>;
   hideNav?: boolean;
   hideWalkthrough?: boolean;
   fullBleed?: boolean;
@@ -1035,6 +1067,7 @@ export function Frame({
         <View style={{ flex: 1 }}>
           {scroll ? (
             <ScrollView
+              ref={scrollRef}
               showsVerticalScrollIndicator={false}
               automaticallyAdjustKeyboardInsets
               contentInsetAdjustmentBehavior="automatic"

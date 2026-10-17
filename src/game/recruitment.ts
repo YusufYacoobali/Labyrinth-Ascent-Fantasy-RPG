@@ -11,6 +11,61 @@ export interface RecruitReply {
   line: string;
 }
 
+/** Contracts are between adventurers with comparable experience, regardless of wealth. */
+export function recruitLevelRefusal(s: Game, r: Recruit): string | undefined {
+  const hero = s.party.concat(s.reserve).find((c) => c.id === "hero");
+  const difference = (r.level || 1) - (hero?.level || 1);
+  if (difference > 3)
+    return r.race === "dwarf"
+      ? "You’ve got nerve, I’ll give you that. But the fights I take would bury you. Get some experience, then come find me."
+      : r.race === "barbarian"
+        ? "You’re not ready to fight beside me. Survive a few harder battles. Then we’ll talk."
+        : r.race === "elf"
+          ? "I’d spend the whole journey keeping you alive. Find your footing first. I’ll still be here."
+          : "I need a captain who can keep up when things go wrong. Prove yourself in the labyrinth, then ask me again.";
+  if (difference < -3)
+    return "You’re taking on fights I’m not ready for. Find someone who can keep pace with you. I’d only slow you down.";
+}
+
+export function recruitEquipment(r: Recruit): string[] {
+  if (r.equipment) return r.equipment;
+  const tier =
+    (r.level || 1) >= 18
+      ? "sovereign"
+      : (r.level || 1) >= 12
+        ? "dragon"
+        : (r.level || 1) >= 8
+          ? "moon"
+          : (r.level || 1) >= 4
+            ? "steel"
+            : "copper";
+  const kits: Record<string, string[]> = {
+    kael: ["sword", "mail"],
+    lyria: ["bow", "leathers"],
+    bram: ["axe", "helm"],
+    ragnar: ["maul", "vest"],
+    elowen: ["staff", "robes"],
+    mira: ["wand", "hood"],
+    torren: ["maul", "plate", "helm"],
+    sigrun: ["axe", "leathers"],
+    finn: ["sword", "runners"],
+    eira: ["bow", "mantle", "hood"],
+    nessa: ["wand", "vest"],
+    orik: ["crossbow", "hood"],
+    vesper: ["dagger", "leathers", "runners"],
+    haldor: ["spear", "mantle"],
+    ilyra: ["staff", "robes", "amulet"],
+    cassian: ["sword", "plate", "helm"],
+    dagna: ["maul", "mail", "greaves"],
+    zephyr: ["bow", "leathers", "runners"],
+    morrigan: ["staff", "robes", "circlet", "orb"],
+    astra: ["sword", "plate", "helm", "greaves"],
+  };
+  return (kits[r.id] || ["sword", "leathers"]).map(
+    (form) => `market-${tier}-${form}`,
+  );
+}
+
 export function recruitShare(
   s: Game,
   r: Recruit,
@@ -110,7 +165,7 @@ export function recruitmentReply(
     line:
       reason ||
       (outcome === "accepted"
-        ? `${voices[r.id]?.accept || "Agreed. Let’s see this through together."} ${offered}% it is.`
-        : `${voices[r.id]?.decline || "That’s too little for the risk."} Make it ${asking}%, and we have a deal.`),
+        ? `${r.accept || voices[r.id]?.accept || "Agreed. Let’s see this through together."} ${offered}% it is.`
+        : `${r.decline || voices[r.id]?.decline || "That’s too little for the risk."} Make it ${asking}%, and we have a deal.`),
   };
 }

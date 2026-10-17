@@ -88,15 +88,25 @@ export function resumeRestLocation(s: Game): Game {
       fieldRest: null,
       phase: s.expedition.lost ? s.phase : "extraction",
     };
+  const nagRecovered =
+    saved.phase === "nag" &&
+    saved.journey.nag &&
+    (s.party.find((c) => c.id === saved.journey.nag?.speaker)?.exhaustion ||
+      0) < 50;
   return {
     ...s,
     ...saved,
+    phase: nagRecovered ? saved.journey.nag!.resume : saved.phase,
     fieldRest: null,
     party: s.party.map((c) => ({
       ...c,
       battleMastery: saved.combat?.mastery[c.id] || {},
       cooldowns: {},
     })),
-    journey: { ...s.journey, ...saved.journey },
+    journey: {
+      ...s.journey,
+      ...saved.journey,
+      nag: nagRecovered ? null : saved.journey.nag,
+    },
   };
 }

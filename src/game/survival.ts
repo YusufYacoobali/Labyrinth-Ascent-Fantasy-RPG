@@ -110,23 +110,25 @@ export function passTime(
                     0,
                     c.hp - Math.max(1, Math.round(c.maxHp * B.hungerDamage)),
                   ),
-              mp:
-                fed && resting
-                  ? Math.min(
-                      c.maxMp,
-                      c.mp + Math.round(c.maxMp * B.dailyRecovery),
-                    )
-                  : c.mp,
+              mp: resting
+                ? Math.min(
+                    c.maxMp,
+                    c.mp +
+                      Math.round(
+                        c.maxMp * (fed ? B.dailyRecovery : B.hungryRestMp),
+                      ),
+                  )
+                : c.mp,
               exhaustion: Math.max(
                 0,
                 Math.min(
                   100,
                   (c.exhaustion || 0) +
-                    (fed
-                      ? resting
-                        ? -B.fedExhaustionRecovery
-                        : 0
-                      : B.hungerExhaustion),
+                    (resting
+                      ? -(fed ? B.fedExhaustionRecovery : B.hungryRestRecovery)
+                      : fed
+                        ? 0
+                        : B.hungerExhaustion),
                 ),
               ),
             },
@@ -135,7 +137,9 @@ export function passTime(
         ? resting
           ? "A day passes. One party ration used; standing companions recover 25% HP/MP and 35 exhaustion."
           : next.message
-        : `${resting ? "" : `${next.message} `}No food remains. Standing companions gain 15 exhaustion and lose 10% maximum HP.`,
+        : resting
+          ? "You sleep on empty stomachs. Standing companions recover 10% MP and 20 exhaustion, but hunger costs 10% maximum HP."
+          : `${next.message} No food remains. Standing companions gain 15 exhaustion and lose 10% maximum HP.`,
     };
   }
   const fallen = next.party.length > 0 && next.party.every((c) => c.hp <= 0);

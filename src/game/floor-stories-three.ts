@@ -1,19 +1,67 @@
 import { floorChain } from "./floor-stories";
 export const FLOOR_STORIES_THREE = [
-  floorChain(9,
-    ["The scouts’ unfinished survey", "The ninth-floor sanctuary holds the scouts’ survey pages, including the order that left them short of food. The pages record both the routes they discovered and the names of those who helped them survive.", "Preserve the helpers’ names with the survey", "The survey becomes an account of mutual aid rather than a commander’s achievement. Its difficult final pages remain intact."],
-    ["A report that returns everyone", "The guardian’s portal is open. A courier niche can carry the scouts’ complete report toward the White Stag. Removing the supply order would protect the commander while leaving the scouts’ failures unexplained.", "Send the complete report", "The report carries responsibility upward with the rescue story. A scout’s medicinal pouch is left for the next company."],
-    "The scouts’ original crisis is resolved. Their abandoned camp and your recorded decision remain on this floor."),
-  floorChain(10,
-    ["The inventory before the king", "A vault register in the sanctuary lists objects taken from petitioners before their audience with the Hollow King. Beside each object is a name; beside many names, the same final word: retained.", "Copy the names before counting the valuables", "The register becomes a list of missing people. The treasure can no longer be described as a hoard without owners."],
-    ["A vault with an inventory", "With the sentinel gone, the upward arch offers a dry place for a duplicate register. You can leave the names where later salvagers must read them before claiming what remains.", "Post the register at the arch", "The vault keeps an inventory of its losses. A broken registration seal joins your evidence, without a petitioner’s name being removed."],
-    "The vault’s first locks are open and its owners are recorded. Your original treasure decision cannot be repeated."),
-  floorChain(11,
-    ["The merchant’s last customer", "At the upper sanctuary, a receipt names the merchant’s last customer: a keeper who paid for enough rations to wait out the month. The payment was a map of the throne’s emergency exit, never delivered to the guild.", "Preserve the receipt and copy the exit’s history", "The map’s history reveals how the keeper hoped to return. It is evidence of an old route, not a promise that an unconnected passage exists today."],
-    ["A lantern that stays lit", "The final defender has fallen. The merchant’s empty lantern could mark a common shelter for parties that turn back from the throne. Its ledger still names the keeper who paid for that hope.", "Dedicate the lantern to returning travellers", "The lantern becomes a sign of shelter rather than a final sale. A loose lens fragment falls from its old housing."],
-    "The last merchant has moved on. The lantern, receipt and your first bargain remain in the chronicle."),
-  floorChain(12,
-    ["The keeper before the crown", "After the throne’s decision, the summit sanctuary reveals the first keeper’s sleeping place. A plain bowl and an unfinished letter describe a person who accepted the crown to keep others safe, then forgot whose safety mattered.", "Keep the letter beside the account of the throne", "The king becomes a warning with a human beginning. Your own final decision remains written beside it, beyond the comfort of a simple legend."],
-    ["An ending with witnesses", "The summit arch stands open. You can leave a complete account of the throne, the keeper and your companions’ return, so the next campaign begins with evidence rather than a crown’s invitation.", "Leave the account and name every companion", "The last page names those who stood, those who fell and those who waited. A fragment of the empty throne seals the account."],
-    "The Hollow King’s reign is over. The throne retains your campaign ending and cannot grant another crown."),
+  floorChain(
+    9,
+    [
+      "The scouts’ unfinished survey",
+      "The sanctuary holds pages from the missing scouts’ survey. The final sheets list dwindling rations, failed hunts, and the travellers who helped them. One name is underlined beside the words “shared their last loaf.”",
+      "Keep the names with the survey",
+      "You gather the pages in order and tie them with dry cord. The scouts’ route matters, but so do the people who helped them reach this shelter.",
+    ],
+    [
+      "A report that returns everyone",
+      "The portal is open. Beside it, a battered dispatch case holds the scouts’ report. Their supply order is still attached. It would be easy to remove the page that makes their commander look careless.",
+      "Pack the complete report for the White Stag",
+      "You close the case with every page inside. A scout has left a medicinal pouch beside it, with a short note: “For the road home.”",
+    ],
+    "The scouts have left their shelter. Your choice at their camp is already made.",
+  ),
+  floorChain(
+    10,
+    [
+      "The inventory before the king",
+      "A vault register lists belongings taken from people waiting to meet the Hollow King. Rings, letters, children’s toys. Beside many names is the same final entry: “Retained.” There are no departure dates.",
+      "Copy the names in the register",
+      "You start with the names, then the belongings. By the time you reach the last page, the vault feels less like a treasure room.",
+    ],
+    [
+      "A vault with an inventory",
+      "The sentinel is gone. A dry recess beside the arch could hold a copy of the vault register. Any salvager passing through would see the names of the people who once owned this treasure.",
+      "Leave a copy beside the arch",
+      "You weigh the pages down with a stone. A broken registration seal lies beneath the register; you take the relic fragment and leave the names where they can be read.",
+    ],
+    "The first vault locks are open. You’ve already taken what you chose to carry.",
+  ),
+  floorChain(
+    11,
+    [
+      "The merchant’s last customer",
+      "At the upper sanctuary, you find a receipt signed by the merchant. A keeper bought enough rations to wait for the gate. They paid with a sketch of the throne’s escape stair. A red mark beside it reads: “Collapsed.”",
+      "Copy the keeper’s warning",
+      "You copy the sketch and its warning. The keeper was looking for another way home. The crossed-out stair explains why they bought so much food.",
+    ],
+    [
+      "A lantern that stays lit",
+      "The way to the summit is clear. The merchant has left an old lantern in a sheltered alcove, beside the keeper’s receipt. A light here could guide someone who has had enough of climbing.",
+      "Set the lantern in the shelter entrance",
+      "You hang the lantern where tired travellers will see it. A cracked spare lens lies in its case; you keep the fragment and leave the rest ready to use.",
+    ],
+    "The merchant has packed up. Only a few scraps of twine remain where his stall stood.",
+  ),
+  floorChain(
+    12,
+    [
+      "The keeper before the crown",
+      "Behind the throne, you find a plain sleeping mat and an unfinished letter. The first keeper wrote about keeping the city safe. The later pages are full of orders, crossed-out names, and fears that everyone meant to betray him.",
+      "Keep the letter with the account of the throne",
+      "You fold the letter beside your own notes. Before the crown and the fear, there was someone here who wanted to protect his home.",
+    ],
+    [
+      "An ending with witnesses",
+      "The summit arch stands open. On a stone beside it, there is space to leave the names of your company. The climb is over. You can make sure the people who carried you this far are remembered.",
+      "Write every companion’s name",
+      "You write the names slowly, including those who fell and those who waited in town. A loose shard of the empty throne seals the page against the wind.",
+    ],
+    "The Hollow King’s reign is over. The empty throne offers you nothing more.",
+  ),
 ];

@@ -1,7 +1,9 @@
 import type { MotionKey } from "@/game/combat-visuals";
+import { EXPANSION_MOTION_SHEETS } from "./market-art-sources";
 
 // Metro needs literal asset paths; the canvas decodes only the current combatants.
 export const MOTION_SHEETS: Record<MotionKey, number> = {
+  ...EXPANSION_MOTION_SHEETS,
   kael: require("../../assets/combat/kael-motion.png"),
   barbarian: require("../../assets/combat/barbarian-motion.png"),
   lyria: require("../../assets/combat/lyria-motion.png"),

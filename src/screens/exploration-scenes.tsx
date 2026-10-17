@@ -117,12 +117,13 @@ export function FieldSurvival() {
           tone="dark"
           style={{ flex: 1 }}
           label={`Rest here · ${Math.round(restHereRisk(state.floor) * 100)}% ambush`}
-          disabled={state.food < 1 || !state.party.some((c) => c.hp > 0)}
           onPress={() => dispatch({ type: "REST_HERE" })}
         />
       </View>
       <Copy muted style={{ fontSize: 11, lineHeight: 16 }}>
-        1 day · 1 ration · +25% HP/MP · −35 exhaustion.
+        {state.food > 0
+          ? "1 day · 1 ration · +25% HP/MP · −35 exhaustion."
+          : "1 day · No rations: +10% MP · −20 exhaustion · hunger costs 10% HP."}
         {canCamp
           ? ` Kit camp: ${Math.round(wildCampRisk(state.floor) * 100)}% ambush.`
           : ""}
@@ -457,7 +458,11 @@ export function CampScene() {
               ? `Rest here · ${Math.round(wildCampRisk(state.floor) * 100)}% ambush`
               : "Rest here · safe"
           }
-          detail={`At dawn: 1 party ration, 25% HP/MP and −35 exhaustion. ${state.journey.wildCamp ? `${state.floor <= 4 ? 20 : state.floor <= 8 ? 30 : 40}% interruption risk.` : "Safe from ambush."}`}
+          detail={
+            state.food > 0
+              ? "1 day · 1 ration · +25% HP/MP · −35 exhaustion."
+              : "1 day · No rations: +10% MP · −20 exhaustion · hunger costs 10% HP."
+          }
           icon="campfire"
           onPress={() => dispatch({ type: "CAMP_REST" })}
         />
@@ -502,7 +507,7 @@ export function NagScene() {
         </View>
         <Choice
           label="Back to the map"
-          detail="Choose a route to a sanctuary, or use a camping kit."
+          detail="Keep moving, or use Rest here below to stop now."
           icon="map-outline"
           tone="blue"
           onPress={() => dispatch({ type: "NAG_DECISION" })}

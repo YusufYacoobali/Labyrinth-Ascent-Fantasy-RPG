@@ -152,7 +152,7 @@ export const STORY_ILLUSTRATIONS: Record<
   "floor.1.arrival": {
     sheet: "floor.1",
     panel: 0,
-    label: "A stranger at your fire",
+    label: "A fire beneath the arch",
   },
   "floor.1.investigation": {
     sheet: "floor.1",
