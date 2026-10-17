@@ -137,13 +137,11 @@ export function TownScreen() {
             </View>
             <Button
               icon="gold"
-              label={`Trade cores at the guild · ${state.inventory["beast-core"] * CORE_TRADE_VALUE} gold`}
+              label={`Sell cores at the shop · ${state.inventory["beast-core"] * CORE_TRADE_VALUE} gold`}
               onPress={() =>
-                dispatch({
-                  type: "SELL",
-                  id: "beast-core",
-                  vendor: "guild",
-                  quantity: state.inventory["beast-core"],
+                router.push({
+                  pathname: "/shop",
+                  params: { vendor: "provisioner", mode: "sell" },
                 })
               }
             />

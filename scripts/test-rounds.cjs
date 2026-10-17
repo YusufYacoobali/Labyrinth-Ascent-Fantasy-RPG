@@ -279,8 +279,8 @@ test("Multiple monsters produce one receipt with independently rolled species re
   assert.equal(s.lootReceipt.gross, 0);
   assert.equal(
     s.lootReceipt.items["beast-core"],
-    m.MONSTERS.slice(0, 3).reduce(
-      (n, species) => n + m.monsterCoreYield(species),
+    s.combat.enemies.reduce(
+      (n, enemy) => n + m.enemyCoreYield(enemy, s.floor, s.journey.defender),
       0,
     ),
   );
@@ -398,11 +398,12 @@ test("Completed loot receipts remain durable after presentation is dismissed", (
   s.combat.enemies[0].hp = 1;
   s = e.reducer(s, request(s));
   const id = s.lootReceipt.id;
+  const cores = s.lootReceipt.items["beast-core"];
   s = e.reducer(s, { type: "COLLECT" });
   assert.equal(s.lootReceipt, null);
   assert.ok(s.expedition.receipts[id]);
   assert.equal(s.expedition.receipts[id].gross, 0);
-  assert.equal(s.expedition.receipts[id].items["beast-core"], 2);
+  assert.equal(s.expedition.receipts[id].items["beast-core"], cores);
 });
 test("Playback events for Focus, Guard and items never inherit another actor's attack", () => {
   let s = arena(3, 1);

@@ -152,7 +152,7 @@ test("Recurring named explorers occupy one stable location and remember encounte
     1,
   );
 });
-test("Merchant barter preserves secured inputs and keeps mixed field-derived rations unsecured", () => {
+test("Merchant purchases preserve secured gold and keep field-funded rations unsecured", () => {
   for (const field of [0, 1, 2]) {
     let s = start();
     const place = s.expedition.director.npcs.tamsin;
@@ -161,11 +161,12 @@ test("Merchant barter preserves secured inputs and keeps mixed field-derived rat
         ...s,
         floor: 2,
         inventory: { ...s.inventory, "beast-core": 2 },
+        gold: 100,
         expedition: {
           ...s.expedition,
           unsecured: {
             ...s.expedition.unsecured,
-            inventory: { "beast-core": field },
+            gold: field,
           },
         },
       },
@@ -173,9 +174,9 @@ test("Merchant barter preserves secured inputs and keeps mixed field-derived rat
     );
     const food = s.food;
     s = e.reducer(s, { type: "BRANCH_CHOICE", choice: "trade", roll: 0.5 });
-    assert.equal(s.food, food + 2);
-    assert.equal(s.inventory["beast-core"], 0);
-    assert.equal(s.expedition.unsecured.food, field ? 2 : 0);
+    assert.equal(s.food, food + 29);
+    assert.equal(s.inventory["beast-core"], 2);
+    assert.equal(s.expedition.unsecured.food, field ? 29 : 0);
     assert.equal(
       e.reducer(e.normalizeSave(plain(s)), {
         type: "BRANCH_CHOICE",

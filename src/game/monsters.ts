@@ -363,17 +363,48 @@ export function nextRandom(seed: number) {
   const next = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
   return { seed: next, roll: next / 4294967296 };
 }
-export const CORE_TRADE_VALUE = 55;
-export const monsterCoreYield = (spec: MonsterSpec) =>
-  Math.max(1, Math.ceil(spec.gold / CORE_TRADE_VALUE));
+export const CORE_TRADE_VALUE = 100;
+/** Regular creatures yield floor–2×floor cores; portal leaders yield ten times
+ * (floor + 1). An encounter's stable identity keeps its roll unchanged on reload. */
+export function monsterCoreYield(
+  spec: MonsterSpec,
+  floor = ECOLOGY[spec.id]?.floors[0] || 1,
+  boss = false,
+  identity = spec.id,
+) {
+  const depth = Math.max(1, Math.min(12, Math.floor(floor)));
+  if (boss) return (depth + 1) * 10;
+  let seed = 2166136261;
+  for (const letter of identity)
+    seed = Math.imul(seed ^ letter.charCodeAt(0), 16777619);
+  return depth + Math.floor(nextRandom(seed).roll * (depth + 1));
+}
 
-export function monsterDrops(spec: MonsterSpec, seed: number) {
+export function enemyCoreYield(
+  enemy: Enemy & { id?: string },
+  floor: number,
+  defender = false,
+) {
+  const spec = monsterFor(enemy, floor);
+  const leader =
+    enemy.boss ||
+    (defender &&
+      (spec.id === MONSTERS[floor - 1]?.id ||
+        /-(elite|guardian)$/.test(spec.id)));
+  return monsterCoreYield(spec, floor, leader, enemy.id || spec.id);
+}
+
+export function monsterDrops(
+  spec: MonsterSpec,
+  seed: number,
+  cores = monsterCoreYield(spec),
+) {
   const essence = nextRandom(seed);
   const material = nextRandom(essence.seed);
   return {
     seed: material.seed,
     items: {
-      "beast-core": monsterCoreYield(spec),
+      "beast-core": cores,
       ...Object.fromEntries((spec.equipment || []).map((id) => [id, 1])),
       ...(spec.trophy ? { [spec.trophy]: 1 } : {}),
       ...(essence.roll < 0.3 ? { [essenceId(spec.id)]: 1 } : {}),

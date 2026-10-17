@@ -52,6 +52,7 @@ import { skillRank } from "@/game/progression";
 import { ITEMS } from "@/game/world";
 import { Button, Choice, Copy, Eyebrow, Icon, Panel } from "./game-ui";
 import CombatStage from "./combat-stage";
+import { useBattleReadiness } from "./use-battle-readiness";
 import { useCombatFeedback } from "./combat-motion";
 import { theme as t } from "@/theme";
 
@@ -76,7 +77,6 @@ export default function TacticalCombat({
     [submitting, setSubmitting] = useState(""),
     [impactFrame, setImpactFrame] = useState(""),
     [collectedGold, setCollectedGold] = useState<string[]>([]),
-    [sceneReady, setSceneReady] = useState(false),
     [introDone, setIntroDone] = useState(
       () => !combat || combat.round > 1 || !!playback,
     ),
@@ -101,8 +101,12 @@ export default function TacticalCombat({
   const frame = playback?.events[Math.min(cursor, playback.events.length - 1)];
   const actor = source.party.find((c) => c.id === selected) || ready[0];
   const inspectedCharacter = source.party.find((c) => c.id === inspectedAlly);
-  const onReady = useCallback(() => setSceneReady(true), []);
+  const { ready: sceneReady, markReady: onReady } = useBattleReadiness();
   const finishIntro = useCallback(() => setIntroDone(true), []);
+  const beginBattle = useCallback(() => {
+    onReady();
+    setIntroDone(true);
+  }, [onReady]);
   const feedback = useCombatFeedback(),
     feedbackRef = useRef(feedback);
   useEffect(() => {
@@ -1000,7 +1004,7 @@ export default function TacticalCombat({
         <CombatIntro
           state={source}
           ready={sceneReady}
-          onComplete={finishIntro}
+          onComplete={sceneReady ? finishIntro : beginBattle}
         />
       )}
     </View>

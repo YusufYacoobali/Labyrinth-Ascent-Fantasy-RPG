@@ -27,6 +27,10 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  expeditionReview: load("src/game/expedition-review.ts"),
+  shopStock: load("src/game/shop-stock.ts"),
+  treasure: load("src/game/treasure.ts"),
+  balance: load("src/game/balance.ts"),
   sceneIllustrations: load("src/game/scene-illustrations.ts"),
   illustrationBounds: load("src/game/illustration-bounds.ts"),
   illustrationLayouts: load("src/game/illustration-layouts.ts"),

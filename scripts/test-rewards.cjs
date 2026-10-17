@@ -120,7 +120,7 @@ test("Victory records cores, no loose gold, items and individual XP once", () =>
   assert.equal(won.gold, s.gold);
   assert.equal(
     won.lootReceipt.items["beast-core"],
-    m.monsterCoreYield(m.MONSTERS[0]),
+    m.enemyCoreYield(won.combat.enemies[0], won.floor, true),
   );
   assert.equal(won.expedition.accruedShares.kael || 0, 0);
   assert.equal(won.runPaid.kael, undefined);
@@ -150,7 +150,7 @@ test("Drops differ by species, include genuine misses, and never give a guarante
   }
   assert.ok(found > 0 && missed > 0);
 });
-test("Final-watch victory retains its receipt before extraction", () => {
+test("Final-watch defender victory retains its receipt and portal before extraction", () => {
   const s = win({
     ...battle(),
     journey: { ...battle().journey, watches: 179 },
@@ -158,7 +158,11 @@ test("Final-watch victory retains its receipt before extraction", () => {
   });
   assert.equal(s.phase, "loot");
   assert.equal(s.journey.watches, 180);
-  assert.equal(act(s, { type: "COLLECT" }).phase, "extraction");
+  const portal = act(s, { type: "COLLECT" });
+  assert.equal(portal.phase, "victory");
+  const extracted = act(portal, { type: "CONTINUE" });
+  assert.equal(extracted.phase, "extraction");
+  assert.equal(extracted.floor, 2);
 });
 test("World seeds are injectable and combat and loot streams remain independent", () => {
   assert.equal(create(123).journey.seed, 123);
@@ -317,7 +321,11 @@ test("Accrued companion shares settle only on successful extraction", () => {
     },
     { type: "BRANCH_CHOICE", choice: "careful", roll: 1 },
   );
-  assert.equal(extract(s).runPaid.kael, 2);
+  assert.ok(
+    s.expedition.accruedShares.kael >= 7 &&
+      s.expedition.accruedShares.kael <= 140,
+  );
+  assert.equal(extract(s).runPaid.kael, s.expedition.accruedShares.kael);
   assert.equal(extract(fail(s)).runPaid.kael, undefined);
 });
 test("Duplicate essences teach another companion, craft equipment or sell without changing mastery", () => {

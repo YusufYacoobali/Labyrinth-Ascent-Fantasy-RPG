@@ -14,6 +14,19 @@ import { ITEMS } from "./world";
 import { prepareShortcuts } from "./shortcuts";
 import { WORLD_NPCS, type WorldNpcId } from "./world-npcs";
 const B = BALANCE.director;
+export function patrolApproach(floor: number, variant: string) {
+  if (floor === 1)
+    return variant === "ambush"
+      ? "Crates block most of the passage, leaving a narrow gap. A goblin slips behind them as your lantern swings round. You hear another whisper nearby. They’re waiting for someone to walk through."
+      : variant === "elite"
+        ? "Broken shields and timber have been lashed into a barricade across the chamber. A goblin peers over the top, then bangs its shield. More goblins scramble into position behind it."
+        : "The passage has been fortified with stacked crates and sharpened stakes. At first it looks abandoned. Then a goblin’s head rises above the barricade, and a harsh voice calls to the others.";
+  return variant === "ambush"
+    ? "Fresh tracks lead behind a narrow blind corner. Something shifts beyond it. You have a moment to prepare before drawing the enemy out."
+    : variant === "elite"
+      ? "The chamber’s narrow approaches are guarded. Movement beyond the obstacles gives away an enemy watching the passage."
+      : "Scrapes and fresh tracks lead into the next chamber. You hear movement ahead, and stop before your lantern gives you away.";
+}
 export interface DirectedEncounter {
   kind: Occupant;
   variant:
@@ -154,15 +167,13 @@ export function establishExpedition(s: Game): Game {
               ? gear[Math.floor(rng() * gear.length)]?.id
               : undefined,
           approach:
-            variant === "ambush"
-              ? "Fresh tracks circle a narrow approach. The party can prepare before drawing the patrol out."
-              : variant === "elite"
-                ? "A disciplined patrol has fortified this chamber."
-                : kind === "hazard"
-                  ? `The ${route || "stone"} passage bears signs of a disturbed mechanism.`
-                  : kind === "quiet"
-                    ? "Only old tracks remain; this chamber is quiet this month."
-                    : "Signs of this month's expedition remain in the chamber.",
+            kind === "beast"
+              ? patrolApproach(floor, variant)
+              : kind === "hazard"
+                ? `The ${route || "stone"} passage bears signs of a disturbed mechanism.`
+                : kind === "quiet"
+                  ? "Only old tracks remain; this chamber is quiet this month."
+                  : "Signs of this month's expedition remain in the chamber.",
         };
         occupants[key][room.id] = kind;
         encounters[key][room.id].lateKind =

@@ -225,7 +225,7 @@ test("Core value completes salvage missions and the report includes the paid gui
       },
     },
   };
-  assert.equal(ex.missionProgress(state), 440);
+  assert.equal(ex.missionProgress(state), 800);
   const returned = e.reducer(state, { type: "RETURN" });
   assert.equal(returned.gold - state.gold, 200);
   assert.equal(returned.lastReport.missionReward, 200);
@@ -321,7 +321,7 @@ test("Tempering stacks with the weapon bonus and survives reload", () => {
   const start = equippedFixture();
   let state = equip(start, "iron-blade");
   state = e.reducer(
-    { ...state, gold: 120, inventory: { ...state.inventory, "beast-core": 2 } },
+    { ...state, gold: 250, inventory: { ...state.inventory, "beast-core": 2 } },
     { type: "FORGE", id: "hero" },
   );
   const c = e.normalizeSave(plain(state)).party[0];

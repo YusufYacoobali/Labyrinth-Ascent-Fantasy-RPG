@@ -9,6 +9,7 @@ import { principalResolved, principalAftermath } from "./stories";
 import { passTime } from "./survival";
 import { canRestHere, rememberRestLocation } from "./field-rest";
 import { BALANCE } from "./balance";
+import { rollTreasureGold } from "./treasure";
 import { nextRandom, CORE_TRADE_VALUE } from "./monsters";
 import type { Action, Enemy, Game, Phase } from "./engine";
 import { FLOORS, ITEMS } from "./world";
@@ -553,10 +554,12 @@ export function resolveExploration(
               ? ["ancient-ore"]
               : ["relic-fragment", "ancient-ore", "night-herb"];
       const material = materials[(roomSeed >>> 2) % materials.length];
-      const gold = safe ? 12 + s.floor * 3 : 8;
+      const draw = rollTreasureGold(s.rng.loot);
+      const gold = draw.gold;
       return say(
         {
           ...next,
+          rng: { ...next.rng, loot: draw.seed },
           gold: s.gold + gold,
           inventory: {
             ...s.inventory,
@@ -672,18 +675,19 @@ export function resolveExploration(
       );
     }
     if (b.kind === "company" && a.choice === "trade" && npcAt(s) === "tamsin") {
-      if ((s.inventory["beast-core"] || 0) < 2)
-        return say(s, "Tamsin's trade requires two monster cores.");
+      if (s.gold < BALANCE.rationPackGold)
+        return say(
+          s,
+          `Tamsin asks ${BALANCE.rationPackGold} gold for a month’s ration pack.`,
+        );
       const old = s.npcs?.tamsin;
-      const quantity = (old?.trust || 0) >= 3 ? 4 : 3;
+      const quantity =
+        BALANCE.rationPackSize + ((old?.trust || 0) >= 3 ? 1 : 0);
       return say(
         {
           ...next,
+          gold: s.gold - BALANCE.rationPackGold,
           food: s.food + quantity,
-          inventory: {
-            ...s.inventory,
-            "beast-core": s.inventory["beast-core"] - 2,
-          },
           npcs: {
             ...s.npcs,
             tamsin: {
@@ -695,7 +699,7 @@ export function resolveExploration(
             },
           },
         },
-        `Tamsin trades ${quantity} party rations for two monster cores${quantity === 4 ? ", including a ration reserved for a trusted customer" : ""}. Rations bought with field-found cores remain at risk until extraction.`,
+        `Tamsin sells you ${quantity} party rations for ${BALANCE.rationPackGold} gold${quantity > BALANCE.rationPackSize ? ", including an extra ration for a trusted customer" : ""}.`,
       );
     }
     if (b.kind === "spring" && ["gather", "drink"].includes(a.choice)) {
@@ -853,7 +857,7 @@ export function resolveExploration(
     if (!s.party.some((c) => c.hp > 0))
       return say(
         s,
-        "No one can continue. Keep watch until the return gate opens.",
+        "No one can continue. Keep watch until the labyrinth closes and teleports everyone to town.",
       );
     const phase: Phase = s.journey.campReturn;
     if (s.journey.wildCamp)

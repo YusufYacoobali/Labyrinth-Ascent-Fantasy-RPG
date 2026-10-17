@@ -144,11 +144,23 @@ export function passTime(
   }
   const fallen = next.party.length > 0 && next.party.every((c) => c.hp <= 0);
   if (fallen) next = { ...next, phase: "defeat" };
-  if (elapsed >= B.expeditionDays * B.watchesPerDay && next.phase !== "loot")
+  const inBattle =
+    next.phase === "combat" ||
+    (next.phase === "arrival" &&
+      next.journey.defender &&
+      next.combat &&
+      !next.combat.complete);
+  // Closing pauses for an accepted battle. A victorious portal defender's loot
+  // leads to its portal; stepping through unlocks the next floor before extraction.
+  if (
+    elapsed >= B.expeditionDays * B.watchesPerDay &&
+    next.phase !== "loot" &&
+    !inBattle
+  )
     next = {
       ...next,
       phase: "extraction",
-      message: "Thirty days have passed. The return gate is open.",
+      message: "The labyrinth is closing. You are teleported back to town.",
     };
   return next;
 }

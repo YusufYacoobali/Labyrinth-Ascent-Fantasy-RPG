@@ -8,6 +8,8 @@ import React, {
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AppState } from "react-native";
+import { createExpeditionReview } from "./expedition-review";
 import {
   Action,
   Game,
@@ -30,6 +32,9 @@ const Context = createContext<{
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState(initialGame);
   const current = useRef(state);
+  const reviewPrompt = useRef<ReturnType<typeof createExpeditionReview> | null>(
+    null,
+  );
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const working = useRef(false);
@@ -42,6 +47,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   );
   const [saveError, setSaveError] = useState("");
   useEffect(() => {
+    const prompt = createExpeditionReview({
+      getState: () => current.current,
+      isActive: () => AppState.currentState === "active",
+      isAvailable: async () =>
+        (await import("expo-store-review")).isAvailableAsync(),
+      requestReview: async () =>
+        (await import("expo-store-review")).requestReview(),
+    });
+    reviewPrompt.current = prompt;
     alive.current = true;
     loadSave(AsyncStorage)
       .then(({ save, backedUp }) => {
@@ -68,6 +82,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       });
     return () => {
       alive.current = false;
+      prompt.reset();
     };
   }, []);
   const dispatch: React.Dispatch<Action> = (action) => {
@@ -78,11 +93,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
     const next = reducer(current.current, action);
     if (next === current.current) return;
+    reviewPrompt.current?.queueEntry(current.current, next);
     current.current = next;
     pendingCommit.current = next;
     // Ordinary navigation stays immediate. Combat waits for its durable result before playback.
-    const waitForCommit =
-      action.type === "ROUND" && action.animate;
+    const waitForCommit = action.type === "ROUND" && action.animate;
     if (!waitForCommit) setState(next);
     working.current = true;
     setSaving(true);
@@ -96,6 +111,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         if (alive.current) {
           setSaveError("");
           if (waitForCommit) setState(next);
+          reviewPrompt.current?.afterSaved();
         }
       })
       .catch(() => {
@@ -119,6 +135,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             ? { ...normalizeSave(save), playback: null, roundPlayback: null }
             : initialGame();
           current.current = next;
+          reviewPrompt.current?.reset();
           setState(next);
           pendingCommit.current = null;
           working.current = false;
@@ -139,6 +156,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         working.current = false;
         setState(current.current);
         setSaveError("");
+        reviewPrompt.current?.afterSaved();
       })
       .catch(() => setSaveError("Progress could not be saved. Tap to retry."))
       .finally(() => setSaving(false));

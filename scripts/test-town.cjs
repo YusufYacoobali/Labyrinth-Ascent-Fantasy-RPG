@@ -55,7 +55,7 @@ test("Catalog is unique, priced, stocked and all recipes reference real material
   }
   for (const recipe of town.RECIPES) {
     assert.ok(w.ITEMS.find((i) => i.id === recipe.id));
-    assert.ok(recipe.materials.length);
+    assert.ok(recipe.gold > 0);
     for (const m of recipe.materials)
       assert.ok(m.quantity > 0 && w.ITEMS.find((i) => i.id === m.id));
   }
@@ -148,8 +148,11 @@ test("Each recipe consumes exactly its materials and gold; locked recipes are at
     assert.equal(next.townProgress.crafted, 1);
     for (const m of recipe.materials) assert.equal(next.inventory[m.id], 0);
     const again = reduce(next, { type: "CRAFT", id: recipe.id });
-    assert.equal(again.gold, next.gold);
-    assert.equal(again.townProgress.crafted, 1);
+    assert.equal(
+      again.gold,
+      next.gold - (recipe.materials.length ? 0 : recipe.gold),
+    );
+    assert.equal(again.townProgress.crafted, recipe.materials.length ? 1 : 2);
     if (recipe.floor) {
       const locked = reduce(
         { ...s, bestFloor: 0 },
@@ -177,14 +180,15 @@ test("Town contracts track unique recruits, training, crafting and actual kills"
   );
   assert.equal(e.questProgress({ ...s, kills: 8 }, "seasoned-hunter"), 8);
 });
-test("Core delivery consumes three cores once and is blocked when materials are missing", () => {
-  let s = { ...create(), inventory: { "beast-core": 2 } };
+test("Quartermaster rewards month-long provisions once without taking food or cores", () => {
+  let s = { ...create(), food: 29, inventory: { "beast-core": 3 } };
   s = reduce(s, { type: "ACCEPT", id: "quartermaster" });
   assert.equal(reduce(s, { type: "CLAIM", id: "quartermaster" }).gold, s.gold);
-  s = { ...s, inventory: { "beast-core": 3 } };
+  s = { ...s, food: 30 };
   const reward = reduce(s, { type: "CLAIM", id: "quartermaster" });
-  assert.equal(reward.inventory["beast-core"], 0);
-  assert.equal(reward.gold, s.gold + 220);
+  assert.equal(reward.inventory["beast-core"], 3);
+  assert.equal(reward.food, 30);
+  assert.equal(reward.gold, s.gold + 80);
   assert.equal(
     reduce(reward, { type: "CLAIM", id: "quartermaster" }).gold,
     reward.gold,
@@ -272,7 +276,7 @@ test("Monster cores defer currency to town and never charge town work or upfront
   assert.equal(s.contracts.kael, 18);
   assert.equal(s.contracts.mira, 22);
   s = reduce(s, { type: "WORK" });
-  assert.equal(s.gold, 425);
+  assert.equal(s.gold, 380);
   s = reduce({ ...s, day: 30 }, { type: "ENTER" });
   s = reduce(s, { type: "MISSION", id: "survey" });
   s = reduce(portalArrival(s), {

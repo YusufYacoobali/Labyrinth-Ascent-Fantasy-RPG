@@ -55,10 +55,10 @@ test("Recruiting and packing advance only when the real action succeeds", () => 
   const failed = act({ ...s, gold: 0 }, { type: "BUY", item: "food" });
   assert.equal(failed.walkthrough.done.includes("supplies"), false);
   s = act(s, { type: "BUY", item: "food" });
-  assert.equal(s.food, 4);
+  assert.equal(s.food, 31);
   assert.equal(wt.walkthroughTip(s).id, "equipment");
   s = act(s, { type: "BUY_ITEM", id: "chipped-blade" });
-  assert.equal(s.gold, 220);
+  assert.equal(s.gold, 205);
   s = act(s, { type: "EQUIP", character: "hero", item: "chipped-blade" });
   s = act(s, { type: "WALKTHROUGH", kind: "ack", id: "equipment" });
   assert.equal(wt.walkthroughTip(s).id, "train");

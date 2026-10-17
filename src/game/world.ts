@@ -3,6 +3,7 @@ import { EXPANSION_ITEMS } from "./market-expansion";
 import { FACTION_ITEMS, type FactionId } from "./faction-opportunities";
 import { MONSTERS, essenceId, CORE_TRADE_VALUE } from "./monsters";
 import { TOWN_ITEMS, TOWN_QUESTS } from "./town-content";
+import { BALANCE } from "./balance";
 export type Element = "physical" | "fire" | "frost" | "venom";
 export type Route = "roots" | "frost" | "forge" | "crypt";
 export type Vendor = "provisioner" | "alchemist" | "emporium" | "guild";
@@ -268,17 +269,17 @@ export const ITEMS: Item[] = [
   },
   {
     id: "rations",
-    name: "Trail rations ×3",
+    name: "Trail rations ×30",
     icon: "sack",
     kind: "supply",
     quality: "common",
-    price: 35,
+    price: BALANCE.rationPackGold,
     sell: 5,
     vendor: "provisioner",
-    quantity: 3,
+    quantity: BALANCE.rationPackSize,
     effect: "food",
     description:
-      "One party ration per elapsed expedition day. Thirty cover the sealed month.",
+      "A full month’s food: 30 party rations for 50 gold. One ration feeds the whole party for a day.",
   },
   {
     id: "potion",
@@ -409,9 +410,9 @@ export const ITEMS: Item[] = [
     kind: "loot",
     quality: "common",
     price: 0,
-    sell: 42,
-    vendor: "guild",
-    description: `Crystallised monster energy. Trade at the town guild for ${CORE_TRADE_VALUE} gold each.`,
+    sell: CORE_TRADE_VALUE,
+    vendor: "provisioner",
+    description: `Crystallised monster energy. Sell at the shop in town for ${CORE_TRADE_VALUE} gold each.`,
   },
   {
     id: "night-herb",
@@ -644,7 +645,8 @@ export const EVENTS: Record<
       {
         id: "rush",
         title: "Pry the chest open",
-        detail: "More gold; the ward hits standing allies for 15 HP.",
+        detail:
+          "Extra relic fragment; the ward hits standing allies for 15 HP.",
         icon: "treasure-chest",
       },
       {
@@ -853,13 +855,13 @@ export const EVENTS: Record<
       {
         id: "force",
         title: "Break the lock",
-        detail: "Gain more gold; standing allies lose 20 HP.",
+        detail: "Extra relic fragment; standing allies lose 20 HP.",
         icon: "hammer",
       },
       {
         id: "leave",
         title: "Take the outer cache",
-        detail: "Take a small reward safely.",
+        detail: "Take the outer treasure safely; leave the inner relics.",
         icon: "sack",
         tone: "dark",
       },
@@ -880,7 +882,7 @@ export const EVENTS: Record<
       {
         id: "supplies",
         title: "Buy the survival bundle",
-        detail: "120 gold. Gain 3 rations, a potion, and an antidote.",
+        detail: "120 gold. Gain 30 rations, a potion, and an antidote.",
         icon: "sack",
         tone: "blue",
       },

@@ -293,7 +293,7 @@ test("Portal discovery requires a defender victory, rewards once, and retains th
   assert.equal(s.phase, "victory");
   assert.equal(campaignAction(s, { type: "CONTINUE" }).floor, 2);
 });
-test("Checkpoint unlocks require actual major guardian victories and reject undiscovered route starts", () => {
+test("Floor shortcuts unlock on entry and reject undiscovered route starts", () => {
   let s = start();
   assert.equal(
     campaignAction({ ...s, phase: "town" }, { type: "SELECT_START", floor: 7 })
@@ -310,9 +310,9 @@ test("Checkpoint unlocks require actual major guardian victories and reject undi
       party: s.party.map((c) => ({ ...c, atk: 999 })),
     };
     s = campaignAction(s, { type: "BATTLE", kind: "attack", roll: 0.5 });
-    assert.ok(s.checkpoints.includes(floor + 1));
+    assert.ok(!s.checkpoints.includes(floor + 1));
   }
-  s = { ...s, phase: "town" };
+  s = { ...s, phase: "town", checkpoints: [1, 7] };
   assert.equal(
     campaignAction(s, { type: "SELECT_START", floor: 7, route: "frost" })
       .startFloor,

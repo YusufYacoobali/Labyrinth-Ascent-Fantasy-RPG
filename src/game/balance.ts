@@ -1,5 +1,11 @@
 /** Campaign tuning lives here; progression thresholds and calendar rules remain fixed. */
 export const BALANCE = {
+  rationPackSize: 30,
+  rationPackGold: 50,
+  townWorkGold: 80,
+  guildWorkLimit: 500,
+  chestGoldMin: 50,
+  chestGoldMax: 1000,
   director: {
     quiet: 32,
     patrol: 18,
@@ -67,25 +73,19 @@ export const BALANCE = {
   tempering: [
     {
       floor: 0,
-      material: "beast-core",
-      quantity: 2,
-      gold: 120,
+      gold: 250,
       attack: 6,
       defense: 2,
     },
     {
       floor: 4,
-      material: "ancient-ore",
-      quantity: 3,
-      gold: 240,
+      gold: 450,
       attack: 4,
       defense: 1,
     },
     {
       floor: 7,
-      material: "relic-fragment",
-      quantity: 5,
-      gold: 400,
+      gold: 850,
       attack: 2,
       defense: 1,
     },

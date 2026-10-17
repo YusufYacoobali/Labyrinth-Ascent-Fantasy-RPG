@@ -620,7 +620,7 @@ test("Core pickup amounts match real enemy rewards, appear once per identity, an
   assert.equal(drops.length, 1);
   assert.equal(
     drops[0].amount,
-    m.monsterCoreYield(m.monsterFor(foe, state.floor)),
+    m.enemyCoreYield(foe, state.floor, state.journey.defender),
   );
   assert.equal(drops[0].enemyId, foe.id);
   assert.equal(ui.defeatedGold(playback, 1).length, 0);

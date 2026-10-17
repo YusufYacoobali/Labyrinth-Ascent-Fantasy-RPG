@@ -53,7 +53,6 @@ export default function CombatIntro({
       accessibilityRole="button"
       accessibilityLabel="Begin battle"
       accessibilityHint={`${party.map((c) => c.name).join(", ")} versus ${enemies.map((e) => e.name).join(", ")}. Tap to skip the entrance.`}
-      disabled={!ready}
       onPress={onComplete}
       style={[
         StyleSheet.absoluteFill,
@@ -199,7 +198,7 @@ export default function CombatIntro({
       <View style={{ alignItems: "center", gap: 12 }}>
         <Copy style={styles.fight}>FIGHT</Copy>
         <Copy style={{ fontSize: 11, letterSpacing: 2, color: t.color.muted }}>
-          {ready ? "TAP TO BEGIN" : "PREPARING ARENA"}
+          {ready ? "TAP TO BEGIN" : "LOADING ART · TAP TO BEGIN"}
         </Copy>
       </View>
     </Pressable>

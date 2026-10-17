@@ -204,7 +204,7 @@ export function LabyrinthScreen() {
                         type: "SELECT_START",
                         floor,
                         route:
-                          floor === 7
+                          floor >= 5 && floor <= 7
                             ? state.startRoute || state.discoveredRoutes[0]
                             : undefined,
                       })
@@ -212,7 +212,8 @@ export function LabyrinthScreen() {
                   />
                 ))}
               </View>
-              {state.startFloor === 7 &&
+              {state.startFloor >= 5 &&
+                state.startFloor <= 7 &&
                 ROUTES.filter((r) => state.discoveredRoutes.includes(r.id)).map(
                   (r) => (
                     <Button
@@ -223,7 +224,7 @@ export function LabyrinthScreen() {
                       onPress={() =>
                         dispatch({
                           type: "SELECT_START",
-                          floor: 7,
+                          floor: state.startFloor,
                           route: r.id,
                         })
                       }
@@ -231,8 +232,8 @@ export function LabyrinthScreen() {
                   ),
                 )}
               <Copy muted style={{ fontSize: 12 }}>
-                Defeat the major guardians on Floors 3, 6 and 9 to unlock the
-                next start. Floor 7 follows a route you discovered.
+                Reached floors stay unlocked. Your latest floor is selected for
+                the next expedition.
               </Copy>
             </Panel>
             <Panel
@@ -339,8 +340,8 @@ function Loot() {
       <RewardItems items={loot.items} gold={loot.net} />
       {(loot.items["beast-core"] || 0) > 0 && (
         <Copy muted style={{ fontSize: 13 }}>
-          Monster cores are crystallised energy. Trade them in town for{" "}
-          {CORE_TRADE_VALUE} gold each.
+          Monster cores are crystallised energy. Sell them at the shop in town
+          for {CORE_TRADE_VALUE} gold each.
         </Copy>
       )}
       <Panel style={{ gap: 8 }}>
@@ -443,11 +444,15 @@ function Victory() {
             title
             style={{ fontSize: 42, lineHeight: 52, color: t.color.goldLight }}
           >
-            {extracted ? "Homeward" : final ? "Legend" : "Battle Won"}
+            {extracted
+              ? "The labyrinth is closing"
+              : final
+                ? "Legend"
+                : "Battle Won"}
           </Copy>
           <Copy title style={{ fontSize: 16, color: t.color.gold }}>
             {extracted
-              ? "The return gate is open"
+              ? "You are teleported back to town"
               : final
                 ? state.ending
                 : "The team catches its breath"}
@@ -567,7 +572,9 @@ export function ExpeditionScreen() {
         fullBleed={battleFocus}
         subtitle={
           daysRemaining(state) === 0
-            ? "Return gate open · thirty-day window complete"
+            ? state.phase === "extraction"
+              ? "Labyrinth closing · expedition complete"
+              : "Labyrinth closing · finish your encounter"
             : `${daysRemaining(state)} days left · Day ${state.day}`
         }
         back={false}
@@ -616,12 +623,13 @@ export function ExpeditionScreen() {
               The darkness prevailed.
             </Copy>
             <Copy>
-              Your party cannot keep fighting. Shelter the fallen and wait for
-              the return gate. Unsecured spoils and provisional essence skills
-              are lost. Earlier skills and earned experience remain.
+              Your party cannot keep fighting. Shelter the fallen until the
+              labyrinth closes and teleports everyone to town. Unsecured spoils
+              and provisional essence skills are lost. Earlier skills and earned
+              experience remain.
             </Copy>
             <Button
-              label="Wait for the return gate"
+              label="Wait for the labyrinth to close"
               onPress={() => dispatch({ type: "CAMP_REST", untilClose: true })}
             />
           </View>

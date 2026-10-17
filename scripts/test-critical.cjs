@@ -230,11 +230,11 @@ test("Training catches up weaker characters without safe infinite levels; bulk p
   assert.equal(bulk.day, 30);
   assert.equal(bulk.party[0].level, 2);
   assert.equal(bulk.townProgress.trained, 2);
-  assert.equal(bulk.gold, 1000 - 2 * 60 + 27 * 125);
+  assert.equal(bulk.gold, 1000 - 2 * 60 + 500);
   const veteran = { ...s.party[0], level: 20 };
   assert.equal(tp.trainingXp(veteran, 0), 0);
 });
-test("Tempering is finite, consumes real materials and retains old upgrades; work cannot farm elite standing", () => {
+test("Tempering is finite, costs gold only and retains old upgrades; work cannot farm elite standing", () => {
   let s = fresh();
   s.gold = 100000;
   s.bestFloor = 12;
@@ -248,7 +248,7 @@ test("Tempering is finite, consumes real materials and retains old upgrades; wor
   ]) {
     s = e.reducer(s, { type: "FORGE", id: "hero" });
     assert.equal(s.party[0].gear, i + 1);
-    assert.equal(s.inventory[material], 20 - qty);
+    assert.equal(s.inventory[material], 20);
   }
   assert.equal(s.party[0].atk, base + 12);
   const gold = s.gold;

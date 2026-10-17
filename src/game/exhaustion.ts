@@ -83,6 +83,7 @@ export function exertForAction(
 }
 /** Complaints happen once at each threshold, then re-arm after genuine recovery. */
 export function maybeComplain(s: Game): Game {
+  if (s.journey.watches >= 180) return s;
   if (!["exploration", "branch", "victory", "event"].includes(s.phase))
     return s;
   const nagged = { ...s.journey.nagged };

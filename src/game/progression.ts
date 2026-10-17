@@ -115,14 +115,10 @@ export function trackSpoils(before: Game, after: Game, action?: Action): Game {
     ((action?.type === "EVENT" &&
       before.floor === 11 &&
       action.choice === "supplies") ||
-      action?.type === "GENERIC_CHOICE") &&
+      action?.type === "GENERIC_CHOICE" ||
+      (action?.type === "BRANCH_CHOICE" && action.choice === "trade")) &&
     after.gold < before.gold &&
     old.gold === 0;
-  const securedBarter =
-    action?.type === "BRANCH_CHOICE" &&
-    action.choice === "trade" &&
-    after.food > before.food &&
-    (old.inventory["beast-core"] || 0) === 0;
   const inventory = { ...old.inventory };
   for (const id of new Set([
     ...Object.keys(before.inventory),
@@ -131,7 +127,7 @@ export function trackSpoils(before: Game, after: Game, action?: Action): Game {
     inventory[id] = Math.max(
       0,
       (old.inventory[id] || 0) +
-        (securedPurchase || securedBarter
+        (securedPurchase
           ? Math.min(
               0,
               (after.inventory[id] || 0) - (before.inventory[id] || 0),
@@ -143,7 +139,7 @@ export function trackSpoils(before: Game, after: Game, action?: Action): Game {
     unsecured[key] = Math.max(
       0,
       old[key] +
-        (securedPurchase || securedBarter
+        (securedPurchase
           ? Math.min(0, after[key] - before[key])
           : after[key] - before[key]),
     );

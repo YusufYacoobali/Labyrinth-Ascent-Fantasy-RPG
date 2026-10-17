@@ -22,16 +22,12 @@ export function temperingOffer(s: Game, c: Character) {
       gold: 0,
       attack: 0,
       defense: 0,
-      material: "",
-      quantity: 0,
     };
   const reason =
     s.bestFloor < tier.floor
       ? `Reach Floor ${tier.floor} to unlock this tempering tier.`
-      : (s.inventory[tier.material] || 0) < tier.quantity
-        ? `Requires ${tier.quantity} ${tier.material}.`
-        : s.gold < tier.gold
-          ? `Requires ${tier.gold} gold.`
-          : "";
+      : s.gold < tier.gold
+        ? `Requires ${tier.gold} gold.`
+        : "";
   return { ...tier, available: !reason, reason };
 }

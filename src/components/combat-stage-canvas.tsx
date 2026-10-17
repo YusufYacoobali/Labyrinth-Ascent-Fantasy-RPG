@@ -15,7 +15,6 @@ import {
   FilterMode,
   MipmapMode,
   useClock,
-  useImage,
   useRectBuffer,
   useRSXformBuffer,
   vec,
@@ -50,6 +49,7 @@ import type { CombatStageProps } from "./combat-stage-types";
 import { battleAtlases } from "./battle-backdrop";
 import { MOTION_SHEETS } from "./combat-sheets";
 import CombatGoldPickup from "./combat-gold-pickup";
+import { useBattleImage } from "./use-battle-image";
 import {
   characterVisual,
   enemyVisual,
@@ -91,10 +91,10 @@ function Figure({
   destination: { x: number; y: number };
   onLoaded: (id: string) => void;
 }) {
-  const image = useImage(MOTION_SHEETS[motionKey]);
+  const { image, failed } = useBattleImage(MOTION_SHEETS[motionKey]);
   useEffect(() => {
-    if (image) onLoaded(id);
-  }, [image, id, onLoaded]);
+    if (image || failed) onLoaded(id);
+  }, [image, failed, id, onLoaded]);
   const cw = (image?.width() || 8) / 8;
   const ch = (image?.height() || 6) / 6;
   const scale = size / Math.max(cw, ch);
@@ -180,6 +180,14 @@ function Figure({
           color={enemy ? t.color.gold : "#7bd1ff"}
           style="stroke"
           strokeWidth={1.5}
+        />
+      )}
+      {!image && (
+        <Circle
+          cx={x}
+          cy={y - size * 0.35}
+          r={size * 0.2}
+          color={enemy ? "#b16b65" : "#6598b1"}
         />
       )}
       <Group transform={mirror}>
@@ -669,7 +677,9 @@ export default function CombatStage({
   const clock = useClock();
   const time = useSharedValue(2500);
   const floorIndex = arenaFloor(state.floor, state.route) - 1;
-  const background = useImage(battleAtlases[Math.floor(floorIndex / 4)]);
+  const { image: background, failed: backgroundFailed } = useBattleImage(
+    battleAtlases[Math.floor(floorIndex / 4)],
+  );
   const cell = floorIndex % 4;
   const backdrop = battleBackdropBounds(width, height, cell);
   const fieldHeight = Math.max(120, height - hudInset);
@@ -780,8 +790,8 @@ export default function CombatStage({
   subjects.sort((a, b) => a.y - b.y);
   const figuresReady = subjects.every((subject) => loaded.includes(subject.id));
   useEffect(() => {
-    if (background && figuresReady) onReady();
-  }, [background, figuresReady, onReady]);
+    if ((background || backgroundFailed) && figuresReady) onReady();
+  }, [background, backgroundFailed, figuresReady, onReady]);
   return (
     <View
       accessibilityLabel={`${

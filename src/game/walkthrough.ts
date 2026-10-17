@@ -47,11 +47,11 @@ export function walkthroughTip(s: Game): Guidance | null {
         "Visit the Tavern. Talk to a recruit, then agree on a share of expedition gold. No fee is paid up front.",
         { destination: "/tavern", button: "Visit Tavern" },
       );
-    if (s.food < 4 && !done("supplies"))
+    if (s.food < 30 && !done("supplies"))
       return tip(
         "supplies",
-        "Pack a few rations",
-        "Buy a bundle of trail rations. Each move, combat round and event uses one day and one ration. Sanctuary caches and travelling merchants can replenish food.",
+        "Pack a month of rations",
+        "Buy 30 trail rations for 50 gold. Each move, combat round and event uses one day and one party ration. One pack covers the month.",
         { destination: "/shop", button: "Visit Shop" },
       );
     if (!done("equipment"))
@@ -178,13 +178,13 @@ export function walkthroughTip(s: Game): Guidance | null {
     return tip(
       "rest",
       "Rest behind a safe door",
-      "Rest restores health and MP. With a ration it also clears more exhaustion. Wait for the return gate here if you need to end the expedition.",
+      "Rest restores health and MP. With a ration it also clears more exhaustion. When the labyrinth closes, everyone is teleported back to town.",
     );
   if (s.phase === "defeat" || s.phase === "extraction")
     return tip(
       "return",
-      "The return gate",
-      "Town stays sealed until the 30 days end. Successful extraction secures spoils. Defeat loses unsecured rewards and provisional skills.",
+      "The labyrinth is closing",
+      "After thirty days, you are teleported back to town. Surviving secures spoils. Defeat loses unsecured rewards and provisional skills.",
       { acknowledge: true },
     );
   if (s.phase === "loot")

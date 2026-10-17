@@ -4,6 +4,8 @@ import {
   type ExpeditionReport,
 } from "./expedition-report";
 import { gearFloor } from "./build-equipment";
+import { rollTreasureGold } from "./treasure";
+import { reviewDue } from "./expedition-review";
 import { trainingLimit, trainingXp, temperingOffer } from "./town-progression";
 import { canAutoResolve } from "./combat-commands";
 import {
@@ -56,7 +58,9 @@ import {
   essenceId,
   monsterFor,
   monsterDrops,
+  enemyCoreYield,
   nextRandom,
+  CORE_TRADE_VALUE,
 } from "./monsters";
 import {
   essenceBindingOptions,
@@ -277,6 +281,7 @@ export interface Game {
     action: Extract<Action, { type: "BATTLE" }>;
   } | null;
   started: boolean;
+  reviewPromptExpedition: number;
   day: number;
   gold: number;
   gems: number;
@@ -542,6 +547,7 @@ export function initialGame(): Game {
     roundPlayback: null,
     playback: null,
     started: false,
+    reviewPromptExpedition: 0,
     day: 24,
     gold: STARTING_GOLD,
     gems: 0,
@@ -606,6 +612,11 @@ export function initialGame(): Game {
 export function normalizeSave(raw: Game): Game {
   raw = deserializeSave(raw);
   const s = { ...initialGame(), ...raw };
+  s.reviewPromptExpedition =
+    Number.isSafeInteger(raw.reviewPromptExpedition) &&
+    raw.reviewPromptExpedition >= 0
+      ? raw.reviewPromptExpedition
+      : 0;
   s.townLife = {
     ...newTownLife(),
     ...raw.townLife,
@@ -682,6 +693,23 @@ export function normalizeSave(raw: Game): Game {
   s.journey.maps = Object.fromEntries(
     Object.entries(s.journey.maps).filter(([, map]) => map.version === 2),
   );
+  const reached = Math.min(
+    12,
+    Math.max(1, s.floor, s.bestFloor, ...s.checkpoints),
+  );
+  const shortcuts = Array.from({ length: reached }, (_, i) => i + 1);
+  const newlyUnlocked = shortcuts.some(
+    (floor) => !s.checkpoints.includes(floor),
+  );
+  s.checkpoints = shortcuts;
+  if (
+    s.phase === "town" &&
+    (newlyUnlocked || !shortcuts.includes(s.startFloor))
+  )
+    s.startFloor = reached;
+  if (s.route && !s.discoveredRoutes.includes(s.route))
+    s.discoveredRoutes = [...s.discoveredRoutes, s.route];
+  s.startRoute = s.startRoute || s.route || s.discoveredRoutes[0] || null;
   const key = currentMapKey(s),
     map = floorMap(s);
   s.journey.maps = { ...s.journey.maps, [key]: map };
@@ -743,6 +771,17 @@ export function normalizeSave(raw: Game): Game {
     ...raw.expedition,
     unsecured: { ...newExpedition().unsecured, ...raw.expedition?.unsecured },
   };
+  // Recover saves interrupted by the former day-30 boss extraction bug.
+  if (
+    s.phase === "extraction" &&
+    s.journey.startDay !== null &&
+    s.journey.defender &&
+    s.combat &&
+    !s.combat.complete &&
+    !s.expedition.lost &&
+    s.party.some((c) => c.hp > 0)
+  )
+    s.phase = "combat";
   if (firstExpeditionComplete(s)) {
     s.walkthrough = { ...s.walkthrough, active: false };
     s.guideSeen = true;
@@ -782,13 +821,17 @@ export const TOWN_RUMOURS = [
 ] as const;
 export const marketRush = (day: number) => day % 30 >= 27 || day % 30 === 0;
 export const buyPrice = (item: Item, day: number, state?: Game) =>
-  Math.ceil(
-    item.price *
-      (marketRush(day) ? 1.15 : 1) *
-      (state ? 1 - factionDiscount(state, item) : 1),
-  );
+  item.id === "rations"
+    ? B.rationPackGold
+    : Math.ceil(
+        item.price *
+          (marketRush(day) ? 1.15 : 1) *
+          (state ? 1 - factionDiscount(state, item) : 1),
+      );
 export const sellPrice = (item: Item, vendor: Vendor) =>
-  Math.round(item.sell * (item.vendor === vendor ? 1.3 : 0.85));
+  item.id === "beast-core"
+    ? CORE_TRADE_VALUE
+    : Math.round(item.sell * (item.vendor === vendor ? 1.3 : 0.85));
 export function floorEnvironment(floor: number, route: Route | null): string {
   const env = FLOORS[Math.min(11, Math.max(0, floor - 1))].environment;
   return env === "route"
@@ -901,8 +944,7 @@ export function questProgress(s: Game, id: QuestId): number {
     return Math.min(3, s.townProgress.signed.length);
   if (id === "ready-for-gate") return Math.min(2, s.townProgress.trained);
   if (id === "ironbell-apprentice") return Math.min(2, s.townProgress.crafted);
-  if (id === "quartermaster")
-    return Math.min(3, s.inventory["beast-core"] || 0);
+  if (id === "quartermaster") return Math.min(B.rationPackSize, s.food);
   if (id === "seasoned-hunter") return Math.min(10, s.kills);
   if (id === "plunderer") return Math.min(1, s.plunderers);
   if (id === "clan-rescue") return s.scoutsRescued && s.clanAlly ? 1 : 0;
@@ -953,7 +995,7 @@ export type Action =
       choice: "strengths" | "honor" | "discovery" | "glory";
     }
   | { type: "REST"; skipOpening?: boolean }
-  | { type: "WORK"; skipOpening?: boolean }
+  | { type: "WORK"; skipOpening?: boolean; payLimit?: number }
   | { type: "TRAIN"; skipOpening?: boolean }
   | { type: "PREPARE_CYCLE"; mode: "rest" | "work" | "train" }
   | { type: "BUY"; item: "food" | "potion" }
@@ -1004,14 +1046,19 @@ export type Action =
   | { type: "SETTING"; key: "sound" | "haptics"; value: boolean };
 function afterFloor(s: Game): Game {
   if (s.fieldRest) return resumeRestLocation(s);
-  if (s.journey.watches >= 180) return { ...s, phase: "extraction" };
-  if (s.combat?.resume === "camp") return { ...s, phase: "camp", combat: null };
   if (s.journey.defender)
     return {
       ...s,
-      phase: s.floor === 12 && !principalResolved(s) ? "event" : "victory",
+      phase:
+        s.floor === 12 && principalResolved(s) && s.journey.watches >= 180
+          ? "extraction"
+          : s.floor === 12 && !principalResolved(s)
+            ? "event"
+            : "victory",
       journey: { ...s.journey, portal: true, defender: false },
     };
+  if (s.journey.watches >= 180) return { ...s, phase: "extraction" };
+  if (s.combat?.resume === "camp") return { ...s, phase: "camp", combat: null };
   return enterMappedRoom(
     {
       ...s,
@@ -1046,7 +1093,11 @@ function battleWon(
   const items: Record<string, number> = {};
   for (const foe of defeated) {
     const reward = monsterFor(foe, s.floor),
-      drop = monsterDrops(reward, seed);
+      drop = monsterDrops(
+        reward,
+        seed,
+        enemyCoreYield(foe, s.floor, s.journey.defender),
+      );
     seed = drop.seed;
     xp += reward.xp;
     for (const [id, qty] of Object.entries(drop.items)) {
@@ -1076,10 +1127,6 @@ function battleWon(
       bestFloor: s.journey.defender
         ? Math.max(s.bestFloor, s.floor)
         : s.bestFloor,
-      checkpoints:
-        s.journey.defender && [3, 6, 9].includes(s.floor)
-          ? [...new Set([...s.checkpoints, s.floor + 1])]
-          : s.checkpoints,
       journey: {
         ...s.journey,
         defeatedPortals: s.journey.defender
@@ -1831,13 +1878,17 @@ function reduceGame(s: Game, a: Action): Game {
         s.floor === 2 ? "careful" : "pick",
         1,
       );
+      const bonusGold = Math.max(
+        0,
+        Math.min(100, B.chestGoldMax - (result.gold - s.gold)),
+      );
       return note(
         {
           ...result,
-          gold: result.gold + 100,
+          gold: result.gold + bonusGold,
           inventory: addLoot(result.inventory, "relic-fragment"),
         },
-        "The key opens an untouched compartment. Safe treasure, +100 gold and an extra relic fragment.",
+        `The key opens an untouched compartment. Safe treasure, +${bonusGold} gold and an extra relic fragment.`,
       );
     }
     return note(s, "You cannot use this supply here.");
@@ -1911,13 +1962,14 @@ function reduceGame(s: Game, a: Action): Game {
         expedition: newExpedition(s.expedition.number),
         journey: { ...s.journey, startDay: null },
         phase: "town",
+        startFloor: Math.max(...s.checkpoints),
         enemy: null,
         combat: null,
         roundPlayback: null,
         lastOutcome: s.expedition.lost ? "Lost expedition" : "Returned safely",
         fieldRest: null,
       },
-      `The return gate carried your team home.${reward ? ` Mission fulfilled: +${reward} guild gold.` : ""} ${s.ending ? "The summit is conquered. Stormhold will remember your names." : "Regroup, grow stronger, and conquer Floor 12."}`,
+      `The labyrinth is closing. You are teleported back to town.${reward ? ` Mission fulfilled: +${reward} guild gold.` : ""} ${s.ending ? "The summit is conquered. Stormhold will remember your names." : "Regroup, grow stronger, and conquer Floor 12."}`,
     );
   }
   if (a.type === "ACCEPT") {
@@ -1942,10 +1994,6 @@ function reduceGame(s: Game, a: Action): Game {
         ...s,
         gold: s.gold + q.gold,
         gems: s.gems + q.gems,
-        inventory:
-          id === "quartermaster"
-            ? { ...s.inventory, "beast-core": s.inventory["beast-core"] - 3 }
-            : s.inventory,
         questClaimed: id === "first-ascent" ? true : s.questClaimed,
         quests: { ...s.quests, [id]: "claimed" },
         faction: {
@@ -2049,7 +2097,9 @@ function reduceGame(s: Game, a: Action): Game {
         return note(s, "The gate is open now. Your expedition awaits.");
       let next = s,
         trained = 0,
-        worked = 0;
+        worked = 0,
+        earned = 0,
+        rested = 0;
       for (let i = 0; i < days; i++) {
         const eligible = next.party.some(
           (c) => trainingXp(c, next.bestFloor) > 0,
@@ -2058,20 +2108,32 @@ function reduceGame(s: Game, a: Action): Game {
           a.mode === "rest"
             ? "REST"
             : a.mode === "work" || !eligible
-              ? "WORK"
+              ? earned < B.guildWorkLimit
+                ? "WORK"
+                : "REST"
               : "TRAIN";
         if (type === "TRAIN" && next.gold < 60)
           return note(
             next,
             "Training paused: the next session costs 60 gold. Your completed days are preserved.",
           );
-        next = reducer(next, { type, skipOpening: true });
+        const beforeGold = next.gold;
+        next = reducer(
+          next,
+          type === "WORK"
+            ? { type, skipOpening: true, payLimit: B.guildWorkLimit - earned }
+            : { type, skipOpening: true },
+        );
         if (type === "TRAIN") trained++;
-        if (type === "WORK") worked++;
+        if (type === "WORK") {
+          worked++;
+          earned += next.gold - beforeGold;
+        }
+        if (type === "REST") rested++;
       }
       return note(
         next,
-        `Preparation complete: ${trained} training days, ${worked} work days${a.mode === "rest" ? `, ${days} recovery days` : ""}. The gate is open.`,
+        `Preparation complete: ${trained} training days, ${worked} work days, ${rested} recovery days. Earned ${earned} gold. The gate is open.`,
       );
     }
     if (a.type === "BENCH") {
@@ -2259,12 +2321,21 @@ function reduceGame(s: Game, a: Action): Game {
         },
         "Rested at the inn. Everyone’s HP, MP, and ailments are restored.",
       );
-    if (a.type === "WORK")
+    if (a.type === "WORK") {
+      const pay = Math.min(
+        B.townWorkGold,
+        Math.max(
+          0,
+          Number.isFinite(a.payLimit)
+            ? Math.floor(a.payLimit!)
+            : B.townWorkGold,
+        ),
+      );
       return note(
         {
           ...s,
           day: s.day + 1,
-          gold: s.gold + 125,
+          gold: s.gold + pay,
           faction: {
             ...s.faction,
             guild: Math.max(
@@ -2273,8 +2344,9 @@ function reduceGame(s: Game, a: Action): Game {
             ),
           },
         },
-        `Completed a town contract. +125 gold${s.faction.guild < B.townWorkStandingCap ? " and +1 Guild standing" : "; further standing comes from expeditions"}.`,
+        `Completed a town contract. +${pay} gold${s.faction.guild < B.townWorkStandingCap ? " and +1 Guild standing" : "; further standing comes from expeditions"}.`,
       );
+    }
     if (a.type === "TRAIN") {
       if (
         !s.party.some(
@@ -2346,7 +2418,7 @@ function reduceGame(s: Game, a: Action): Game {
       };
       return note(
         n,
-        `Purchased ${item.name} for ${price} gold${marketRush(s.day) ? " · gate-season price" : ""}.`,
+        `Purchased ${item.name} for ${price} gold${item.id !== "rations" && marketRush(s.day) ? " · gate-season price" : ""}.`,
       );
     }
     if (a.type === "SELL") {
@@ -2426,10 +2498,6 @@ function reduceGame(s: Game, a: Action): Game {
         {
           ...s,
           gold: s.gold - offer.gold,
-          inventory: {
-            ...s.inventory,
-            [offer.material]: s.inventory[offer.material] - offer.quantity,
-          },
           party: s.party.map((p) =>
             p.id === a.id
               ? {
@@ -2477,9 +2545,13 @@ function reduceGame(s: Game, a: Action): Game {
       );
     if (a.type === "SELECT_START") {
       if (!s.checkpoints.includes(a.floor)) return s;
-      const route = a.route || s.startRoute;
-      if (a.floor === 7 && (!route || !s.discoveredRoutes.includes(route)))
-        return note(s, "Choose a previously discovered route for Floor 7.");
+      const route = a.route || s.startRoute || s.discoveredRoutes[0];
+      if (
+        a.floor >= 5 &&
+        a.floor <= 7 &&
+        (!route || !s.discoveredRoutes.includes(route))
+      )
+        return note(s, "Choose a previously discovered route for this floor.");
       return { ...s, startFloor: a.floor, startRoute: route || null };
     }
     if (a.type === "ENTER") {
@@ -2510,6 +2582,12 @@ function reduceGame(s: Game, a: Action): Game {
           combat: null,
           roundPlayback: null,
           expedition: newExpedition(s.expedition.number + 1),
+          reviewPromptExpedition: reviewDue(
+            s.expedition.number + 1,
+            s.reviewPromptExpedition,
+          )
+            ? s.expedition.number + 1
+            : s.reviewPromptExpedition,
           fieldRest: null,
           lootReceipt: null,
           floor: s.startFloor,
@@ -2524,7 +2602,9 @@ function reduceGame(s: Game, a: Action): Game {
                 generateFloor(
                   s.startFloor,
                   s.journey.seed,
-                  s.startFloor === 7 ? s.startRoute || "roots" : "",
+                  s.startFloor >= 5 && s.startFloor <= 7
+                    ? s.startRoute || "roots"
+                    : "",
                 ),
             },
             chart: s.journey.chart,
@@ -2548,7 +2628,7 @@ function reduceGame(s: Game, a: Action): Game {
               .filter((c) => s.contracts[c.id] !== undefined)
               .map((c) => [c.id, s.contracts[c.id]]),
           ),
-          route: s.startFloor === 7 ? s.startRoute : null,
+          route: s.startFloor >= 5 && s.startFloor <= 7 ? s.startRoute : null,
           eventResolved: false,
           sideBattle: false,
           ending: s.ending,
@@ -2682,6 +2762,10 @@ function reduceGame(s: Game, a: Action): Game {
     return {
       ...s,
       phase: "arrival",
+      checkpoints: [...new Set([...s.checkpoints, floor])].sort(
+        (a, b) => a - b,
+      ),
+      startRoute: s.route || s.startRoute,
       journey: {
         ...s.journey,
         step: 0,
@@ -2841,18 +2925,21 @@ function resolveEvent(s: Game, choice: string, roll: number): Game {
     const inventory = addLoot(
       addLoot(s.inventory, "beast-core", 2),
       "relic-fragment",
+      choice === "rush" ? 2 : 1,
     );
+    const draw = rollTreasureGold(s.rng.loot);
     return done(
       {
         ...s,
+        rng: { ...s.rng, loot: draw.seed },
         inventory,
         potions: s.potions + 1,
-        gold: s.gold + (choice === "rush" ? 130 : 65),
+        gold: s.gold + draw.gold,
         party: choice === "rush" ? hurtParty(s.party, 15) : s.party,
       },
       choice === "rush"
-        ? "You recover the cargo, but its ward cuts the party for 15 HP."
-        : "Tripwires disarmed. Recovered cores, a relic fragment, gold, and a potion.",
+        ? `The ward cuts the party for 15 HP. You recover ${draw.gold} gold and the surviving cargo.`
+        : `Tripwires disarmed. You recover ${draw.gold} gold, two cores, a relic fragment and a potion.`,
     );
   }
   if (kind === "clan") {
@@ -3017,32 +3104,39 @@ function resolveEvent(s: Game, choice: string, roll: number): Game {
     );
   }
   if (kind === "vault") {
+    const draw = rollTreasureGold(s.rng.loot);
     if (choice === "leave")
       return done(
         {
           ...s,
-          gold: s.gold + 80,
+          rng: { ...s.rng, loot: draw.seed },
+          gold: s.gold + draw.gold,
           inventory: addLoot(s.inventory, "ancient-ore"),
         },
-        "The outer cache yields 80 gold and ancient ore.",
+        `The outer cache yields ${draw.gold} gold and ancient ore.`,
       );
     const keyed = s.usedSupplies.includes("labyrinth-key");
     const safe =
       choice === "pick" &&
       (keyed || s.party.some((c) => c.hp > 0 && c.race === "dwarf"));
-    const gold = choice === "force" ? 300 : 220;
+    const gold = draw.gold;
     return done(
       {
         ...s,
+        rng: { ...s.rng, loot: draw.seed },
         gold: s.gold + gold,
         party: safe ? s.party : hurtParty(s.party, 20),
-        inventory: addLoot(s.inventory, "relic-fragment", 3),
+        inventory: addLoot(
+          s.inventory,
+          "relic-fragment",
+          choice === "force" ? 4 : 3,
+        ),
       },
       safe
         ? keyed
-          ? "The key releases the vault’s locks. +220 gold and three relic fragments."
-          : "The dwarf opens the vault. +220 gold and three relic fragments."
-        : `The blades strike for 20 party HP. You recover ${gold} gold and three fragments.`,
+          ? `The key releases the vault’s locks. You recover ${gold} gold and three relic fragments.`
+          : `The dwarf opens the vault. You recover ${gold} gold and three relic fragments.`
+        : `The blades strike for 20 party HP. You recover ${gold} gold and ${choice === "force" ? "four" : "three"} relic fragments.`,
     );
   }
   if (kind === "merchant") {
@@ -3075,11 +3169,11 @@ function resolveEvent(s: Game, choice: string, roll: number): Game {
       {
         ...s,
         gold: s.gold - price,
-        food: s.food + 3,
+        food: s.food + B.rationPackSize,
         potions: s.potions + 1,
         inventory: addLoot(s.inventory, "antidote"),
       },
-      "Survival bundle purchased: 3 rations, a potion, and an antidote.",
+      `Survival bundle purchased: ${B.rationPackSize} rations, a potion, and an antidote.`,
     );
   }
   if (kind === "throne")

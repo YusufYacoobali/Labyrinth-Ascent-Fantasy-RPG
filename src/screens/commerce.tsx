@@ -1,6 +1,13 @@
 import { FactionOpportunities } from "@/components/faction-opportunities";
 import { RecruitReplyDialog } from "@/components/recruit-reply";
 import { CharacterStatValue } from "@/components/character-stat-value";
+import { BALANCE } from "@/game/balance";
+import {
+  shopStock,
+  SHOP_ITEM_TYPES,
+  type ShopCategory,
+  type ShopItemType,
+} from "@/game/shop-stock";
 import { recruitLevelRefusal } from "@/game/recruitment";
 import { gearFloor } from "@/game/build-equipment";
 import { factionAccess } from "@/game/faction-opportunities";
@@ -510,24 +517,15 @@ export function TavernScreen() {
   );
 }
 
-const SHOP_TABS: Record<string, string> = {
-  Supplies: "Supplies",
-  Equipment: "Gear",
-  Consumables: "Magic",
-  "Rare Goods": "Relics",
-  Sell: "Sell",
-};
 export function ShopScreen() {
   const { state, dispatch } = useGame();
   const params = useLocalSearchParams<{ vendor?: string; mode?: string }>();
-  const [category, setCategory] = useState(
+  const [category, setCategory] = useState<ShopCategory>(
     params.mode === "sell"
       ? "Sell"
-      : params.vendor === "alchemist"
-        ? "Consumables"
-        : params.vendor === "emporium"
-          ? "Rare Goods"
-          : "Supplies",
+      : params.vendor === "emporium"
+        ? "Gear"
+        : "Supplies",
   );
   const [recipient, setRecipient] = useState(state.party[0]?.id);
   const recipients = state.party.map((c) => ({
@@ -535,49 +533,33 @@ export function ShopScreen() {
     label: c.name + (c.id === "hero" ? " (You)" : ""),
   }));
   const [cart, setCart] = useState<Record<string, number>>({});
-  const [buyer, setBuyer] = useState<Vendor>("guild");
-  const [search, setSearch] = useState("");
+  const [buyer, setBuyer] = useState<Vendor>(
+    ["provisioner", "alchemist", "emporium", "guild"].includes(
+      params.vendor || "",
+    )
+      ? (params.vendor as Vendor)
+      : "provisioner",
+  );
+  const [itemType, setItemType] = useState<ShopItemType>("all");
   const [sort, setSort] = useState("Price ↑");
   const [page, setPage] = useState(0);
   const stockScroll = useRef<ScrollView>(null);
   useEffect(() => {
     stockScroll.current?.scrollTo({ y: 0, animated: false });
   }, [page]);
-  const vendor: Vendor =
-    category === "Consumables"
-      ? "alchemist"
-      : category === "Rare Goods"
-        ? "emporium"
-        : "provisioner";
   const sell = category === "Sell";
-  const goods = ITEMS.filter((i) =>
-    sell
-      ? (state.inventory[i.id] || 0) > 0
-      : i.vendor === vendor &&
-        i.kind !== "loot" &&
-        (category === "Supplies"
-          ? i.kind === "supply"
-          : category === "Equipment"
-            ? i.kind !== "supply"
-            : true),
-  );
+  const goods = shopStock(category, itemType, state.inventory);
   const total = ITEMS.reduce(
     (n, i) => n + (cart[i.id] || 0) * buyPrice(i, state.day, state),
     0,
   );
-  const filtered = goods
-    .filter((item) =>
-      `${item.name} ${item.kind} ${item.description}`
-        .toLowerCase()
-        .includes(search.trim().toLowerCase()),
-    )
-    .sort((a, b) =>
-      sort === "Name"
-        ? a.name.localeCompare(b.name)
-        : sort === "Price ↓"
-          ? b.price - a.price
-          : a.price - b.price,
-    );
+  const filtered = goods.sort((a, b) =>
+    sort === "Name"
+      ? a.name.localeCompare(b.name)
+      : sort === "Price ↓"
+        ? b.price - a.price
+        : a.price - b.price,
+  );
   const pageCount = Math.max(1, Math.ceil(filtered.length / 12));
   const shownPage = Math.min(page, pageCount - 1);
   const visibleGoods = filtered.slice(shownPage * 12, (shownPage + 1) * 12);
@@ -593,7 +575,7 @@ export function ShopScreen() {
         subtitle={
           "Day " +
           state.day +
-          (marketRush(state.day) ? " · Gate-season prices +15%" : "")
+          (marketRush(state.day) ? " · Gate-season +15% except rations" : "")
         }
       >
         <SceneImage
@@ -603,37 +585,38 @@ export function ShopScreen() {
           accessibilityLabel="Provisioner’s Shop. Good gear makes long roads shorter. Everything you need for a safer journey is right here."
         />
         <TabStrip
-          tabs={Object.values(SHOP_TABS)}
-          active={SHOP_TABS[category]}
+          tabs={["Supplies", "Gear", "Sell"]}
+          active={category}
           compact
           onChange={(next) => {
-            setCategory(
-              Object.keys(SHOP_TABS).find((key) => SHOP_TABS[key] === next)!,
-            );
+            setCategory(next as ShopCategory);
+            setItemType("all");
             setPage(0);
           }}
         />
         <View style={{ padding: 10, gap: 7 }}>
-          <TextInput
-            accessibilityLabel="Search shop items"
-            placeholder="Search gear, stats or item names"
-            placeholderTextColor={t.color.muted}
-            value={search}
-            onChangeText={(value) => {
-              setSearch(value);
-              setPage(0);
-            }}
-            style={{
-              minHeight: 44,
-              borderWidth: 1,
-              borderColor: t.color.goldDim,
-              borderRadius: 5,
-              color: t.color.text,
-              paddingHorizontal: 12,
-              fontFamily: t.font.body,
-              fontSize: 15,
-            }}
-          />
+          {category !== "Supplies" && (
+            <View
+              accessibilityRole="tablist"
+              style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}
+            >
+              {SHOP_ITEM_TYPES.filter(
+                ([, type]) => sell || !["supply", "loot"].includes(type),
+              ).map(([label, type]) => (
+                <Button
+                  key={type}
+                  label={label}
+                  small
+                  compact
+                  tone={itemType === type ? "gold" : "dark"}
+                  onPress={() => {
+                    setItemType(type);
+                    setPage(0);
+                  }}
+                />
+              ))}
+            </View>
+          )}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <Copy muted style={{ fontSize: 12, flex: 1 }}>
               {filtered.length} {filtered.length === 1 ? "item" : "items"}
@@ -677,9 +660,7 @@ export function ShopScreen() {
               }
             />
           )}
-          {(category === "Rare Goods" ||
-            category === "Equipment" ||
-            category === "Consumables") && (
+          {category === "Gear" && (
             <TabStrip
               tabs={recipients.map((p) => p.label)}
               active={recipients.find((p) => p.id === recipient)?.label || ""}
@@ -896,12 +877,14 @@ export function ShopScreen() {
           {!filtered.length && (
             <Surface style={{ padding: 20 }}>
               <Copy title>
-                {search ? "No matching items" : "No spoils to sell"}
+                {sell
+                  ? "No items of this type to sell"
+                  : "No items of this type"}
               </Copy>
               <Copy muted>
-                {search
-                  ? "Try another name or stat."
-                  : "Bring back loot from the labyrinth."}
+                {sell
+                  ? "Choose another type or bring back more loot."
+                  : "Choose another item type."}
               </Copy>
             </Surface>
           )}
@@ -923,7 +906,7 @@ export function ShopScreen() {
                     key={i.id}
                     style={{ padding: 6, alignItems: "center", gap: 3 }}
                   >
-                    <Icon name={i.icon} size={28} />
+                    <ItemGlyph id={i.id} size={28} />
                     <Copy style={{ fontSize: 11 }}>×{cart[i.id]}</Copy>
                   </Surface>
                 ))}
@@ -1115,7 +1098,7 @@ export function GuildScreen() {
                 },
                 {
                   title: "Town contracts",
-                  detail: "+125 gold · +1 Guild standing up to 20 · +1 day",
+                  detail: `+${BALANCE.townWorkGold} gold · +1 Guild standing up to 20 · +1 day`,
                   action: "WORK" as const,
                   disabled: false,
                   label: "Work",
@@ -1160,7 +1143,7 @@ export function GuildScreen() {
                     }
                   />
                   <Button
-                    label={"Work · +" + daysToGate(state.day) * 125 + " gold"}
+                    label={`Guild work · +${Math.min(BALANCE.guildWorkLimit, daysToGate(state.day) * BALANCE.townWorkGold)} gold`}
                     small
                     onPress={() =>
                       dispatch({ type: "PREPARE_CYCLE", mode: "work" })
@@ -1182,8 +1165,8 @@ export function GuildScreen() {
                   />
                   <Copy muted>
                     Training costs 60 gold per day while someone can learn. Once
-                    everyone reaches the catch-up limit, remaining days earn
-                    contract gold.
+                    everyone reaches the catch-up limit, take guild work up to{" "}
+                    {BALANCE.guildWorkLimit} gold, then rest until opening.
                   </Copy>
                 </Surface>
               )}

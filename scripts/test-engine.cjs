@@ -149,10 +149,10 @@ test("No inventory transaction permits negative balances", () => {
     0,
   );
 });
-test("Appraisal pays matching vendors more", () => {
+test("Monster cores sell for 100 gold at every shop", () => {
   const core = w.ITEMS.find((i) => i.id === "beast-core");
-  assert.equal(e.sellPrice(core, "guild"), 55);
-  assert.equal(e.sellPrice(core, "alchemist"), 36);
+  assert.equal(e.sellPrice(core, "guild"), 100);
+  assert.equal(e.sellPrice(core, "alchemist"), 100);
   let s = { ...create(), inventory: { "beast-core": 2 } };
   s = reduce(s, {
     type: "SELL",
@@ -160,7 +160,7 @@ test("Appraisal pays matching vendors more", () => {
     vendor: "guild",
     quantity: 2,
   });
-  assert.equal(s.gold, 410);
+  assert.equal(s.gold, 500);
   assert.equal(s.inventory["beast-core"], 0);
 });
 test("Equipment swapping replaces bonuses rather than stacking forever", () => {
@@ -445,7 +445,7 @@ test("Preparation plans stop at the next gate and cannot skip an open gate", () 
     assert.equal(e.gateOpen(s.day), true);
     assert.equal(
       s.gold,
-      before + (mode === "work" ? 750 : mode === "train" ? 380 : 0),
+      before + (mode === "work" ? 480 : mode === "train" ? 200 : 0),
     );
     const again = reduce(s, { type: "PREPARE_CYCLE", mode });
     assert.equal(again.day, 30);
@@ -604,8 +604,8 @@ test("Cart checkout is atomic and rejects invalid quantities", () => {
     ],
   };
   const result = reduce(s, batch);
-  assert.equal(result.gold, s.gold - 150);
-  assert.equal(result.food, s.food + 6);
+  assert.equal(result.gold, s.gold - 180);
+  assert.equal(result.food, s.food + 60);
   assert.equal(result.potions, s.potions + 1);
   const poor = { ...s, gold: 149 };
   const rejected = reduce(poor, batch);
@@ -619,11 +619,11 @@ test("Cart checkout is atomic and rejects invalid quantities", () => {
     );
   assert.equal(reduce(enter(), batch).gold, enter().gold);
 });
-test("Forge crafting consumes real cores and gold, then equipment can be used", () => {
+test("Forge crafting uses gold without consuming cores, then equipment can be used", () => {
   const s = { ...create(), gold: 500, inventory: { "beast-core": 3 } };
   const crafted = reduce(s, { type: "CRAFT", id: "iron-blade" });
-  assert.equal(crafted.gold, s.gold - 90);
-  assert.equal(crafted.inventory["beast-core"], 0);
+  assert.equal(crafted.gold, s.gold - 120);
+  assert.equal(crafted.inventory["beast-core"], 3);
   assert.equal(crafted.inventory["iron-blade"], 1);
   const equipped = reduce(crafted, {
     type: "EQUIP",

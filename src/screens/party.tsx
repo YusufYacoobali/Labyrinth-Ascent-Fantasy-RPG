@@ -670,15 +670,19 @@ export function BlacksmithScreen() {
                       alignItems: "center",
                     }}
                   >
-                    <Icon name="sword" size={48} />
+                    {weapon ? (
+                      <ItemGlyph id={weapon.id} size={48} />
+                    ) : (
+                      <Icon name="hand-back-right-outline" size={40} />
+                    )}
                     <Copy style={{ fontSize: 12 }}>+{c.gear}</Copy>
                   </Surface>
                   <View style={{ flex: 1 }}>
                     <Copy title style={{ fontSize: 20, lineHeight: 23 }}>
-                      {weapon?.name || "Wanderer’s Blade"}
+                      {weapon?.name || "No weapon equipped"}
                     </Copy>
                     <Copy style={{ color: t.color.green }}>
-                      {offer.material
+                      {offer.gold > 0
                         ? `+${c.gear} → +${c.gear + 1}`
                         : `+${c.gear} · Complete`}
                     </Copy>
@@ -723,7 +727,7 @@ export function BlacksmithScreen() {
                 ))}
                 <Ornament />
                 <Copy title style={{ fontSize: 18, textAlign: "center" }}>
-                  Required Materials
+                  Upgrade cost
                 </Copy>
                 <Surface style={{ padding: 8, alignItems: "center", gap: 4 }}>
                   <Icon name="gold" size={35} />
@@ -735,17 +739,10 @@ export function BlacksmithScreen() {
                     {state.gold.toLocaleString()}/{cost} gold
                   </Copy>
                 </Surface>
-                {!!offer.material && (
-                  <Copy>
-                    {ITEMS.find((i) => i.id === offer.material)?.name ||
-                      offer.material}
-                    : {state.inventory[offer.material] || 0}/{offer.quantity}
-                  </Copy>
-                )}
                 {!!offer.reason && <Copy muted>{offer.reason}</Copy>}
                 <Button
                   label={
-                    offer.material
+                    offer.gold > 0
                       ? "Upgrade · " + cost + " gold"
                       : "Tempering complete"
                   }
@@ -768,28 +765,28 @@ export function BlacksmithScreen() {
                       </Copy>
                       <Copy>{item.description}</Copy>
                       <Copy muted style={{ fontSize: 12 }}>
-                        {recipe.materials
-                          .map(
+                        {[
+                          ...recipe.materials.map(
                             (m) =>
                               m.quantity +
                               " " +
                               ITEMS.find((i) => i.id === m.id)!.name,
-                          )
-                          .join(" · ")}{" "}
-                        · {recipe.gold} gold
+                          ),
+                          `${recipe.gold} gold`,
+                        ].join(" · ")}
                       </Copy>
                       <Copy style={{ fontSize: 12, color: t.color.gold }}>
-                        {recipe.materials
-                          .map(
+                        {[
+                          ...recipe.materials.map(
                             (m) =>
                               (state.inventory[m.id] || 0) +
                               "/" +
                               m.quantity +
                               " " +
                               ITEMS.find((i) => i.id === m.id)!.name,
-                          )
-                          .join(" · ")}{" "}
-                        · Owned {state.inventory[item.id] || 0}
+                          ),
+                          `Owned ${state.inventory[item.id] || 0}`,
+                        ].join(" · ")}
                       </Copy>
                       <Button
                         label={

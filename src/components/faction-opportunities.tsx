@@ -13,8 +13,8 @@ export function FactionOpportunities() {
     <Panel style={{ gap: 8 }}>
       <Copy title>Faction commissions</Copy>
       <Copy muted>
-        5 standing unlocks a one-time material delivery; 10 unlocks faction
-        stock and a 10% affiliated merchant discount.
+        5 standing unlocks a one-time commission; 10 unlocks faction stock and a
+        10% affiliated merchant discount.
       </Copy>
       {FACTION_OPPORTUNITIES.filter(
         (o) => state.bestFloor >= o.floor || factionStanding(state, o.id) > 0,
@@ -26,7 +26,9 @@ export function FactionOpportunities() {
             state.phase === "town" &&
             state.bestFloor >= o.floor &&
             factionStanding(state, o.id) >= 5 &&
-            (state.inventory[o.material] || 0) >= o.quantity;
+            (o.material === "gold"
+              ? state.gold
+              : state.inventory[o.material] || 0) >= o.quantity;
         return (
           <React.Fragment key={o.id}>
             <Copy>
@@ -41,7 +43,11 @@ export function FactionOpportunities() {
               tone="dark"
               disabled={!ready}
               label={
-                done ? "Delivery recorded" : `Deliver materials to ${o.name}`
+                done
+                  ? "Commission complete"
+                  : o.material === "gold"
+                    ? `Fund ${o.name} · ${o.quantity} gold`
+                    : `Deliver materials to ${o.name}`
               }
               onPress={() => dispatch({ type: "FACTION_DELIVER", id: o.id })}
             />

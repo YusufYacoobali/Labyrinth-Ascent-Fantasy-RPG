@@ -6,10 +6,10 @@ export const FACTION_OPPORTUNITIES = [
     id: "guild",
     name: "Guild roadwardens",
     floor: 3,
-    material: "beast-core",
-    quantity: 4,
+    material: "gold",
+    quantity: 400,
     item: "guild-aegis",
-    title: "Verify the roadwardens' recovered cores",
+    title: "Fund the roadwardens' rescue supplies",
   },
   {
     id: "stag",
@@ -170,19 +170,22 @@ export function resolveFactionAction(s: Game, a: Action): Game | undefined {
   if (
     s.bestFloor < offer.floor ||
     factionStanding(s, offer.id) < 5 ||
-    (s.inventory[offer.material] || 0) < offer.quantity
+    (offer.material === "gold" ? s.gold : s.inventory[offer.material] || 0) <
+      offer.quantity
   )
     return {
       ...s,
-      message:
-        "This faction delivery needs its floor, standing and secured materials.",
+      message: "This commission needs its floor, standing and listed payment.",
     };
   const message = `${offer.name} accepts ${offer.quantity} ${offer.material} and issues exclusive equipment. The delivery is recorded permanently.`;
   return {
     ...s,
+    gold: s.gold - (offer.material === "gold" ? offer.quantity : 0),
     inventory: {
       ...s.inventory,
-      [offer.material]: s.inventory[offer.material] - offer.quantity,
+      ...(offer.material === "gold"
+        ? {}
+        : { [offer.material]: s.inventory[offer.material] - offer.quantity }),
       [offer.item]: (s.inventory[offer.item] || 0) + 1,
     },
     factionClaims: [...(s.factionClaims || []), offer.id],

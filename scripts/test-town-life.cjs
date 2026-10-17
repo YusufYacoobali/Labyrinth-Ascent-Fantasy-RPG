@@ -35,8 +35,8 @@ test("A new adventurer starts with 300 gold and can buy a chipped sword and rati
   const attack = s.party[0].atk;
   s = act(s, { type: "BUY_ITEM", id: "chipped-blade" });
   s = act(s, { type: "BUY", item: "food" });
-  assert.equal(s.gold, 220);
-  assert.equal(s.food, 4);
+  assert.equal(s.gold, 205);
+  assert.equal(s.food, 31);
   s = act(s, { type: "EQUIP", character: "hero", item: "chipped-blade" });
   assert.equal(s.party[0].atk, attack + 3);
   assert.equal(act(s, { type: "BUY", item: "potion" }).potions, 1);

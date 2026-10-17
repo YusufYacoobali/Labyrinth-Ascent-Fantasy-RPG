@@ -165,14 +165,16 @@ test("Six faction commissions require earned standing, floors and materials and 
     s = {
       ...s,
       bestFloor: offer.floor,
-      inventory: { [offer.material]: offer.quantity },
+      gold: offer.material === "gold" ? offer.quantity : s.gold,
+      inventory:
+        offer.material === "gold" ? {} : { [offer.material]: offer.quantity },
       faction: { guild: 5, stag: 5 },
       stories: {
         ...s.stories,
         factions: { roots: 5, frost: 5, forge: 5, crypt: 5 },
       },
     };
-    const poor = { ...s, inventory: {} };
+    const poor = { ...s, gold: 0, inventory: {} };
     assert.equal(
       e.reducer(poor, { type: "FACTION_DELIVER", id: offer.id }).inventory[
         offer.item
@@ -181,7 +183,10 @@ test("Six faction commissions require earned standing, floors and materials and 
     );
     s = e.reducer(s, { type: "FACTION_DELIVER", id: offer.id });
     assert.equal(s.inventory[offer.item], 1);
-    assert.equal(s.inventory[offer.material], 0);
+    assert.equal(
+      offer.material === "gold" ? s.gold : s.inventory[offer.material],
+      0,
+    );
     s = e.normalizeSave(plain(s));
     assert.equal(
       e.reducer(
@@ -251,7 +256,7 @@ test("Sable disputes persist into later meetings and trusted cooperation grants 
     1,
   );
 });
-test("Trusted merchant trades use their remembered improved quantity without securing field cores", () => {
+test("Trusted merchant purchases include an extra ration and leave cores untouched", () => {
   let s = field();
   const place = s.expedition.director.npcs.tamsin;
   s = x.enterMappedRoom(
@@ -272,6 +277,7 @@ test("Trusted merchant trades use their remembered improved quantity without sec
         ...s.expedition,
         unsecured: {
           ...s.expedition.unsecured,
+          gold: 50,
           inventory: { "beast-core": 2 },
         },
       },
@@ -280,7 +286,8 @@ test("Trusted merchant trades use their remembered improved quantity without sec
   );
   const food = s.food;
   s = e.reducer(s, { type: "BRANCH_CHOICE", choice: "trade", roll: 0.5 });
-  assert.equal(s.food, food + 3);
-  assert.equal(s.expedition.unsecured.food, 3);
+  assert.equal(s.food, food + 30);
+  assert.equal(s.expedition.unsecured.food, 30);
+  assert.equal(s.inventory["beast-core"], 2);
 });
 console.log(`${count} world-consequence checks passed.`);

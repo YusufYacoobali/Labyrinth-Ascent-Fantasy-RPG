@@ -1,6 +1,7 @@
 import { GenericEncounterScene } from "@/components/generic-encounter";
 import { ShelterBinding } from "@/components/skill-library";
-import { directedEncounter } from "@/game/encounter-director";
+import { directedEncounter, patrolApproach } from "@/game/encounter-director";
+import { BALANCE } from "@/game/balance";
 import { npcAt, npcDescription, WORLD_NPCS } from "@/game/world-npcs";
 import React, { useState } from "react";
 import { View } from "react-native";
@@ -357,7 +358,7 @@ export function BranchScene() {
             : npc
               ? npcDescription(state, npc)
               : plan && b.kind === "beast"
-                ? plan.approach
+                ? patrolApproach(state.floor, plan.variant)
                 : scene.body
         }
       >
@@ -365,7 +366,11 @@ export function BranchScene() {
           scene.choices.map((c) => (
             <Choice
               key={c.id}
-              label={c.title}
+              label={
+                b.kind === "beast" && state.floor === 1
+                  ? "Approach the barricade"
+                  : c.title
+              }
               detail={c.detail}
               icon={c.icon}
               disabled={c.id === "help" && state.food < 1}
@@ -380,10 +385,10 @@ export function BranchScene() {
           ))}
         {!resolved && npc === "tamsin" && (
           <Choice
-            label={`Trade two monster cores for ${(state.npcs?.tamsin?.trust || 0) >= 3 ? "four" : "three"} rations`}
-            detail="One trade this expedition; field-found cores produce unsecured rations"
+            label={`Buy ${BALANCE.rationPackSize + ((state.npcs?.tamsin?.trust || 0) >= 3 ? 1 : 0)} rations · ${BALANCE.rationPackGold} gold`}
+            detail="One pack this expedition. Trusted customers get an extra ration."
             icon="sack"
-            disabled={(state.inventory["beast-core"] || 0) < 2}
+            disabled={state.gold < BALANCE.rationPackGold}
             onPress={() =>
               dispatch({ type: "BRANCH_CHOICE", choice: "trade", roll: 1 })
             }
@@ -438,7 +443,7 @@ export function CampScene() {
         title={state.journey.wildCamp ? "Wild camp" : "The sanctuary"}
         body={
           state.message ||
-          "The lantern is sheltered. Your team can rest here until the return gate opens."
+          "The lantern is sheltered. Rest here until the labyrinth closes and teleports everyone back to town."
         }
       >
         {!state.journey.wildCamp && <ShelterBinding />}

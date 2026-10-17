@@ -447,25 +447,24 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: "iron-helm",
-    gold: 60,
-    materials: [{ id: "beast-core", quantity: 2 }],
-    essence: "guardian",
+    gold: 90,
+    materials: [],
   },
   {
     id: "scout-boots",
-    gold: 50,
-    materials: [{ id: "beast-core", quantity: 2 }],
+    gold: 80,
+    materials: [],
   },
   {
     id: "iron-blade",
-    gold: 90,
-    materials: [{ id: "beast-core", quantity: 3 }],
+    gold: 120,
+    materials: [],
   },
-  { id: "leather", gold: 90, materials: [{ id: "beast-core", quantity: 3 }] },
+  { id: "leather", gold: 90, materials: [] },
   {
     id: "scout-dagger",
-    gold: 80,
-    materials: [{ id: "beast-core", quantity: 3 }],
+    gold: 100,
+    materials: [],
   },
   {
     id: "moon-robe",
@@ -499,11 +498,8 @@ export const RECIPES: Recipe[] = [
   {
     id: "root-mantle",
     essence: "broodmother",
-    gold: 150,
-    materials: [
-      { id: "night-herb", quantity: 3 },
-      { id: "beast-core", quantity: 3 },
-    ],
+    gold: 300,
+    materials: [{ id: "night-herb", quantity: 3 }],
     floor: 6,
   },
 ];
@@ -544,10 +540,10 @@ export const TOWN_QUESTS = [
     faction: "Adventurers’ Guild",
     title: "The town’s quartermaster",
     description:
-      "Deliver three monster cores to the guild. Items are consumed on delivery.",
-    target: 3,
-    metric: "cores",
-    gold: 220,
+      "Stock thirty party rations for the next expedition. Keep the food for your journey.",
+    target: 30,
+    metric: "food",
+    gold: 80,
     gems: 15,
   },
   {

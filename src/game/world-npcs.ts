@@ -13,7 +13,7 @@ export const WORLD_NPCS = {
     name: "Tamsin Reed",
     role: "merchant",
     intro:
-      "Tamsin has wedged a travelling shop between two old stones. ‘A month down here makes food worth more than glitter. Two monster cores buy three party rations.’",
+      "Tamsin has wedged a travelling shop between two old stones. ‘Still climbing? A month’s ration pack is fifty gold. Eat properly. Dead customers are terrible for business.’",
     returning:
       "Tamsin waves you toward the packs. ‘Back for another month? I kept the ration trade ready.’",
   },
