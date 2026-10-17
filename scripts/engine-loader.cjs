@@ -27,6 +27,7 @@ function load(filename) {
   return mod.exports;
 }
 module.exports = {
+  dailyReminders: load("src/notifications/daily-reminders.ts"),
   expeditionReview: load("src/game/expedition-review.ts"),
   shopStock: load("src/game/shop-stock.ts"),
   treasure: load("src/game/treasure.ts"),

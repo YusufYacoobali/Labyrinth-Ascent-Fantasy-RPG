@@ -11,6 +11,7 @@ import {
 } from "@expo-google-fonts/roboto-condensed";
 import { ActivityIndicator, View } from "react-native";
 import { GameProvider } from "@/game/provider";
+import { DailyReminderProvider } from "@/notifications/provider";
 import { theme } from "@/theme";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useEffect } from "react";
@@ -87,14 +88,16 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <GameProvider>
-        <StatusBar hidden style="light" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: theme.color.bg },
-            animation: "none",
-          }}
-        />
+        <DailyReminderProvider>
+          <StatusBar hidden style="light" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: theme.color.bg },
+              animation: "none",
+            }}
+          />
+        </DailyReminderProvider>
       </GameProvider>
     </GestureHandlerRootView>
   );

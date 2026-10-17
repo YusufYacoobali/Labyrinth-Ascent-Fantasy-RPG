@@ -23,6 +23,7 @@ import { walkthroughTip } from "@/game/walkthrough";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme as t } from "@/theme";
 import { useGame } from "@/game/provider";
+import { useDailyReminders } from "@/notifications/provider";
 import { BevelFrame } from "./mock-chrome";
 import { EXPANSION_RECRUITS } from "@/game/market-expansion";
 import {
@@ -843,6 +844,7 @@ export function Nav({ active }: { active: string }) {
 }
 export function SettingsControls() {
   const { state, dispatch } = useGame();
+  const reminders = useDailyReminders();
   return (
     <View style={{ gap: 9 }}>
       <Button
@@ -863,6 +865,40 @@ export function SettingsControls() {
           dispatch({ type: "SETTING", key: "haptics", value: !state.haptics })
         }
       />
+      {reminders && (
+        <View style={{ gap: 4 }}>
+          <Button
+            label={
+              reminders.busy || reminders.status === "loading"
+                ? "Updating reminder…"
+                : reminders.status === "blocked"
+                  ? "Notification settings"
+                  : reminders.status === "error"
+                    ? "Retry daily reminder"
+                    : `Daily reminder ${reminders.status === "on" ? "on" : "off"}`
+            }
+            icon={
+              reminders.status === "on" ? "bell-outline" : "bell-off-outline"
+            }
+            small
+            tone={reminders.status === "on" ? "blue" : "dark"}
+            disabled={
+              reminders.busy ||
+              ["loading", "unavailable"].includes(reminders.status)
+            }
+            onPress={reminders.toggle}
+          />
+          <Copy muted style={{ fontSize: 12, lineHeight: 16 }}>
+            {reminders.status === "unavailable"
+              ? "Daily reminders need the latest mobile build."
+              : reminders.status === "blocked"
+                ? "Allow notifications in your device settings."
+                : reminders.status === "error"
+                  ? "Couldn't update reminders. Tap to retry."
+                  : "Once a day at 6 pm, your local time."}
+          </Copy>
+        </View>
+      )}
     </View>
   );
 }

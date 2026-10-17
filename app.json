@@ -8,6 +8,7 @@
     "userInterfaceStyle": "dark",
     "icon": "./assets/art/app-icon.png",
     "ios": {
+      "bundleIdentifier": "com.yacoobali.rpg",
       "supportsTablet": false
     },
     "android": {
@@ -16,7 +17,9 @@
         "foregroundImage": "./assets/art/app-icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": ["android.permission.MODIFY_AUDIO_SETTINGS"],
+      "package": "com.yacoobali.rpg"
     },
     "web": {
       "output": "static",
@@ -48,7 +51,8 @@
           "enableBackgroundPlayback": false
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true
