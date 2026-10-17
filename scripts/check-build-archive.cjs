@@ -3,6 +3,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const ts = require("typescript");
 const ignore = require("ignore");
+const {
+  runtimeImagePath,
+  verifyRuntimeImages,
+} = require("./runtime-image-assets.cjs");
 
 const root = path.dirname(require.resolve("../package.json"));
 const rules = ignore().add(
@@ -15,6 +19,9 @@ const required = new Set([
   "app.json",
   "eas.json",
   "tsconfig.json",
+  "metro.config.js",
+  "scripts/runtime-image-assets.cjs",
+  "assets/runtime-images.json",
   "src/app/_layout.tsx",
   "android/build.gradle",
   "android/settings.gradle",
@@ -50,14 +57,18 @@ function readSources(dir) {
   }
 }
 readSources(path.join(root, "src"));
+const nativeImages = new Set();
 function readConfig(value) {
-  if (typeof value === "string" && value.startsWith("./assets/"))
+  if (typeof value === "string" && value.startsWith("./assets/")) {
     required.add(value.slice(2));
-  else if (value && typeof value === "object")
+    nativeImages.add(value.slice(2));
+  } else if (value && typeof value === "object")
     Object.values(value).forEach(readConfig);
 }
 readConfig(JSON.parse(fs.readFileSync(path.join(root, "app.json"), "utf8")));
-for (const file of required) {
+verifyRuntimeImages();
+for (const source of required) {
+  const file = nativeImages.has(source) ? source : runtimeImagePath(source);
   assert.ok(
     fs.existsSync(path.join(root, file)),
     `Missing build input: ${file}`,

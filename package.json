@@ -54,7 +54,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node scripts/test-engine.cjs && node scripts/test-rounds.cjs && node scripts/test-town.cjs && node scripts/test-exploration.cjs && node scripts/test-maps.cjs && node scripts/test-walkthrough.cjs && node scripts/test-animation.cjs && node scripts/test-rewards.cjs && node scripts/test-stories.cjs && node scripts/test-critical.cjs && node scripts/test-goblins.cjs && node scripts/test-framework.cjs && node scripts/test-planning.cjs && node scripts/test-trial.cjs && node scripts/test-ecosystems.cjs && node scripts/test-director.cjs && node scripts/test-consequences.cjs && node scripts/test-builds.cjs && node scripts/test-polish.cjs && node scripts/test-game-polish.cjs && node scripts/test-town-life.cjs && node scripts/test-expedition-days.cjs && node scripts/test-event-art.cjs && node scripts/test-field-polish.cjs && node scripts/test-market-expansion.cjs && node scripts/test-economy.cjs && node scripts/test-floor-polish.cjs && node scripts/test-battle-loading.cjs && node scripts/test-closing-combat.cjs && node scripts/test-expedition-review.cjs && node scripts/test-daily-reminders.cjs",
+    "test": "node scripts/test-engine.cjs && node scripts/test-rounds.cjs && node scripts/test-town.cjs && node scripts/test-exploration.cjs && node scripts/test-maps.cjs && node scripts/test-walkthrough.cjs && node scripts/test-animation.cjs && node scripts/test-rewards.cjs && node scripts/test-stories.cjs && node scripts/test-critical.cjs && node scripts/test-goblins.cjs && node scripts/test-framework.cjs && node scripts/test-planning.cjs && node scripts/test-trial.cjs && node scripts/test-ecosystems.cjs && node scripts/test-director.cjs && node scripts/test-consequences.cjs && node scripts/test-builds.cjs && node scripts/test-polish.cjs && node scripts/test-game-polish.cjs && node scripts/test-town-life.cjs && node scripts/test-expedition-days.cjs && node scripts/test-event-art.cjs && node scripts/test-field-polish.cjs && node scripts/test-market-expansion.cjs && node scripts/test-economy.cjs && node scripts/test-floor-polish.cjs && node scripts/test-battle-loading.cjs && node scripts/test-closing-combat.cjs && node scripts/test-expedition-review.cjs && node scripts/test-daily-reminders.cjs && node scripts/test-runtime-images.cjs",
     "test:polish": "node scripts/test-game-polish.cjs",
     "test:art": "node scripts/test-event-art.cjs",
     "playtest": "node scripts/playtest.cjs",
@@ -67,7 +67,9 @@
     "test:market": "node scripts/test-market-expansion.cjs",
     "test:economy": "node scripts/test-economy.cjs",
     "test:notifications": "node scripts/test-daily-reminders.cjs",
-    "check:archive": "node scripts/check-build-archive.cjs"
+    "check:archive": "node scripts/check-build-archive.cjs",
+    "assets:pack": "python scripts/pack-runtime-images.py",
+    "assets:check": "node scripts/test-runtime-images.cjs"
   },
   "private": true
 }
