@@ -212,6 +212,23 @@ async function check(name, task) {
     assert.equal(await controller.sync(true), "unavailable");
     assert.equal(d.scheduled.size, 0);
   });
+  await check(
+    "failed opt-out cancellation can retry without re-enabling",
+    async () => {
+      const d = device({ granted: true }),
+        controller = d.controller();
+      await controller.sync(true);
+      const cancel = d.api.cancelScheduledNotificationAsync;
+      d.api.cancelScheduledNotificationAsync = async () => {
+        throw Error("Scheduler busy");
+      };
+      await assert.rejects(controller.setEnabled(false), /Scheduler busy/);
+      assert.equal(d.stored.get(reminders.REMINDER_KEY), "off");
+      d.api.cancelScheduledNotificationAsync = cancel;
+      assert.equal(await controller.setEnabled(false), "off");
+      assert.equal(d.scheduled.size, 0);
+    },
+  );
   await check("storage failure never opens a permission dialog", async () => {
     const d = device();
     const controller = reminders.createDailyReminders({

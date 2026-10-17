@@ -44,6 +44,7 @@ export function DailyReminderProvider({
     "loading",
   );
   const [busy, setBusy] = useState(false);
+  const pendingPreference = useRef<boolean | null>(null);
   const controller = useRef(
     createDailyReminders({
       storage: AsyncStorage,
@@ -78,14 +79,26 @@ export function DailyReminderProvider({
   const toggle = () => {
     if (busy) return;
     setBusy(true);
+    const updatePreference = (enabled: boolean) => {
+      pendingPreference.current = enabled;
+      return controller.current.setEnabled(enabled);
+    };
     const operation =
       status === "blocked"
         ? Linking.openSettings().then(() => controller.current.sync())
         : status === "error"
-          ? controller.current.sync()
-          : controller.current.setEnabled(status !== "on");
+          ? pendingPreference.current === null
+            ? controller.current.sync()
+            : updatePreference(pendingPreference.current)
+          : updatePreference(status !== "on");
     void operation
-      .then(setStatus, () => setStatus("error"))
+      .then(
+        (next) => {
+          pendingPreference.current = null;
+          setStatus(next);
+        },
+        () => setStatus("error"),
+      )
       .finally(() => setBusy(false));
   };
   return (
